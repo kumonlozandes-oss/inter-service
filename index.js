@@ -197,6 +197,118 @@ app.get("/teste-api", async (req, res) => {
 
 });
 
+app.get("/gerar-isabel", async (req, res) => {
+
+  try {
+
+    const oauth =
+      await fetch(
+        "https://inter-service.onrender.com/oauth"
+      );
+
+    const tokenJson =
+      await oauth.json();
+
+    const token =
+      JSON.parse(
+        tokenJson.body
+      ).access_token;
+
+    const cert = fs.readFileSync(
+      "/etc/secrets/inter-certificado.crt"
+    );
+
+    const key = fs.readFileSync(
+      "/etc/secrets/inter-chave.key"
+    );
+
+    const body = JSON.stringify({
+      seuNumero: "JULHO/26",
+      valorNominal: "490.00",
+      dataVencimento: "2026-07-10",
+      pagador: {
+        cpfCnpj: "82702403115",
+        tipoPessoa: "FISICA",
+        nome: "ISABEL CRISTINA DE MORAES PEDROSO VITORIA"
+      }
+    });
+
+    const options = {
+      hostname:
+        "cdpj.partners.bancointer.com.br",
+
+      port: 443,
+
+      path:
+        "/cobranca/v3/cobrancas",
+
+      method:
+        "POST",
+
+      cert,
+      key,
+
+      headers: {
+        Authorization:
+          "Bearer " + token,
+        "Content-Type":
+          "application/json",
+        "Content-Length":
+          Buffer.byteLength(body)
+      }
+    };
+
+    const resultado =
+      await new Promise((resolve, reject) => {
+
+        const reqInter =
+          https.request(
+            options,
+            resp => {
+
+              let data = "";
+
+              resp.on(
+                "data",
+                chunk => data += chunk
+              );
+
+              resp.on(
+                "end",
+                () => resolve({
+                  status:
+                    resp.statusCode,
+                  body:
+                    data
+                })
+              );
+
+            }
+          );
+
+        reqInter.on(
+          "error",
+          reject
+        );
+
+        reqInter.write(body);
+
+        reqInter.end();
+
+      });
+
+    res.json(resultado);
+
+  } catch (e) {
+
+    res.status(500).json({
+      erro: String(e)
+    });
+
+  }
+
+});
+
 const PORT =
   process.env.PORT || 3000;
 
