@@ -15,7 +15,6 @@ app.get("/oauth", async (req, res) => {
 
 try {
 
-```
 const cert = fs.readFileSync(
   "/etc/secrets/inter-certificado.crt"
 );
@@ -86,15 +85,12 @@ const resultado =
   });
 
 res.json(resultado);
-```
 
 } catch (e) {
 
-```
 res.status(500).json({
   erro: String(e)
 });
-```
 
 }
 
@@ -104,7 +100,6 @@ app.get("/teste-api", async (req, res) => {
 
 try {
 
-```
 const oauth =
   await fetch(
     "https://inter-service.onrender.com/oauth"
@@ -193,15 +188,12 @@ const resultado =
   });
 
 res.json(resultado);
-```
 
 } catch (e) {
 
-```
 res.status(500).json({
   erro: String(e)
 });
-```
 
 }
 
@@ -211,7 +203,6 @@ app.get("/gerar-isabel", async (req, res) => {
 
 try {
 
-```
 const oauth =
   await fetch(
     "https://inter-service.onrender.com/oauth"
@@ -355,15 +346,13 @@ const resultado =
   });
 
 res.json(resultado);
-```
 
 } catch (e) {
 
-```
 res.status(500).json({
   erro: String(e)
 });
-```
+
 
 }
 
