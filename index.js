@@ -102,7 +102,55 @@ app.get("/oauth", async (req, res) => {
 
 });
 
+app.get("/teste-api", async (req, res) => {
+
+  try {
+
+    const oauth =
+      await fetch(
+        "https://inter-service.onrender.com/oauth"
+      );
+
+    const tokenJson =
+      await oauth.json();
+
+    const token =
+      JSON.parse(
+        tokenJson.body
+      ).access_token;
+
+    const resposta =
+      await fetch(
+        "https://cdpj.partners.bancointer.com.br/cobranca/v3/cobrancas",
+        {
+          headers: {
+            Authorization:
+              "Bearer " + token
+          }
+        }
+      );
+
+    const texto =
+      await resposta.text();
+
+    res.status(
+      resposta.status
+    ).send(texto);
+
+  } catch (e) {
+
+    res.status(500).json({
+      erro:
+        String(e)
+    });
+
+  }
+
+});
+
 const PORT =
   process.env.PORT || 3000;
+
+
 
 app.listen(PORT);
