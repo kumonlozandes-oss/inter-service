@@ -260,6 +260,8 @@ const body = JSON.stringify({
   dataVencimento:
     req.body.dataVencimento,
 
+  numDiasAgenda: 30,
+
   multa: {
     codigo: "PERCENTUAL",
     taxa: 2
@@ -269,14 +271,6 @@ const body = JSON.stringify({
     codigo: "TAXAMENSAL",
     taxa: 1
   },
-
-  descontos: [
-    {
-      codigo: "VALORFIXODATAINFORMADA",
-      taxa: 25,
-      data: req.body.dataVencimento
-    }
-  ],
 
   pagador: {
 
