@@ -495,7 +495,7 @@ const options = {
   path:
 "/cobranca/v3/cobrancas/" + codigo,
 
-  method: "GET",
+  method: "PATCH",
 
   cert,
   key,
