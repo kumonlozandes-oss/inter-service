@@ -107,17 +107,16 @@ app.get("/teste-api", async (req, res) => {
   try {
 
     const oauth =
-      await fetch(
-        "https://inter-service.onrender.com/oauth"
-      );
+  await fetch(
+    "https://inter-service.onrender.com/oauth"
+  );
 
-    const tokenJson =
-      await oauth.json();
+const tokenJson =
+  await oauth.json();
 
-    const token =
-      JSON.parse(
-        tokenJson.body
-      ).access_token;
+return res.json({
+  oauth: tokenJson
+});
 
     const cert = fs.readFileSync(
       "/etc/secrets/inter-certificado.crt"
