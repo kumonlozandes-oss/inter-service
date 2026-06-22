@@ -249,7 +249,43 @@ const key = fs.readFileSync(
   "/etc/secrets/inter-chave.key"
 );
 
-const body = JSON.stringify(req.body);
+const body = JSON.stringify({
+
+  seuNumero: req.body.seuNumero,
+
+  valorNominal: Number(
+    req.body.valorNominal
+  ),
+
+  dataVencimento:
+    req.body.dataVencimento,
+
+  pagador: {
+
+    cpfCnpj:
+      req.body.cpfCnpj,
+
+    tipoPessoa:
+      "FISICA",
+
+    nome:
+      req.body.nome,
+
+    endereco:
+      req.body.endereco,
+
+    cidade:
+      req.body.cidade,
+
+    uf:
+      req.body.uf,
+
+    cep:
+      req.body.cep
+
+  }
+
+});
 
 const options = {
 
