@@ -1,71 +1,101 @@
 const express = require("express");
 const fs = require("fs");
+const https = require("https");
+const querystring = require("querystring");
 
 const app = express();
 
 app.get("/", (req, res) => {
-
   res.json({
-    status: "ok",
-    mensagem: "Inter Service Online"
+    status: "ok"
   });
-
 });
 
-app.get("/health", (req, res) => {
+app.get("/oauth", async (req, res) => {
 
   try {
 
-    const cert =
-      fs.readFileSync(
-        "/etc/secrets/inter-certificado.crt",
-        "utf8"
-      );
+    const cert = fs.readFileSync(
+      "/etc/secrets/inter-certificado.crt"
+    );
 
-    const key =
-      fs.readFileSync(
-        "/etc/secrets/inter-chave.key",
-        "utf8"
-      );
+    const key = fs.readFileSync(
+      "/etc/secrets/inter-chave.key"
+    );
 
-    res.json({
-
-      sucesso: true,
-
-      certificado:
-        cert.includes(
-          "BEGIN CERTIFICATE"
-        ),
-
-      chave:
-        key.includes(
-          "BEGIN PRIVATE KEY"
-        ),
-
-      tamanhoCertificado:
-        cert.length,
-
-      tamanhoChave:
-        key.length,
-
-      clientId:
-        !!process.env.INTER_CLIENT_ID,
-
-      clientSecret:
-        !!process.env.INTER_CLIENT_SECRET
-
+    const postData = querystring.stringify({
+      client_id: process.env.INTER_CLIENT_ID,
+      client_secret: process.env.INTER_CLIENT_SECRET,
+      grant_type: "client_credentials",
+      scope: "boleto-cobranca.read boleto-cobranca.write"
     });
+
+    const options = {
+      hostname: "cdpj.partners.bancointer.com.br",
+      port: 443,
+      path: "/oauth/v2/token",
+      method: "POST",
+
+      cert,
+      key,
+
+      headers: {
+        "Content-Type":
+          "application/x-www-form-urlencoded",
+        "Content-Length":
+          Buffer.byteLength(postData)
+      }
+    };
+
+    const resultado =
+      await new Promise((resolve, reject) => {
+
+        const reqInter =
+          https.request(
+            options,
+            resp => {
+
+              let data = "";
+
+              resp.on(
+                "data",
+                chunk => data += chunk
+              );
+
+              resp.on(
+                "end",
+                () => resolve({
+                  status:
+                    resp.statusCode,
+                  body:
+                    data
+                })
+              );
+
+            }
+          );
+
+        reqInter.on(
+          "error",
+          reject
+        );
+
+        reqInter.write(
+          postData
+        );
+
+        reqInter.end();
+
+      });
+
+    res.json(resultado);
 
   }
 
   catch(e){
 
     res.status(500).json({
-
-      sucesso:false,
-
-      erro:String(e)
-
+      erro: String(e)
     });
 
   }
@@ -75,11 +105,4 @@ app.get("/health", (req, res) => {
 const PORT =
   process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-
-  console.log(
-    "Servidor iniciado na porta " +
-    PORT
-  );
-
-});
+app.listen(PORT);
