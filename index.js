@@ -119,29 +119,78 @@ app.get("/teste-api", async (req, res) => {
         tokenJson.body
       ).access_token;
 
-    const resposta =
-      await fetch(
-        "https://cdpj.partners.bancointer.com.br/cobranca/v3/cobrancas",
-        {
-          headers: {
-            Authorization:
-              "Bearer " + token
-          }
-        }
-      );
+    const cert = fs.readFileSync(
+      "/etc/secrets/inter-certificado.crt"
+    );
 
-    const texto =
-      await resposta.text();
+    const key = fs.readFileSync(
+      "/etc/secrets/inter-chave.key"
+    );
 
-    res.status(
-      resposta.status
-    ).send(texto);
+    const options = {
+      hostname:
+        "cdpj.partners.bancointer.com.br",
+
+      port: 443,
+
+      path:
+        "/cobranca/v3/cobrancas",
+
+      method:
+        "GET",
+
+      cert,
+      key,
+
+      headers: {
+        Authorization:
+          "Bearer " + token
+      }
+    };
+
+    const resultado =
+      await new Promise((resolve, reject) => {
+
+        const reqInter =
+          https.request(
+            options,
+            resp => {
+
+              let data = "";
+
+              resp.on(
+                "data",
+                chunk => data += chunk
+              );
+
+              resp.on(
+                "end",
+                () => resolve({
+                  status:
+                    resp.statusCode,
+                  body:
+                    data
+                })
+              );
+
+            }
+          );
+
+        reqInter.on(
+          "error",
+          reject
+        );
+
+        reqInter.end();
+
+      });
+
+    res.json(resultado);
 
   } catch (e) {
 
     res.status(500).json({
-      erro:
-        String(e)
+      erro: String(e)
     });
 
   }
