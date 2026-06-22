@@ -134,7 +134,7 @@ app.get("/teste-api", async (req, res) => {
       port: 443,
 
       path:
-        "/cobranca/v3/cobrancas",
+"/cobranca/v3/cobrancas?dataInicial=2026-01-01&dataFinal=2026-12-31",
 
       method:
         "GET",
