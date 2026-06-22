@@ -493,9 +493,9 @@ const options = {
   port: 443,
 
   path:
-    "/cobranca/v3/cobrancas/" + codigo + "/situacao",
+"/cobranca/v3/cobrancas/" + codigo,
 
-  method: "PATCH",
+  method: "GET",
 
   cert,
   key,
