@@ -5,6 +5,10 @@ const querystring = require("querystring");
 
 const app = express();
 
+app.use(express.json());
+
+app.use(express.urlencoded({ extended: true }));
+
 app.get("/", (req, res) => {
 res.json({
 status: "ok"
@@ -199,7 +203,7 @@ res.status(500).json({
 
 });
 
-app.get("/gerar-isabel", async (req, res) => {
+app.post("/gerar-boleto", async (req, res) => {
 
 try {
 
@@ -245,38 +249,7 @@ const key = fs.readFileSync(
   "/etc/secrets/inter-chave.key"
 );
 
-const body = JSON.stringify({
-
-  seuNumero: "JULHO/26",
-
-  valorNominal: 490,
-
-  dataVencimento: "2026-07-10",
-
-  pagador: {
-
-    cpfCnpj: "82702403115",
-
-    tipoPessoa: "FISICA",
-
-    nome:
-      "ISABEL CRISTINA DE MORAES PEDROSO VITORIA",
-
-    endereco:
-      "RUA DOS JACARANDAS QD 4 LT 14",
-
-    cidade:
-      "GOIANIA",
-
-    uf:
-      "GO",
-
-    cep:
-      "74885857"
-
-  }
-
-});
+const body = JSON.stringify(req.body);
 
 const options = {
 
