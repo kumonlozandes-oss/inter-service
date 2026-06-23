@@ -623,7 +623,8 @@ const options = {
   port: 443,
 
   path:
-"/cobranca/v3/cobrancas?dataInicial=2026-04-01&dataFinal=2026-06-30&itensPorPagina=500",
+"/cobranca/v3/cobrancas?dataInicial=2026-04-01
+dataFinal=2026-12-31&itensPorPagina=500",
 
   method: "GET",
 
@@ -758,7 +759,8 @@ const options = {
   port: 443,
 
   path:
-"/cobranca/v3/cobrancas?dataInicial=2026-04-01&dataFinal=2026-06-30&itensPorPagina=500",
+"/cobranca/v3/cobrancas?dataInicial=2026-04-01
+dataFinal=2026-12-31&itensPorPagina=500",
 
   method: "GET",
 
@@ -959,7 +961,8 @@ app.get("/sincronizar-boletos", async (req, res) => {
       port: 443,
 
       path:
-"/cobranca/v3/cobrancas?dataInicial=2026-04-01&dataFinal=2026-06-30&itensPorPagina=500",
+"/cobranca/v3/cobrancas?dataInicial=2026-04-01
+dataFinal=2026-12-31&itensPorPagina=500",
 
       method: "GET",
 
