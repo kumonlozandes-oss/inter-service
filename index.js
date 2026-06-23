@@ -1007,18 +1007,12 @@ app.get("/sincronizar-boletos", async (req, res) => {
 
       });
 
-    const recebidos =
-  (resultado.cobrancas || [])
-  .filter(
-    x =>
-      x.cobranca &&
-      x.cobranca.situacao ===
-      "RECEBIDO"
-  );
+    const cobrancas =
+(resultado.cobrancas || []);
 
 const retorno = [];
 
-for (const item of recebidos) {
+for (const item of cobrancas) {
 
   const codigo =
     item.cobranca.codigoSolicitacao;
@@ -1108,6 +1102,9 @@ for (const item of recebidos) {
   seu_numero:
     detalhe.cobranca?.seuNumero,
 
+  status_inter:
+    detalhe.cobranca?.situacao || null,
+
   nosso_numero:
     detalhe.boleto?.nossoNumero || null,
 
@@ -1175,7 +1172,7 @@ if (
         registro.pix_copia_cola || null,
 
       status_inter:
-        "RECEBIDO"
+  registro.status_inter
 
     })
     .eq(
@@ -1207,7 +1204,8 @@ await supabase
     linha_digitavel: registro.linha_digitavel || null,
     codigo_barras: registro.codigo_barras || null,
     pix_copia_cola: registro.pix_copia_cola || null,
-    status_inter: "RECEBIDO",
+    status_inter:
+  registro.status_inter,
 
     ultima_sincronizacao: new Date().toISOString()
 
@@ -1374,7 +1372,9 @@ app.get("/gerar-mensalidades", async (req, res) => {
           item.vencimento,
 
         STATUS:
-          "PAGO",
+  item.status_inter === "RECEBIDO"
+    ? "PAGO"
+    : "ABERTO",
 
         DATA_PAGAMENTO:
           item.ultima_sincronizacao,
