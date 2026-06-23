@@ -1131,6 +1131,29 @@ for (const item of recebidos) {
 for (const registro of retorno) {
 
   if (!registro.cpf) continue;
+  const existente =
+  await supabase
+    .from("financeiro_responsaveis")
+    .select("id")
+    .eq(
+      "ultimo_codigo_inter",
+      registro.codigo
+    )
+    .limit(1);
+
+if (
+  existente.data &&
+  existente.data.length > 0
+) {
+
+  console.log(
+    "BOLETO JÁ EXISTE:",
+    registro.codigo
+  );
+
+  continue;
+
+}
 
   const resultadoInsert =
   await supabase
