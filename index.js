@@ -1018,7 +1018,7 @@ app.get("/sincronizar-boletos", async (req, res) => {
 
 const retorno = [];
 
-for (const item of recebidos.slice(0,5)) {
+for (const item of recebidos) {
 
   const codigo =
     item.cobranca.codigoSolicitacao;
