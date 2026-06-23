@@ -172,12 +172,11 @@ const resultado =
           );
 
           resp.on(
-            "end",
-            () => resolve({
-              status: resp.statusCode,
-              body: data
-            })
-          );
+  "end",
+  () => resolve(
+    JSON.parse(data)
+  )
+);
 
         }
       );
