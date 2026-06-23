@@ -849,10 +849,21 @@ try {
         );
 
       const detalhe =
-        await consulta.json();
+  await consulta.json();
 
-      const c =
-        detalhe.cobranca || {};
+if (!detalhe.cobranca) {
+
+  lista.push({
+    erro: true,
+    codigo: codigo,
+    retorno: detalhe
+  });
+
+  continue;
+
+}
+
+const c = detalhe.cobranca;
 
       const desconto =
         c.descontos &&
