@@ -1157,19 +1157,42 @@ if (
 
   const resultadoInsert =
   await supabase
-    .from("financeiro_responsaveis")
-    .insert({
+  .from("financeiro_responsaveis")
+  .insert({
 
-      cpf: registro.cpf,
-      nome_responsavel: registro.nome,
-      valor_mensalidade: registro.valor_nominal,
-      valor_desconto: registro.desconto,
-      valor_com_desconto: registro.valor_recebido,
-      ultimo_codigo_inter: registro.codigo,
-      ultimo_seu_numero: registro.seu_numero,
-      ultima_sincronizacao: new Date().toISOString()
+    cpf: registro.cpf,
 
-    });
+    nome_responsavel:
+      registro.nome,
+
+    valor_mensalidade:
+      registro.valor_nominal,
+
+    valor_desconto:
+      registro.desconto,
+
+    valor_com_desconto:
+      registro.valor_recebido,
+
+    ultimo_codigo_inter:
+      registro.codigo,
+
+    ultimo_seu_numero:
+      registro.seu_numero,
+
+    vencimento:
+      registro.vencimento,
+
+    status_inter:
+      "RECEBIDO",
+
+    valor_recebido:
+      registro.valor_recebido,
+
+    ultima_sincronizacao:
+      new Date().toISOString()
+
+  });
 
 console.log(
   "INSERT:",
