@@ -1279,4 +1279,156 @@ try {
 
 });
 
+app.get("/gerar-mensalidades", async (req, res) => {
+
+  try {
+
+    const { data: boletos, error } =
+      await supabase
+        .from("financeiro_responsaveis")
+        .select("*");
+
+    if (error) throw error;
+
+    let criadas = 0;
+    let ignoradas = 0;
+
+    for (const item of boletos) {
+
+      const existente =
+        await supabase
+          .from("mensalidades")
+          .select("ID_MENSALIDADE")
+          .eq(
+            "id_inter",
+            item.ultimo_codigo_inter
+          )
+          .limit(1);
+
+      if (
+        existente.data &&
+        existente.data.length > 0
+      ) {
+
+        ignoradas++;
+        continue;
+
+      }
+
+      const valorOriginal =
+        Number(
+          item.valor_mensalidade || 0
+        );
+
+      const desconto =
+        Number(
+          item.valor_desconto || 0
+        );
+
+      const valorFinal =
+        valorOriginal - desconto;
+
+      const mensalidade = {
+
+        ID_MENSALIDADE:
+          crypto.randomUUID(),
+
+        ID_ALUNO:
+          item.guid_aluno,
+
+        ALUNO:
+          item.nome_responsavel,
+
+        CURSO:
+          "",
+
+        TIPO:
+          "MENSALIDADE",
+
+        VALOR:
+          valorOriginal,
+
+        COMPETENCIA:
+          item.ultimo_seu_numero,
+
+        VENCIMENTO:
+          item.vencimento,
+
+        STATUS:
+          "PAGO",
+
+        DATA_PAGAMENTO:
+          item.ultima_sincronizacao,
+
+        FORMA_PAGAMENTO:
+          "BOLETO",
+
+        responsavel:
+          item.nome_responsavel,
+
+        cpf_responsavel:
+          item.cpf,
+
+        origem:
+          "INTER",
+
+        tipo_cobranca:
+          "BOLETO",
+
+        valor_original:
+          valorOriginal,
+
+        valor_desconto:
+          desconto,
+
+        valor_final:
+          valorFinal,
+
+        seu_numero:
+          item.ultimo_seu_numero,
+
+        id_inter:
+          item.ultimo_codigo_inter,
+
+        status_inter:
+          item.status_inter,
+
+        data_vencimento:
+          item.vencimento
+
+      };
+
+      const insert =
+        await supabase
+          .from("mensalidades")
+          .insert(mensalidade);
+
+      if (!insert.error) {
+        criadas++;
+      }
+
+    }
+
+    res.json({
+
+      sucesso: true,
+
+      mensalidades_criadas:
+        criadas,
+
+      mensalidades_ignoradas:
+        ignoradas
+
+    });
+
+  } catch (e) {
+
+    res.status(500).json({
+      erro: String(e)
+    });
+
+  }
+
+});
+
 app.listen(PORT);
