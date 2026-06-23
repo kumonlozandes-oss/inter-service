@@ -1155,10 +1155,33 @@ if (
   existente.data.length > 0
 ) {
 
-  console.log(
-    "BOLETO JÁ EXISTE:",
-    registro.codigo
-  );
+  await supabase
+    .from("financeiro_responsaveis")
+    .update({
+
+      data_vencimento:
+        registro.vencimento || null,
+
+      nosso_numero:
+        registro.nosso_numero || null,
+
+      linha_digitavel:
+        registro.linha_digitavel || null,
+
+      codigo_barras:
+        registro.codigo_barras || null,
+
+      pix_copia_cola:
+        registro.pix_copia_cola || null,
+
+      status_inter:
+        "RECEBIDO"
+
+    })
+    .eq(
+      "ultimo_codigo_inter",
+      registro.codigo
+    );
 
   continue;
 
