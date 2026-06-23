@@ -671,10 +671,10 @@ for (const item of resultado.cobrancas || []) {
   const c = item.cobranca || {};
 
   const desconto =
-    c.descontos &&
-    c.descontos.length > 0
-      ? Number(c.descontos[0].valor)
-      : 0;
+  item.descontos &&
+  item.descontos.length > 0
+    ? Number(item.descontos[0].valor)
+    : 0;
 
   lista.push({
 
