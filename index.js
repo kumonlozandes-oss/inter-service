@@ -1372,7 +1372,7 @@ app.get("/gerar-mensalidades", async (req, res) => {
           item.ultimo_seu_numero,
 
         VENCIMENTO:
-          item.vencimento,
+  item.data_vencimento,
 
         STATUS:
   item.status_inter === "RECEBIDO"
@@ -1415,8 +1415,8 @@ app.get("/gerar-mensalidades", async (req, res) => {
         status_inter:
           item.status_inter,
 
-        data_vencimento:
-          item.vencimento
+        VENCIMENTO:
+  item.data_vencimento,
 
       };
 
