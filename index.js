@@ -819,4 +819,93 @@ res.status(500).json({
 
 });
 
+app.get("/descontos-confirmados", async (req, res) => {
+
+try {
+
+  const historico =
+    await fetch(
+      "https://inter-service.onrender.com/historico-maio-junho"
+    );
+
+  const cobrancas =
+    await historico.json();
+
+  const lista = [];
+
+  for (const item of cobrancas) {
+
+    const codigo =
+      item.cobranca?.codigoSolicitacao;
+
+    if (!codigo) continue;
+
+    try {
+
+      const consulta =
+        await fetch(
+          "https://inter-service.onrender.com/consultar/" +
+          codigo
+        );
+
+      const detalhe =
+        await consulta.json();
+
+      const c =
+        detalhe.cobranca || {};
+
+      const desconto =
+        c.descontos &&
+        c.descontos.length > 0
+          ? Number(c.descontos[0].valor)
+          : 0;
+
+      lista.push({
+
+        cpf:
+          c.pagador?.cpfCnpj || "",
+
+        nome:
+          c.pagador?.nome || "",
+
+        valor_nominal:
+          Number(c.valorNominal || 0),
+
+        desconto:
+          desconto,
+
+        vencimento:
+          c.dataVencimento || "",
+
+        seu_numero:
+          c.seuNumero || "",
+
+        codigo:
+          codigo
+
+      });
+
+    } catch (erroInterno) {
+
+      console.log(
+        "Erro ao consultar:",
+        codigo
+      );
+
+    }
+
+  }
+
+  res.json(lista);
+
+} catch (e) {
+
+  res.status(500).json({
+    erro: String(e)
+  });
+
+}
+
+});
+
 app.listen(PORT);
