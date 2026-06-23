@@ -1128,7 +1128,46 @@ for (const item of recebidos.slice(0,5)) {
 
 }
 
-res.json(retorno);
+for (const registro of retorno) {
+
+  if (!registro.cpf) continue;
+
+  await supabase
+    .from("financeiro_responsaveis")
+    .insert({
+
+      cpf:
+        registro.cpf,
+
+      nome_responsavel:
+        registro.nome,
+
+      valor_mensalidade:
+        registro.valor_nominal,
+
+      valor_desconto:
+        registro.desconto,
+
+      valor_com_desconto:
+        registro.valor_recebido,
+
+      ultimo_codigo_inter:
+        registro.codigo,
+
+      ultimo_seu_numero:
+        registro.seu_numero,
+
+      ultima_sincronizacao:
+        new Date().toISOString()
+
+    });
+
+}
+
+res.json({
+  sucesso: true,
+  inseridos: retorno.length
+});
 
   } catch (e) {
 
