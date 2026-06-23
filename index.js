@@ -1086,35 +1086,44 @@ for (const item of recebidos) {
 
     retorno.push({
 
-      cpf:
-        detalhe.cobranca?.pagador?.cpfCnpj,
+  cpf: detalhe.cobranca?.pagador?.cpfCnpj,
+  nome: detalhe.cobranca?.pagador?.nome,
 
-      nome:
-        detalhe.cobranca?.pagador?.nome,
+  valor_nominal:
+    Number(
+      detalhe.cobranca?.valorNominal || 0
+    ),
 
-      valor_nominal:
-        Number(
-          detalhe.cobranca?.valorNominal || 0
-        ),
+  valor_recebido:
+    Number(
+      detalhe.cobranca?.valorTotalRecebido || 0
+    ),
 
-      valor_recebido:
-        Number(
-          detalhe.cobranca?.valorTotalRecebido || 0
-        ),
+  desconto:
+    detalhe.cobranca?.descontos?.[0]?.valor || 0,
 
-      desconto:
-        detalhe.cobranca?.descontos?.[0]?.valor || 0,
+  vencimento:
+    detalhe.cobranca?.dataVencimento,
 
-      vencimento:
-        detalhe.cobranca?.dataVencimento,
+  seu_numero:
+    detalhe.cobranca?.seuNumero,
 
-      seu_numero:
-        detalhe.cobranca?.seuNumero,
+  nosso_numero:
+    detalhe.boleto?.nossoNumero || null,
 
-      codigo:
-        codigo
+  linha_digitavel:
+    detalhe.boleto?.linhaDigitavel || null,
 
-    });
+  codigo_barras:
+    detalhe.boleto?.codigoBarras || null,
+
+  pix_copia_cola:
+    detalhe.pix?.pixCopiaECola || null,
+
+  codigo:
+    codigo
+
+});
 
   } catch (e) {
 
@@ -1156,41 +1165,28 @@ if (
 }
 
   const resultadoInsert =
-  await supabase
+await supabase
   .from("financeiro_responsaveis")
   .insert({
 
     cpf: registro.cpf,
+    nome_responsavel: registro.nome,
 
-    nome_responsavel:
-      registro.nome,
+    valor_mensalidade: registro.valor_nominal,
+    valor_desconto: registro.desconto,
+    valor_com_desconto: registro.valor_recebido,
 
-    valor_mensalidade:
-      registro.valor_nominal,
+    ultimo_codigo_inter: registro.codigo,
+    ultimo_seu_numero: registro.seu_numero,
 
-    valor_desconto:
-      registro.desconto,
+    data_vencimento: registro.vencimento || null,
+    nosso_numero: registro.nosso_numero || null,
+    linha_digitavel: registro.linha_digitavel || null,
+    codigo_barras: registro.codigo_barras || null,
+    pix_copia_cola: registro.pix_copia_cola || null,
+    status_inter: "RECEBIDO",
 
-    valor_com_desconto:
-      registro.valor_recebido,
-
-    ultimo_codigo_inter:
-      registro.codigo,
-
-    ultimo_seu_numero:
-      registro.seu_numero,
-
-    vencimento:
-      registro.vencimento,
-
-    status_inter:
-      "RECEBIDO",
-
-    valor_recebido:
-      registro.valor_recebido,
-
-    ultima_sincronizacao:
-      new Date().toISOString()
+    ultima_sincronizacao: new Date().toISOString()
 
   });
 
