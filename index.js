@@ -3,6 +3,13 @@ const fs = require("fs");
 const https = require("https");
 const querystring = require("querystring");
 
+const { createClient } = require("@supabase/supabase-js");
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 const app = express();
 
 app.use(express.json());
