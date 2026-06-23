@@ -619,7 +619,7 @@ const options = {
   port: 443,
 
   path:
-"/cobranca/v3/cobrancas?dataInicial=2026-05-01&dataFinal=2026-06-30&itensPorPagina=500",
+"/cobranca/v3/cobrancas?dataInicial=2026-04-01&dataFinal=2026-06-30&itensPorPagina=500,
 
   method: "GET",
 
