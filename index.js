@@ -1193,4 +1193,67 @@ res.json({
 
 });
 
+app.get("/vincular-responsaveis", async (req, res) => {
+
+try {
+
+  const { data: financeiros } =
+    await supabase
+      .from("financeiro_responsaveis")
+      .select("*");
+
+  const { data: ksis } =
+    await supabase
+      .from("ksis_responsaveis")
+      .select("*");
+
+  let atualizados = 0;
+
+  for (const fin of financeiros) {
+
+    const cpfFinanceiro =
+      String(fin.cpf || "")
+        .replace(/\D/g, "");
+
+    const encontrado =
+      ksis.find(r =>
+        String(r.CPF || "")
+          .replace(/\D/g, "") === cpfFinanceiro
+      );
+
+    if (!encontrado)
+      continue;
+
+    await supabase
+      .from("financeiro_responsaveis")
+      .update({
+
+        guid_responsavel:
+          encontrado.GUID_RESPONSAVEL,
+
+        guid_aluno:
+          encontrado.GUID_ALUNO
+
+      })
+      .eq("id", fin.id);
+
+    atualizados++;
+
+  }
+
+  res.json({
+    sucesso: true,
+    atualizados
+  });
+
+} catch (e) {
+
+  res.status(500).json({
+    erro: String(e)
+  });
+
+}
+
+});
+
 app.listen(PORT);
