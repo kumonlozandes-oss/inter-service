@@ -1008,19 +1008,127 @@ app.get("/sincronizar-boletos", async (req, res) => {
       });
 
     const recebidos =
-      (resultado.cobrancas || [])
-      .filter(
-        x =>
-          x.cobranca &&
-          x.cobranca.situacao ===
-          "RECEBIDO"
+  (resultado.cobrancas || [])
+  .filter(
+    x =>
+      x.cobranca &&
+      x.cobranca.situacao ===
+      "RECEBIDO"
+  );
+
+const retorno = [];
+
+for (const item of recebidos.slice(0,5)) {
+
+  const codigo =
+    item.cobranca.codigoSolicitacao;
+
+  try {
+
+    const detalheOptions = {
+
+      hostname:
+        "cdpj.partners.bancointer.com.br",
+
+      port: 443,
+
+      path:
+        "/cobranca/v3/cobrancas/" +
+        codigo,
+
+      method: "GET",
+
+      cert,
+      key,
+
+      headers: {
+        Authorization:
+          "Bearer " + token
+      }
+
+    };
+
+    const detalhe =
+      await new Promise(
+        (resolve, reject) => {
+
+          const reqInter =
+            https.request(
+              detalheOptions,
+              resp => {
+
+                let data = "";
+
+                resp.on(
+                  "data",
+                  chunk => data += chunk
+                );
+
+                resp.on(
+                  "end",
+                  () => resolve(
+                    JSON.parse(data)
+                  )
+                );
+
+              }
+            );
+
+          reqInter.on(
+            "error",
+            reject
+          );
+
+          reqInter.end();
+
+        }
       );
 
-    res.json({
-      total: recebidos.length,
-      exemplo:
-        recebidos[0]
+    retorno.push({
+
+      cpf:
+        detalhe.cobranca?.pagador?.cpfCnpj,
+
+      nome:
+        detalhe.cobranca?.pagador?.nome,
+
+      valor_nominal:
+        Number(
+          detalhe.cobranca?.valorNominal || 0
+        ),
+
+      valor_recebido:
+        Number(
+          detalhe.cobranca?.valorTotalRecebido || 0
+        ),
+
+      desconto:
+        detalhe.cobranca?.descontos?.[0]?.valor || 0,
+
+      vencimento:
+        detalhe.cobranca?.dataVencimento,
+
+      seu_numero:
+        detalhe.cobranca?.seuNumero,
+
+      codigo:
+        codigo
+
     });
+
+  } catch (e) {
+
+    retorno.push({
+      erro: true,
+      codigo: codigo,
+      mensagem: String(e)
+    });
+
+  }
+
+}
+
+res.json(retorno);
 
   } catch (e) {
 
