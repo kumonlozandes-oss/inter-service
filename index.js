@@ -142,7 +142,7 @@ const options = {
   port: 443,
 
   path:
-    "/cobranca/v3/cobrancas?dataInicial=2026-01-01&dataFinal=2026-12-31",
+"/cobranca/v3/cobrancas?dataInicial=2026-05-01&dataFinal=2026-06-30",
 
   method: "GET",
 
