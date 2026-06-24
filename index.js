@@ -1576,4 +1576,101 @@ app.get("/sincronizar-recebimentos", async (req, res) => {
 
 });
 
+app.get("/sincronizar-movimentacoes", async (req, res) => {
+
+  try {
+
+    const { data: recebimentos } =
+      await supabase
+        .from("recebimentos")
+        .select("*");
+
+    let inseridos = 0;
+
+    for (const item of recebimentos || []) {
+
+      const existe =
+        await supabase
+          .from("movimentacoes")
+          .select("ID_MOV")
+          .eq(
+            "ID_ORIGEM",
+            item.ID_RECEBIMENTO
+          )
+          .limit(1);
+
+      if (
+        existe.data &&
+        existe.data.length > 0
+      ) {
+        continue;
+      }
+
+      await supabase
+        .from("movimentacoes")
+        .insert({
+
+          ID_MOV:
+            crypto.randomUUID(),
+
+          DATA:
+            item.DATA_RECEBIMENTO,
+
+          DATA_VENCIMENTO:
+            item.DATA_RECEBIMENTO,
+
+          TIPO:
+            "RECEITA",
+
+          CATEGORIA:
+            "MENSALIDADE",
+
+          DESCRICAO:
+            item.ALUNO,
+
+          VALOR:
+            Number(item.VALOR || 0),
+
+          FORMA_PAGAMENTO:
+            item.FORMA_PAGAMENTO,
+
+          ORIGEM:
+            "INTER",
+
+          STATUS:
+            "CONFIRMADO",
+
+          CENTRO_CUSTO:
+            "ESCOLA",
+
+          ID_ORIGEM:
+            item.ID_RECEBIMENTO,
+
+          DATA_PAGAMENTO:
+            item.DATA_RECEBIMENTO,
+
+          AMBIENTE_TESTE:
+            null
+
+        });
+
+      inseridos++;
+
+    }
+
+    res.json({
+      sucesso: true,
+      inseridos
+    });
+
+  } catch (e) {
+
+    res.status(500).json({
+      erro: String(e)
+    });
+
+  }
+
+});
+
 app.listen(PORT);
