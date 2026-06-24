@@ -973,42 +973,85 @@ app.get("/sincronizar-boletos", async (req, res) => {
 
     };
 
-    const resultado =
-      await new Promise((resolve, reject) => {
+    let pagina = 0;
+let totalPaginas = 1;
 
-        const reqInter =
-          https.request(
-            options,
-            resp => {
+const cobrancas = [];
 
-              let data = "";
+while (pagina < totalPaginas) {
 
-              resp.on(
-                "data",
-                chunk => data += chunk
-              );
+  const optionsPagina = {
 
-              resp.on(
-                "end",
-                () => resolve(
-                  JSON.parse(data)
-                )
-              );
+    hostname:
+      "cdpj.partners.bancointer.com.br",
 
-            }
-          );
+    port: 443,
 
-        reqInter.on(
-          "error",
-          reject
+    path:
+      "/cobranca/v3/cobrancas?dataInicial=2026-04-01&dataFinal=2026-12-31&itensPorPagina=100&paginaAtual=" +
+      pagina,
+
+    method: "GET",
+
+    cert,
+    key,
+
+    headers: {
+      Authorization:
+        "Bearer " + token
+    }
+
+  };
+
+  const resultado =
+    await new Promise((resolve, reject) => {
+
+      const reqInter =
+        https.request(
+          optionsPagina,
+          resp => {
+
+            let data = "";
+
+            resp.on(
+              "data",
+              chunk => data += chunk
+            );
+
+            resp.on(
+              "end",
+              () => resolve(
+                JSON.parse(data)
+              )
+            );
+
+          }
         );
 
-        reqInter.end();
+      reqInter.on(
+        "error",
+        reject
+      );
 
-      });
+      reqInter.end();
 
-    const cobrancas =
-(resultado.cobrancas || []);
+    });
+
+  totalPaginas =
+    resultado.totalPaginas || 1;
+
+  cobrancas.push(
+    ...(resultado.cobrancas || [])
+  );
+
+  pagina++;
+
+}
+
+console.log(
+  "TOTAL COBRANCAS:",
+  cobrancas.length
+);
 
 const retorno = [];
 
