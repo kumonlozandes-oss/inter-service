@@ -1218,6 +1218,21 @@ console.log(
 
 }
 
+    console.log(
+  "TOTAL COBRANCAS:",
+  resultado.totalElementos
+);
+
+console.log(
+  "TOTAL PAGINAS:",
+  resultado.totalPaginas
+);
+
+console.log(
+  "ELEMENTOS RECEBIDOS:",
+  resultado.numeroDeElementos
+);
+
 res.json({
   sucesso: true,
   inseridos: retorno.length
