@@ -1494,4 +1494,86 @@ app.get("/gerar-mensalidades", async (req, res) => {
 
 });
 
+app.get("/sincronizar-recebimentos", async (req, res) => {
+
+  try {
+
+    const { data: recebidos } =
+      await supabase
+        .from("financeiro_responsaveis")
+        .select("*")
+        .eq("status_inter", "RECEBIDO");
+
+    let inseridos = 0;
+
+    for (const item of recebidos || []) {
+
+      const existe =
+        await supabase
+          .from("recebimentos")
+          .select("ID_RECEBIMENTO")
+          .eq(
+            "ID_MENSALIDADE",
+            item.ultimo_codigo_inter
+          )
+          .limit(1);
+
+      if (
+        existe.data &&
+        existe.data.length > 0
+      ) {
+        continue;
+      }
+
+      await supabase
+        .from("recebimentos")
+        .insert({
+
+          ID_RECEBIMENTO:
+            crypto.randomUUID(),
+
+          ID_MENSALIDADE:
+            item.ultimo_codigo_inter,
+
+          ALUNO:
+            item.nome_responsavel,
+
+          VALOR:
+            String(
+              item.valor_mensalidade || 0
+            ),
+
+          DATA_RECEBIMENTO:
+            new Date().toISOString(),
+
+          FORMA_PAGAMENTO:
+            "BOLETO",
+
+          OBSERVACAO:
+            item.ultimo_seu_numero,
+
+          STATUS:
+            "PAGO"
+
+        });
+
+      inseridos++;
+
+    }
+
+    res.json({
+      sucesso: true,
+      inseridos
+    });
+
+  } catch (e) {
+
+    res.status(500).json({
+      erro: String(e)
+    });
+
+  }
+
+});
+
 app.listen(PORT);
