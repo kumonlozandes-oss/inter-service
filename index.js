@@ -30,6 +30,14 @@ status: "ok"
 });
 });
 
+/**
+ * ==========================================================
+ * INFRAESTRUTURA
+ * Obtém o token OAuth do Banco Inter.
+ * Utilizado pelas demais rotas.
+ * ==========================================================
+ */
+
 app.get("/oauth", async (req, res) => {
 
 try {
@@ -217,6 +225,14 @@ res.status(500).json({
 
 });
 
+/**
+ * ==========================================================
+ * OPERAÇÃO DIÁRIA
+ * Emite um novo boleto no Banco Inter.
+ * Atualiza financeiro_titulos e mensalidades.
+ * ==========================================================
+ */
+
 app.post("/gerar-boleto", async (req, res) => {
 
 try {
@@ -393,6 +409,13 @@ res.status(500).json({
 
 });
 
+/**
+ * ==========================================================
+ * OPERAÇÃO DIÁRIA
+ * Consulta um boleto no Banco Inter.
+ * ==========================================================
+ */
+
 app.get("/consultar/:codigo", async (req, res) => {
 
 try {
@@ -487,6 +510,13 @@ res.status(500).json({
 }
 
 });
+
+/**
+ * ==========================================================
+ * OPERAÇÃO DIÁRIA
+ * Cancela um boleto no Banco Inter.
+ * ==========================================================
+ */
 
 app.get("/cancelar/:codigo", async (req, res) => {
 
