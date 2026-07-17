@@ -934,6 +934,14 @@ const c = detalhe.cobranca;
 
 });
 
+/**
+ * ==========================================================
+ * IMPLANTAÇÃO FINANCEIRA
+ * Importa todos os boletos existentes no Banco Inter.
+ * Utilizada apenas na implantação de novas unidades.
+ * ==========================================================
+ */
+
 app.get("/sincronizar-boletos", async (req, res) => {
 
   try {
@@ -1285,6 +1293,14 @@ res.json({
 
 });
 
+/**
+ * ==========================================================
+ * IMPLANTAÇÃO FINANCEIRA
+ * Vincula os responsáveis importados aos alunos do ERP.
+ * Utilizada apenas na implantação de novas unidades.
+ * ==========================================================
+ */
+
 app.get("/vincular-responsaveis", async (req, res) => {
 
 try {
@@ -1511,6 +1527,14 @@ app.get("/gerar-mensalidades", async (req, res) => {
 
 });
 
+/**
+ * ==========================================================
+ * IMPLANTAÇÃO FINANCEIRA
+ * Importa recebimentos históricos existentes.
+ * Utilizada apenas na implantação de novas unidades.
+ * ==========================================================
+ */
+
 app.get("/sincronizar-recebimentos", async (req, res) => {
 
   try {
@@ -1592,6 +1616,14 @@ app.get("/sincronizar-recebimentos", async (req, res) => {
   }
 
 });
+
+/**
+ * ==========================================================
+ * IMPLANTAÇÃO FINANCEIRA
+ * Gera movimentações financeiras históricas.
+ * Utilizada apenas na implantação de novas unidades.
+ * ==========================================================
+ */
 
 app.get("/sincronizar-movimentacoes", async (req, res) => {
 
