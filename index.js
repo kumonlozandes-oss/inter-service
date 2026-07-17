@@ -1348,6 +1348,15 @@ try {
 
 });
 
+/**
+ * ==========================================================
+ * IMPLANTAÇÃO FINANCEIRA
+ * Gera mensalidades a partir da tabela financeiro_responsaveis.
+ * Utilizada apenas na implantação de novas unidades.
+ * Não faz parte da operação diária.
+ * ==========================================================
+ */
+
 app.get("/gerar-mensalidades", async (req, res) => {
 
   try {
