@@ -5,6 +5,10 @@ const querystring = require("querystring");
 
 const { createClient } = require("@supabase/supabase-js");
 
+const financeiroRoutes = require("./routes/financeiro");
+const interRoutes = require("./routes/inter");
+const webhookRoutes = require("./routes/webhook");
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -15,6 +19,10 @@ const app = express();
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
+
+app.use("/financeiro", financeiroRoutes);
+app.use("/inter", interRoutes);
+app.use("/webhook", webhookRoutes);
 
 app.get("/", (req, res) => {
 res.json({
