@@ -402,7 +402,59 @@ const resultado =
 
   });
 
-res.json(resultado);
+let bodyInter = {};
+
+try {
+
+  bodyInter = resultado.body
+    ? JSON.parse(resultado.body)
+    : {};
+
+} catch (e) {
+
+  bodyInter = {
+
+    resposta_original: resultado.body
+
+  };
+
+}
+
+return res.json({
+
+  sucesso: resultado.status >= 200 && resultado.status < 300,
+
+  status_http: resultado.status,
+
+  id_mensalidade: req.body.id_mensalidade,
+
+  guid_aluno: req.body.guid_aluno,
+
+  guid_responsavel: req.body.guid_responsavel,
+
+  id_inter: bodyInter.codigoSolicitacao,
+
+  nosso_numero: bodyInter.nossoNumero,
+
+  seu_numero: bodyInter.seuNumero,
+
+  linha_digitavel: bodyInter.linhaDigitavel,
+
+  codigo_barras: bodyInter.codigoBarras,
+
+  codigo_pix: bodyInter.pix?.txid,
+
+  qr_code_pix: bodyInter.pix?.imagemQrcode,
+
+  pix_copia_cola: bodyInter.pix?.pixCopiaECola,
+
+  url_pdf_boleto: bodyInter.pdf,
+
+  status: bodyInter.situacao,
+
+  resposta_inter: bodyInter
+
+});
 
 } catch (e) {
 
