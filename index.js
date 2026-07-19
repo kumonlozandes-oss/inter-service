@@ -243,6 +243,8 @@ app.post("/gerar-boleto", async (req, res) => {
 
 try {
 
+  console.log(req.body);
+
 const oauth =
   await fetch(
     "https://inter-service.onrender.com/oauth"
