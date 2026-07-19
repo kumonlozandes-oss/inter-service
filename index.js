@@ -434,25 +434,35 @@ return res.json({
 
   guid_responsavel: req.body.guid_responsavel,
 
-  id_inter: bodyInter.codigoSolicitacao,
+  id_inter:
+  bodyInter.cobranca?.codigoSolicitacao,
 
-  nosso_numero: bodyInter.nossoNumero,
+nosso_numero:
+  bodyInter.boleto?.nossoNumero,
 
-  seu_numero: bodyInter.seuNumero,
+seu_numero:
+  bodyInter.cobranca?.seuNumero,
 
-  linha_digitavel: bodyInter.linhaDigitavel,
+linha_digitavel:
+  bodyInter.boleto?.linhaDigitavel,
 
-  codigo_barras: bodyInter.codigoBarras,
+codigo_barras:
+  bodyInter.boleto?.codigoBarras,
 
-  codigo_pix: bodyInter.pix?.txid,
+codigo_pix:
+  bodyInter.pix?.txid,
 
-  qr_code_pix: bodyInter.pix?.imagemQrcode,
+qr_code_pix:
+  bodyInter.pix?.imagemQrcode || null,
 
-  pix_copia_cola: bodyInter.pix?.pixCopiaECola,
+pix_copia_cola:
+  bodyInter.pix?.pixCopiaECola,
 
-  url_pdf_boleto: bodyInter.pdf,
+url_pdf_boleto:
+  bodyInter.pdf || null,
 
-  status: bodyInter.situacao,
+status:
+  bodyInter.cobranca?.situacao,
 
   resposta_inter: bodyInter
 
