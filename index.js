@@ -422,6 +422,47 @@ try {
 
 }
 
+const codigoSolicitacao = bodyInter.codigoSolicitacao;
+
+const detalhe = await new Promise((resolve, reject) => {
+
+  const reqConsulta = https.request({
+
+    hostname: "cdpj.partners.bancointer.com.br",
+    port: 443,
+    path: "/cobranca/v3/cobrancas/" + codigoSolicitacao,
+    method: "GET",
+    cert,
+    key,
+
+    headers: {
+      Authorization: "Bearer " + token
+    }
+
+  }, resp => {
+
+    let data = "";
+
+    resp.on("data", chunk => data += chunk);
+
+    resp.on("end", () => {
+
+      try {
+        resolve(JSON.parse(data));
+      } catch(e) {
+        reject(e);
+      }
+
+    });
+
+  });
+
+  reqConsulta.on("error", reject);
+
+  reqConsulta.end();
+
+});
+
   console.log("STATUS:", resultado.status);
 
 console.log(
@@ -441,37 +482,27 @@ return res.json({
 
   guid_responsavel: req.body.guid_responsavel,
 
-  id_inter:
-  bodyInter.cobranca?.codigoSolicitacao,
+  id_inter: detalhe.cobranca?.codigoSolicitacao,
 
-nosso_numero:
-  bodyInter.boleto?.nossoNumero,
+  nosso_numero: detalhe.boleto?.nossoNumero,
 
-seu_numero:
-  bodyInter.cobranca?.seuNumero,
+  seu_numero: detalhe.cobranca?.seuNumero,
 
-linha_digitavel:
-  bodyInter.boleto?.linhaDigitavel,
+  linha_digitavel: detalhe.boleto?.linhaDigitavel,
 
-codigo_barras:
-  bodyInter.boleto?.codigoBarras,
+  codigo_barras: detalhe.boleto?.codigoBarras,
 
-codigo_pix:
-  bodyInter.pix?.txid,
+  codigo_pix: detalhe.pix?.txid,
 
-qr_code_pix:
-  bodyInter.pix?.imagemQrcode || null,
+  qr_code_pix: detalhe.pix?.imagemQrcode,
 
-pix_copia_cola:
-  bodyInter.pix?.pixCopiaECola,
+  pix_copia_cola: detalhe.pix?.pixCopiaECola,
 
-url_pdf_boleto:
-  bodyInter.pdf || null,
+  url_pdf_boleto: detalhe.pdf,
 
-status:
-  bodyInter.cobranca?.situacao,
+  status: detalhe.cobranca?.situacao,
 
-  resposta_inter: bodyInter
+  resposta_inter: detalhe
 
 });
 
