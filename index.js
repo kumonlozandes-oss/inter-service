@@ -569,6 +569,85 @@ res.status(500).json({
 
 });
 
+app.get("/boletos", async (req, res) => {
+
+try {
+
+const oauth =
+  await fetch(
+    "https://inter-service.onrender.com/oauth"
+  );
+
+const tokenJson =
+  await oauth.json();
+
+const token =
+  JSON.parse(
+    tokenJson.body
+  ).access_token;
+
+const cert = fs.readFileSync(
+  "/etc/secrets/inter-certificado.crt"
+);
+
+const key = fs.readFileSync(
+  "/etc/secrets/inter-chave.key"
+);
+
+const options = {
+
+  hostname:
+    "cdpj.partners.bancointer.com.br",
+
+  port: 443,
+
+path:
+"/cobranca/v3/cobrancas?dataInicial=2026-01-01&dataFinal=2026-12-31&itensPorPagina=500",
+  method:"GET",
+
+  cert,
+  key,
+
+  headers:{
+    Authorization:"Bearer "+token
+  }
+
+};
+
+const resultado =
+await new Promise((resolve,reject)=>{
+
+const reqInter =
+https.request(options,resp=>{
+
+let data="";
+
+resp.on("data",c=>data+=c);
+
+resp.on("end",()=>resolve(JSON.parse(data)));
+
+});
+
+reqInter.on("error",reject);
+
+reqInter.end();
+
+});
+
+res.json(resultado);
+
+}catch(e){
+
+res.status(500).json({
+
+erro:String(e)
+
+});
+
+}
+
+});
+
 /**
  * ==========================================================
  * OPERAÇÃO DIÁRIA
