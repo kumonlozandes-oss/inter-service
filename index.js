@@ -422,6 +422,13 @@ try {
 
 }
 
+  console.log("STATUS:", resultado.status);
+
+console.log(
+  "BODY INTER:",
+  JSON.stringify(bodyInter, null, 2)
+);
+
 return res.json({
 
   sucesso: resultado.status >= 200 && resultado.status < 300,
