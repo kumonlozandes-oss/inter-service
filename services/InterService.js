@@ -78,14 +78,13 @@ class InterService {
     }
 
     async consultarBoleto(codigo) {
-       
+
     const token = await this.obterToken();
 
     const resposta = await axios.get(
 
         this.baseURL +
-        "/cobranca/v3/cobrancas/" +
-        codigo,
+        "/cobranca/v3/cobrancas",
 
         {
 
@@ -95,13 +94,19 @@ class InterService {
 
                 Authorization: "Bearer " + token
 
+            },
+
+            params: {
+
+                idSolicitacao: codigo
+
             }
 
         }
 
     );
 
-return resposta.data;
+    return resposta.data;
 
 }
 
