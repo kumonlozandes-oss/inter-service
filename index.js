@@ -710,6 +710,75 @@ erro:String(e)
 
 });
 
+/**
+ * ==========================================================
+ * SINCRONIZA TODOS OS BOLETOS
+ * ==========================================================
+ */
+app.get("/sincronizar-todos", async (req, res) => {
+
+try {
+
+const { data, error } = await supabase
+
+.from("financeiro_titulos")
+
+.select("id_inter")
+
+.not("id_inter","is",null)
+
+.eq("ativo",true);
+
+if(error) throw error;
+
+let total = 0;
+
+for(const titulo of data){
+
+    try{
+
+        await fetch(
+
+            "https://inter-service.onrender.com/sincronizar/" +
+
+            titulo.id_inter
+
+        );
+
+        total++;
+
+    }catch(e){
+
+        console.log(e);
+
+    }
+
+}
+
+res.json({
+
+    sucesso:true,
+
+    boletos:data.length,
+
+    sincronizados:total
+
+});
+
+}catch(e){
+
+res.status(500).json({
+
+    sucesso:false,
+
+    erro:String(e)
+
+});
+
+}
+
+});
+
 app.get("/boletos", async (req, res) => {
 
 try {
