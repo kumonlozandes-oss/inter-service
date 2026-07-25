@@ -1,7 +1,5 @@
 const supabase = require("./SupabaseRepository");
-
 class FinanceiroRepository {
-
   async listarTitulosPendentes() {
 
     const { data, error } = await supabase
@@ -16,9 +14,7 @@ class FinanceiroRepository {
     if (error) throw error;
 
     return data || [];
-
   }
-
   async atualizarTitulo(id, dados) {
 
     const { error } = await supabase
@@ -27,9 +23,7 @@ class FinanceiroRepository {
       .eq("id", id);
 
     if (error) throw error;
-
   }
-
   async atualizarMensalidade(idMensalidade, dados) {
 
     const { error } = await supabase
@@ -38,11 +32,8 @@ class FinanceiroRepository {
       .eq("ID_MENSALIDADE", idMensalidade);
 
     if (error) throw error;
-
   }
-
 }
-
 async atualizarStatusInter(idInter, cobranca) {
 
     const { error } = await supabase
@@ -55,12 +46,10 @@ async atualizarStatusInter(idInter, cobranca) {
             codigo_barras: cobranca.boleto?.codigoBarras,
             data_pagamento: cobranca.dataPagamento || null,
             ultima_sincronizacao: new Date().toISOString()
-
         })
         .eq("id_inter", idInter);
 
     if (error) throw error;
-
 }
 
 module.exports = new FinanceiroRepository();
