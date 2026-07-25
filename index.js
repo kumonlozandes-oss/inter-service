@@ -702,6 +702,14 @@ if(
 
     reemitir = true;
 
+    console.log(
+
+        "BOLETO PRECISA SER REEMITIDO:",
+
+        idInter
+
+    );
+
 }
 
 res.json({
