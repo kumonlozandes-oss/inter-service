@@ -642,6 +642,96 @@ const retorno = await consulta.json();
 
 const cobranca = retorno.cobranca || {};
 
+const { data: titulo } = await supabase
+
+.from("financeiro_titulos")
+
+.select("*")
+
+.eq("id_inter", idInter)
+
+.limit(1);
+
+if(!titulo || titulo.length === 0){
+
+    const seuNumero = cobranca.seuNumero || "";
+
+    const { data: mensalidade } = await supabase
+
+    .from("mensalidades")
+
+    .select("*")
+
+    .eq("ID_MENSALIDADE", seuNumero)
+
+    .limit(1);
+
+    if(mensalidade && mensalidade.length){
+
+        const m = mensalidade[0];
+
+        const insert = await supabase
+
+        .from("financeiro_titulos")
+
+        .insert({
+
+            id_mensalidade: m.ID_MENSALIDADE,
+
+            guid_aluno: m.guid_aluno,
+
+            guid_responsavel: m.guid_responsavel,
+
+            aluno: m.ALUNO,
+
+            responsavel: m.responsavel,
+
+            cpf_responsavel: m.cpf_responsavel,
+
+            valor_original: m.valor_original,
+
+            valor_desconto: m.valor_desconto,
+
+            valor_final: m.valor_final,
+
+            competencia_mes: m.competencia_mes,
+
+            competencia_ano: m.competencia_ano,
+
+            forma_pagamento: "BOLETO",
+
+            status: cobranca.situacao === "RECEBIDO" ? "PAGO" : cobranca.situacao,
+
+            status_inter: cobranca.situacao,
+
+            id_inter: idInter
+
+        })
+
+        .select()
+
+        .single();
+
+        if(insert.data){
+
+            await supabase
+
+            .from("mensalidades")
+
+            .update({
+
+                id_titulo: insert.data.id
+
+            })
+
+            .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
+
+        }
+
+    }
+
+}
+
 await supabase
 
 .from("financeiro_titulos")
@@ -666,7 +756,7 @@ await supabase
     sincronizado_inter: true
 
 })
-  
+
 .eq("id_inter", idInter);
 
 await supabase
@@ -684,46 +774,19 @@ await supabase
     ultima_sincronizacao: new Date(),
 
     STATUS:
-
         cobranca.situacao === "RECEBIDO"
-
-        ? "PAGO"
-
-        : cobranca.situacao
+            ? "PAGO"
+            : cobranca.situacao
 
 })
 
 .eq("id_inter", idInter);
 
-let reemitir = false;
-
-if(
-
-    cobranca.situacao === "CANCELADO" ||
-
-    cobranca.situacao === "EXPIRADO"
-
-){
-
-    reemitir = true;
-
-    console.log(
-
-        "BOLETO PRECISA SER REEMITIDO:",
-
-        idInter
-
-    );
-
-}
-
 res.json({
 
     sucesso:true,
 
-    situacao:cobranca.situacao,
-
-    reemitir
+    situacao:cobranca.situacao
 
 });
 
