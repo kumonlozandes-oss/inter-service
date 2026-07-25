@@ -46,7 +46,12 @@ router.get("/sincronizar/:codigo", async (req, res) => {
 
             req.params.codigo,
 
-            resultado.cobranca
+            {
+                situacao: resultado.status,
+                dataPagamento: resultado.dataPagamento,
+                valorPago: resultado.valorPago,
+                boleto: resultado.boleto
+            }
 
         );
 
@@ -54,7 +59,7 @@ router.get("/sincronizar/:codigo", async (req, res) => {
 
             sucesso: true,
 
-            situacao: resultado.cobranca.situacao
+            situacao: resultado.status
 
         });
 
