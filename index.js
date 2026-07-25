@@ -741,6 +741,12 @@ let total = 0;
 
 for(const titulo of data){
 
+    if(!titulo.id_inter){
+
+        continue;
+
+    }
+
     try{
 
         await fetch(
