@@ -648,6 +648,11 @@ await supabase
 
 .update({
 
+    status:
+        cobranca.situacao === "RECEBIDO"
+            ? "PAGO"
+            : cobranca.situacao,
+
     status_inter: cobranca.situacao,
 
     data_pagamento: cobranca.dataPagamento || null,
@@ -661,7 +666,7 @@ await supabase
     sincronizado_inter: true
 
 })
-
+  
 .eq("id_inter", idInter);
 
 await supabase
@@ -745,13 +750,13 @@ app.get("/sincronizar-todos", async (req, res) => {
 
 try {
 
-const { data, error } = await supabase
+.eq("ativo",true)
 
-.from("financeiro_titulos")
-
-.select("id_inter,ultima_sincronizacao")
-
-.not("id_inter","is",null)
+.in("status",[
+    "EMITIDO",
+    "PENDENTE",
+    "ATRASADO"
+]);
 
 .eq("ativo",true)
 
@@ -788,13 +793,17 @@ for(const titulo of data){
 
     try{
 
-        await fetch(
+        const r = await fetch(
+    "https://inter-service.onrender.com/sincronizar/" +
+    titulo.id_inter
+);
 
-            "https://inter-service.onrender.com/sincronizar/" +
+const json = await r.json();
 
-            titulo.id_inter
-
-        );
+console.log(
+    titulo.id_inter,
+    json.situacao
+);
 
         total++;
 
