@@ -749,22 +749,15 @@ erro:String(e)
 app.get("/sincronizar-todos", async (req, res) => {
 
 try {
+const { data, error } = await supabase
 
-.eq("ativo",true)
+.from("financeiro_titulos")
 
-.in("status",[
-    "EMITIDO",
-    "PENDENTE",
-    "ATRASADO"
-]);
+.select("id,id_inter,ultima_sincronizacao,status,status_inter")
 
-.eq("ativo",true)
+.not("id_inter","is",null);
 
-.in("status",[
-    "EMITIDO",
-    "PENDENTE",
-    "ATRASADO"
-]);
+if(error) throw error;
 
 if(error) throw error;
 
