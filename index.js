@@ -811,72 +811,153 @@ erro:String(e)
  */
 app.get("/sincronizar-todos", async (req, res) => {
 
-try {
-const { data, error } = await supabase
+  try {
 
-.from("financeiro_titulos")
+    // Busca todos os boletos existentes no Banco Inter
+    const resposta = await fetch(
+      "https://inter-service.onrender.com/boletos"
+    );
 
-.select("id,id_inter,ultima_sincronizacao,status,status_inter")
+    const lista = await resposta.json();
 
-.not("id_inter","is",null);
+    const cobrancas = lista.cobrancas || [];
 
-if(error) throw error;
+    let criados = 0;
+    let sincronizados = 0;
 
-let total = 0;
+    for (const item of cobrancas) {
 
-for(const titulo of data){
+      const cobranca = item.cobranca || {};
 
-    if(!titulo.id_inter){
+      const idInter = cobranca.codigoSolicitacao;
+      const seuNumero = cobranca.seuNumero;
 
-        continue;
+      if (!idInter || !seuNumero) continue;
+
+      // Procura o título
+      const { data: titulo } = await supabase
+        .from("financeiro_titulos")
+        .select("id")
+        .eq("id_inter", idInter)
+        .limit(1);
+
+      // Se não existe, cria
+      if (!titulo || titulo.length === 0) {
+
+        const { data: mensalidade } = await supabase
+          .from("mensalidades")
+          .select("*")
+          .eq("ID_MENSALIDADE", seuNumero)
+          .limit(1);
+
+        if (mensalidade && mensalidade.length) {
+
+          const m = mensalidade[0];
+
+          const insert = await supabase
+            .from("financeiro_titulos")
+            .insert({
+
+              id_mensalidade: m.ID_MENSALIDADE,
+
+              guid_aluno: m.guid_aluno,
+
+              guid_responsavel: m.guid_responsavel,
+
+              aluno: m.ALUNO,
+
+              responsavel: m.responsavel,
+
+              cpf_responsavel: m.cpf_responsavel,
+
+              valor_original: m.valor_original,
+
+              valor_desconto: m.valor_desconto,
+
+              valor_final: m.valor_final,
+
+              competencia_mes: m.competencia_mes,
+
+              competencia_ano: m.competencia_ano,
+
+              forma_pagamento: "BOLETO",
+
+              status: cobranca.situacao === "RECEBIDO"
+                ? "PAGO"
+                : cobranca.situacao,
+
+              status_inter: cobranca.situacao,
+
+              id_inter: idInter,
+
+              seu_numero: seuNumero,
+
+              nosso_numero: item.boleto?.nossoNumero || null,
+
+              linha_digitavel: item.boleto?.linhaDigitavel || null,
+
+              codigo_barras: item.boleto?.codigoBarras || null,
+
+              pix_copia_cola: item.pix?.pixCopiaECola || null,
+
+              url_pdf_boleto: item.pdf || null,
+
+              data_vencimento: cobranca.dataVencimento
+
+            })
+            .select()
+            .single();
+
+          if (insert.data) {
+
+            await supabase
+              .from("mensalidades")
+              .update({
+                id_titulo: insert.data.id
+              })
+              .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
+
+            criados++;
+
+          }
+
+        }
+
+      }
+
+      // Atualiza situação do boleto
+      await fetch(
+        "https://inter-service.onrender.com/sincronizar/" +
+        idInter
+      );
+
+      sincronizados++;
 
     }
 
-    try{
+    res.json({
 
-        const r = await fetch(
-    "https://inter-service.onrender.com/sincronizar/" +
-    titulo.id_inter
-);
+      sucesso: true,
 
-const json = await r.json();
+      boletos_inter: cobrancas.length,
 
-console.log(
-    titulo.id_inter,
-    json.situacao
-);
+      titulos_criados: criados,
 
-        total++;
+      sincronizados
 
-    }catch(e){
+    });
 
-        console.log(e);
+  } catch (e) {
 
-    }
+    res.status(500).json({
 
-}
+      sucesso: false,
 
-res.json({
+      erro: String(e)
 
-    sucesso:true,
+    });
 
-    boletos:data.length,
-
-    sincronizados:total
-
-});
-
-}catch(e){
-
-res.status(500).json({
-
-    sucesso:false,
-
-    erro:String(e)
-
-});
-
-}
+  }
 
 });
 
