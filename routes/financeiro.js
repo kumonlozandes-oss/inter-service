@@ -1,21 +1,35 @@
 const express = require("express");
-
 const router = express.Router();
 
+const inter = require("../services/InterService");
+
 /**
- * Health Check do módulo financeiro
+ * Consulta um boleto
  */
-router.get("/health", (req, res) => {
+router.get("/consultar/:codigo", async (req, res) => {
 
-  res.json({
+    try {
 
-    modulo: "Financeiro",
+        const resultado = await inter.consultarBoleto(
 
-    status: "OK",
+            req.params.codigo
 
-    data: new Date()
+        );
 
-  });
+        res.json(resultado);
+
+    } catch (erro) {
+
+        console.error(erro);
+
+        res.status(500).json({
+
+            sucesso: false,
+            erro: erro.message
+
+        });
+
+    }
 
 });
 
