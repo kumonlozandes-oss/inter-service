@@ -656,15 +656,14 @@ if(!titulo || titulo.length === 0){
 
     const seuNumero = cobranca.seuNumero || "";
 
-    const { data: mensalidade } = await supabase
+const { data: mensalidade } = await supabase
+  .from("mensalidades")
+  .select("ID_MENSALIDADE,seu_numero,COMPETENCIA,ALUNO")
+  .eq("seu_numero", seuNumero);
 
-    .from("mensalidades")
-
-    .select("*")
-
-    .eq("ID_MENSALIDADE", seuNumero)
-
-    .limit(1);
+console.log("INTER:", cobranca.seuNumero);
+console.log("PROCURANDO:", seuNumero);
+console.log("ENCONTROU:", mensalidade);
 
     if(mensalidade && mensalidade.length){
 
@@ -858,11 +857,14 @@ if (
       // Se não existe, cria
       if (!titulo || titulo.length === 0) {
 
-        const { data: mensalidade } = await supabase
-          .from("mensalidades")
-          .select("*")
-          .eq("ID_MENSALIDADE", seuNumero)
-          .limit(1);
+const { data: mensalidade } = await supabase
+  .from("mensalidades")
+  .select("ID_MENSALIDADE,seu_numero,COMPETENCIA,ALUNO")
+  .eq("seu_numero", seuNumero);
+
+console.log("INTER:", cobranca.seuNumero);
+console.log("PROCURANDO:", seuNumero);
+console.log("ENCONTROU:", mensalidade);
 
         if (mensalidade && mensalidade.length) {
 
