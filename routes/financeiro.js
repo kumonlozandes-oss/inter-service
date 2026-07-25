@@ -40,15 +40,34 @@ router.get("/sincronizar/:codigo", async (req, res) => {
             req.params.codigo
         );
 
-        res.json(resultado);
+        const financeiro = require("../repositories/FinanceiroRepository");
+
+        await financeiro.atualizarStatusInter(
+
+            req.params.codigo,
+
+            resultado.cobranca
+
+        );
+
+        res.json({
+
+            sucesso: true,
+
+            situacao: resultado.cobranca.situacao
+
+        });
 
     } catch (erro) {
 
         console.error(erro);
 
         res.status(500).json({
+
             sucesso: false,
+
             erro: erro.message
+
         });
 
     }
