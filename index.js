@@ -818,9 +818,13 @@ app.get("/sincronizar-todos", async (req, res) => {
       "https://inter-service.onrender.com/boletos"
     );
 
-    const lista = await resposta.json();
+    const texto = await resposta.text();
 
-    const cobrancas = lista.cobrancas || [];
+const lista = JSON.parse(texto);
+    
+    console.log(typeof lista, lista.totalElementos);
+
+const cobrancas = lista.cobrancas || [];
 
     let criados = 0;
     let sincronizados = 0;
