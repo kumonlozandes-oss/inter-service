@@ -727,7 +727,13 @@ const { data, error } = await supabase
 
 .not("id_inter","is",null)
 
-.eq("ativo",true);
+.eq("ativo",true)
+
+.in("status",[
+    "EMITIDO",
+    "PENDENTE",
+    "ATRASADO"
+]);
 
 if(error) throw error;
 
