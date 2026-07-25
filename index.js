@@ -723,7 +723,7 @@ const { data, error } = await supabase
 
 .from("financeiro_titulos")
 
-.select("id_inter")
+.select("id_inter,ultima_sincronizacao")
 
 .not("id_inter","is",null)
 
@@ -739,7 +739,20 @@ if(error) throw error;
 
 let total = 0;
 
+const limite = Date.now() - (30 * 60 * 1000);
+
 for(const titulo of data){
+
+    if(
+        titulo.ultima_sincronizacao &&
+        new Date(titulo.ultima_sincronizacao).getTime() > limite
+    ){
+        continue;
+    }
+
+    if(!titulo.id_inter){
+        continue;
+    }
 
     if(!titulo.id_inter){
 
