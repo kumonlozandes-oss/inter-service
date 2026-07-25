@@ -79,4 +79,32 @@ class InterService {
 
 }
 
+async consultarBoleto(codigo) {
+
+    const token = await this.obterToken();
+
+    const resposta = await axios.get(
+
+        this.baseURL +
+        "/cobranca/v3/cobrancas/" +
+        codigo,
+
+        {
+
+            httpsAgent: this.agent,
+
+            headers: {
+
+                Authorization: "Bearer " + token
+
+            }
+
+        }
+
+    );
+
+    return resposta.data;
+
+}
+
 module.exports = new InterService();
