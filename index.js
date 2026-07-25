@@ -2231,4 +2231,65 @@ erro:String(e)
 
 });
 
+/**
+ * ==========================================================
+ * DIAGNÓSTICO DAS MENSALIDADES
+ * ==========================================================
+ */
+app.get("/diagnostico-mensalidades", async (req, res) => {
+
+try{
+
+const { data: mensalidades } = await supabase
+.from("mensalidades")
+.select("ID_MENSALIDADE,ALUNO,COMPETENCIA,id_inter,id_titulo,STATUS");
+
+const { data: titulos } = await supabase
+.from("financeiro_titulos")
+.select("id,id_mensalidade,id_inter");
+
+const mapa = {};
+
+titulos.forEach(t=>{
+
+    mapa[t.id_mensalidade] = t;
+
+});
+
+const resultado = mensalidades.map(m=>{
+
+    const titulo = mapa[m.ID_MENSALIDADE];
+
+    return{
+
+        mensalidade:m.ID_MENSALIDADE,
+
+        aluno:m.ALUNO,
+
+        competencia:m.COMPETENCIA,
+
+        status:m.STATUS,
+
+        possuiTitulo:!!titulo,
+
+        possuiInter:!!titulo?.id_inter
+
+    };
+
+});
+
+res.json(resultado);
+
+}catch(e){
+
+res.status(500).json({
+
+erro:String(e)
+
+});
+
+}
+
+});
+
 app.listen(PORT);
