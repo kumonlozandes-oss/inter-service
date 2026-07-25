@@ -2292,4 +2292,24 @@ erro:String(e)
 
 });
 
+app.get("/mensalidades-sem-titulo", async (req, res) => {
+
+const { data } = await supabase
+
+.from("mensalidades")
+
+.select("ID_MENSALIDADE,ALUNO,COMPETENCIA,STATUS")
+
+.is("id_titulo",null);
+
+res.json({
+
+    total:data.length,
+
+    lista:data
+
+});
+
+});
+
 app.listen(PORT);
