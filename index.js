@@ -812,104 +812,105 @@ app.get("/sincronizar-todos", async (req, res) => {
 
   try {
 
-    const { data: mensalidades, error } = await supabase
-      .from("mensalidades")
-      .select("*")
-      .not("id_inter", "is", null);
+    const resposta = await fetch(
+      "https://inter-service.onrender.com/boletos"
+    );
 
-    if (error) throw error;
+    const lista = await resposta.json();
 
-    let criados = 0;
-    let sincronizados = 0;
+    const cobrancas = lista.cobrancas || [];
 
-    for (const m of mensalidades) {
+    let conciliados = 0;
+    let pagos = 0;
 
-      const { data: titulo } = await supabase
-        .from("financeiro_titulos")
-        .select("id")
-        .eq("id_inter", m.id_inter)
+    for (const item of cobrancas) {
+
+      const c = item.cobranca || {};
+
+      let seuNumero = (c.seuNumero || "").trim();
+
+      if (
+        seuNumero.length >= 7 &&
+        !seuNumero.includes("/")
+      ) {
+        seuNumero =
+          seuNumero.slice(0, -2) +
+          "/" +
+          seuNumero.slice(-2);
+      }
+
+      const { data: mensalidade } = await supabase
+        .from("mensalidades")
+        .select("*")
+        .eq("seu_numero", seuNumero)
         .limit(1);
 
-      if (!titulo || titulo.length === 0) {
+      if (!mensalidade || mensalidade.length === 0)
+        continue;
 
-        const insert = await supabase
-          .from("financeiro_titulos")
-          .insert({
+      const m = mensalidade[0];
 
-            id_mensalidade: m.ID_MENSALIDADE,
+      await supabase
+        .from("mensalidades")
+        .update({
 
-            guid_aluno: m.guid_aluno,
-            guid_responsavel: m.guid_responsavel,
+          id_inter: c.codigoSolicitacao,
 
-            aluno: m.ALUNO,
-            responsavel: m.responsavel,
+          status_inter: c.situacao,
 
-            cpf_responsavel: m.cpf_responsavel,
+          STATUS:
+            c.situacao === "RECEBIDO"
+              ? "PAGO"
+              : c.situacao,
 
-            valor_original: m.valor_original,
-            valor_desconto: m.valor_desconto,
-            valor_final: m.valor_final,
+          nosso_numero:
+            item.boleto?.nossoNumero || null,
 
-            competencia_mes: m.competencia_mes,
-            competencia_ano: m.competencia_ano,
+          linha_digitavel:
+            item.boleto?.linhaDigitavel || null,
 
-            forma_pagamento: "BOLETO",
+          codigo_barras:
+            item.boleto?.codigoBarras || null,
 
-            status: m.STATUS,
-            status_inter: m.status_inter,
+          pix_copia_cola:
+            item.pix?.pixCopiaECola || null,
 
-            id_inter: m.id_inter,
+          url_pdf_boleto:
+            item.pdf || null,
 
-            nosso_numero: m.nosso_numero,
-            seu_numero: m.seu_numero,
+          data_baixa:
+            c.dataPagamento || null,
 
-            linha_digitavel: m.linha_digitavel,
-            codigo_barras: m.codigo_barras,
+          DATA_PAGAMENTO:
+            c.dataPagamento || null,
 
-            pix_copia_cola: m.pix_copia_cola,
-            url_pdf_boleto: m.url_pdf_boleto,
+          ultima_sincronizacao:
+            new Date().toISOString()
 
-            data_vencimento: m.data_vencimento
-
-          })
-          .select()
-          .single();
-
-        if (insert.data) {
-
-          await supabase
-            .from("mensalidades")
-            .update({
-              id_titulo: insert.data.id
-            })
-            .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
-
-          criados++;
-
-        }
-
-      }
+        })
+        .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
 
       await fetch(
         "https://inter-service.onrender.com/sincronizar/" +
-        m.id_inter
+        c.codigoSolicitacao
       );
 
-      sincronizados++;
+      conciliados++;
+
+      if (c.situacao === "RECEBIDO")
+        pagos++;
 
     }
 
     res.json({
       sucesso: true,
-      mensalidades: mensalidades.length,
-      titulos_criados: criados,
-      sincronizados
+      conciliados,
+      pagos
     });
 
   } catch (e) {
 
     res.status(500).json({
-      sucesso: false,
       erro: String(e)
     });
 
