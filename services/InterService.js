@@ -112,14 +112,22 @@ class InterService {
 
 async sincronizarBoleto(codigo) {
 
-    const boleto = await this.consultarBoleto(codigo);
+    const resposta = await this.consultarBoleto(codigo);
+
+    const cobranca = resposta.cobrancas
+        ? resposta.cobrancas[0].cobranca
+        : resposta.cobranca;
+
 
     return {
 
-        status: boleto.situacao,
-        dataPagamento: boleto.dataPagamento,
-        valorPago: boleto.valorPago,
-        boleto
+        status: cobranca.situacao,
+
+        dataPagamento: cobranca.dataSituacao,
+
+        valorPago: cobranca.valorTotalRecebido,
+
+        cobranca
 
     };
 
