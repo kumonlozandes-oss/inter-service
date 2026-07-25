@@ -690,11 +690,27 @@ await supabase
 
 .eq("id_inter", idInter);
 
+let reemitir = false;
+
+if(
+
+    cobranca.situacao === "CANCELADO" ||
+
+    cobranca.situacao === "EXPIRADO"
+
+){
+
+    reemitir = true;
+
+}
+
 res.json({
 
     sucesso:true,
 
-    situacao:cobranca.situacao
+    situacao:cobranca.situacao,
+
+    reemitir
 
 });
 
