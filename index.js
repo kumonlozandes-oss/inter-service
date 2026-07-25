@@ -734,6 +734,8 @@ erro:String(e)
 
 });
 
+
+
 /**
  * ==========================================================
  * SINCRONIZA TODOS OS BOLETOS
@@ -2163,6 +2165,69 @@ app.get("/sincronizar-movimentacoes", async (req, res) => {
     });
 
   }
+
+});
+
+/**
+ * ==========================================================
+ * DIAGNÓSTICO DO FINANCEIRO
+ * ==========================================================
+ */
+app.get("/diagnostico-financeiro", async (req, res) => {
+
+try{
+
+const titulos = await supabase
+.from("financeiro_titulos")
+.select("id,status,status_inter,id_inter,id_mensalidade");
+
+const mensalidades = await supabase
+.from("mensalidades")
+.select("ID_MENSALIDADE,STATUS,id_inter");
+
+const alunos = await supabase
+.from("alunos_master")
+.select("guid,nome,status");
+
+res.json({
+
+    alunos: alunos.data.length,
+
+    mensalidades: mensalidades.data.length,
+
+    boletos: titulos.data.length,
+
+    boletosEmitidos:
+
+        titulos.data.filter(t=>t.id_inter).length,
+
+    boletosSemInter:
+
+        titulos.data.filter(t=>!t.id_inter).length,
+
+    pagos:
+
+        titulos.data.filter(t=>t.status==="PAGO").length,
+
+    atrasados:
+
+        titulos.data.filter(t=>t.status==="ATRASADO").length,
+
+    cancelados:
+
+        titulos.data.filter(t=>t.status_inter==="CANCELADO").length
+
+});
+
+}catch(e){
+
+res.status(500).json({
+
+erro:String(e)
+
+});
+
+}
 
 });
 
