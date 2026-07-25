@@ -759,8 +759,6 @@ const { data, error } = await supabase
 
 if(error) throw error;
 
-if(error) throw error;
-
 let total = 0;
 
 const limite = Date.now() - (30 * 60 * 1000);
