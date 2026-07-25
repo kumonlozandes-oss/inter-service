@@ -78,22 +78,7 @@ class InterService {
     }
 
     async consultarBoleto(codigo) {
-
-        async sincronizarBoleto(codigo) {
-
-    const boleto = await this.consultarBoleto(codigo);
-
-    return {
-
-        status: boleto.situacao,
-        dataPagamento: boleto.dataPagamento,
-        valorPago: boleto.valorPago,
-        boleto
-
-    };
-
-}
-
+       
     const token = await this.obterToken();
 
     const resposta = await axios.get(
@@ -116,7 +101,22 @@ class InterService {
 
     );
 
-    return resposta.data;
+return resposta.data;
+
+}
+
+async sincronizarBoleto(codigo) {
+
+    const boleto = await this.consultarBoleto(codigo);
+
+    return {
+
+        status: boleto.situacao,
+        dataPagamento: boleto.dataPagamento,
+        valorPago: boleto.valorPago,
+        boleto
+
+    };
 
 }
 
