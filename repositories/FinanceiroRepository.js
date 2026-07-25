@@ -43,4 +43,24 @@ class FinanceiroRepository {
 
 }
 
+async atualizarStatusInter(idInter, cobranca) {
+
+    const { error } = await supabase
+        .from("financeiro_titulos")
+        .update({
+
+            status_inter: cobranca.situacao,
+            nosso_numero: cobranca.nossoNumero,
+            linha_digitavel: cobranca.boleto?.linhaDigitavel,
+            codigo_barras: cobranca.boleto?.codigoBarras,
+            data_pagamento: cobranca.dataPagamento || null,
+            ultima_sincronizacao: new Date().toISOString()
+
+        })
+        .eq("id_inter", idInter);
+
+    if (error) throw error;
+
+}
+
 module.exports = new FinanceiroRepository();
