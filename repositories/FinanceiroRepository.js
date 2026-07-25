@@ -44,44 +44,43 @@ class FinanceiroRepository {
   async atualizarStatusInter(idInter, cobranca) {
 
     const { error } = await supabase
-      .from("financeiro_titulos")
-      .update({
+        .from("financeiro_titulos")
+        .update({
 
-        status_inter: cobranca.situacao,
+            status_inter: cobranca.situacao,
 
-        nosso_numero:
-          cobranca.boleto?.nossoNumero || null,
+            nosso_numero:
+                cobranca.cobranca.nossoNumero || null,
 
-        linha_digitavel:
-          cobranca.boleto?.linhaDigitavel || null,
+            linha_digitavel:
+                cobranca.cobranca.boleto?.linhaDigitavel || null,
 
-        codigo_barras:
-          cobranca.boleto?.codigoBarras || null,
+            codigo_barras:
+                cobranca.cobranca.boleto?.codigoBarras || null,
 
-        data_pagamento:
-    cobranca.dataSituacao || new Date().toISOString(),
+            data_pagamento:
+                cobranca.dataPagamento || null,
 
-valor_recebido:
-    Number(cobranca.valorTotalRecebido || 0),
+            valor_recebido:
+                Number(cobranca.valorPago || 0),
 
-webhook_recebido:
-    true,
+            webhook_recebido:
+                true,
 
-sincronizado_inter:
-    true,
+            sincronizado_inter:
+                true,
 
-data_sincronizacao_inter:
-    new Date().toISOString(),
+            data_sincronizacao_inter:
+                new Date().toISOString(),
 
-        ultima_sincronizacao:
-          new Date().toISOString()
+            ultima_sincronizacao:
+                new Date().toISOString()
 
-      })
-      .eq("id_inter", idInter);
-
+        })
+        .eq("id_inter", idInter);
 
     if (error) throw error;
-  }
+}
 
 }
 
