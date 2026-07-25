@@ -619,6 +619,97 @@ res.status(500).json({
 
 });
 
+/**
+ * ==========================================================
+ * SINCRONIZA UM BOLETO
+ * ==========================================================
+ */
+app.get("/sincronizar/:idInter", async (req, res) => {
+
+try {
+
+const idInter = req.params.idInter;
+
+const consulta = await fetch(
+
+    "https://inter-service.onrender.com/consultar/" +
+
+    idInter
+
+);
+
+const retorno = await consulta.json();
+
+const cobranca = retorno.cobranca || {};
+
+await supabase
+
+.from("financeiro_titulos")
+
+.update({
+
+    status_inter: cobranca.situacao,
+
+    data_pagamento: cobranca.dataPagamento || null,
+
+    valor_recebido: cobranca.valorRecebido || 0,
+
+    data_baixa: cobranca.dataPagamento || null,
+
+    ultima_sincronizacao: new Date(),
+
+    sincronizado_inter: true
+
+})
+
+.eq("id_inter", idInter);
+
+await supabase
+
+.from("mensalidades")
+
+.update({
+
+    status_inter: cobranca.situacao,
+
+    DATA_PAGAMENTO: cobranca.dataPagamento || null,
+
+    data_baixa: cobranca.dataPagamento || null,
+
+    ultima_sincronizacao: new Date(),
+
+    STATUS:
+
+        cobranca.situacao === "RECEBIDO"
+
+        ? "PAGO"
+
+        : cobranca.situacao
+
+})
+
+.eq("id_inter", idInter);
+
+res.json({
+
+    sucesso:true,
+
+    situacao:cobranca.situacao
+
+});
+
+}catch(e){
+
+res.status(500).json({
+
+erro:String(e)
+
+});
+
+}
+
+});
+
 app.get("/boletos", async (req, res) => {
 
 try {
