@@ -77,9 +77,7 @@ class InterService {
 
     }
 
-}
-
-async consultarBoleto(codigo) {
+    async consultarBoleto(codigo) {
 
     const token = await this.obterToken();
 
@@ -106,5 +104,9 @@ async consultarBoleto(codigo) {
     return resposta.data;
 
 }
+
+}
+
+
 
 module.exports = new InterService();
