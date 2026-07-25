@@ -834,7 +834,17 @@ const cobrancas = lista.cobrancas || [];
       const cobranca = item.cobranca || {};
 
       const idInter = cobranca.codigoSolicitacao;
-      const seuNumero = cobranca.seuNumero;
+      let seuNumero = (cobranca.seuNumero || "").trim();
+
+if (
+  seuNumero.length >= 7 &&
+  !seuNumero.includes("/")
+) {
+  seuNumero =
+    seuNumero.slice(0, -2) +
+    "/" +
+    seuNumero.slice(-2);
+}
 
       if (!idInter || !seuNumero) continue;
 
