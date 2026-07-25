@@ -812,139 +812,87 @@ app.get("/sincronizar-todos", async (req, res) => {
 
   try {
 
-    // Busca todos os boletos existentes no Banco Inter
-    const resposta = await fetch(
-      "https://inter-service.onrender.com/boletos"
-    );
+    const { data: mensalidades, error } = await supabase
+      .from("mensalidades")
+      .select("*")
+      .not("id_inter", "is", null);
 
-    const texto = await resposta.text();
-
-const lista = JSON.parse(texto);
-    
-    console.log(typeof lista, lista.totalElementos);
-
-const cobrancas = lista.cobrancas || [];
+    if (error) throw error;
 
     let criados = 0;
     let sincronizados = 0;
 
-    for (const item of cobrancas) {
+    for (const m of mensalidades) {
 
-      const cobranca = item.cobranca || {};
-
-      const idInter = cobranca.codigoSolicitacao;
-      let seuNumero = (cobranca.seuNumero || "").trim();
-
-if (
-  seuNumero.length >= 7 &&
-  !seuNumero.includes("/")
-) {
-  seuNumero =
-    seuNumero.slice(0, -2) +
-    "/" +
-    seuNumero.slice(-2);
-}
-
-      if (!idInter || !seuNumero) continue;
-
-      // Procura o título
       const { data: titulo } = await supabase
         .from("financeiro_titulos")
         .select("id")
-        .eq("id_inter", idInter)
+        .eq("id_inter", m.id_inter)
         .limit(1);
 
-      // Se não existe, cria
       if (!titulo || titulo.length === 0) {
 
-const { data: mensalidade } = await supabase
-  .from("mensalidades")
-  .select("ID_MENSALIDADE,seu_numero,COMPETENCIA,ALUNO")
-  .eq("seu_numero", seuNumero);
+        const insert = await supabase
+          .from("financeiro_titulos")
+          .insert({
 
-console.log("INTER:", cobranca.seuNumero);
-console.log("PROCURANDO:", seuNumero);
-console.log("ENCONTROU:", mensalidade);
+            id_mensalidade: m.ID_MENSALIDADE,
 
-        if (mensalidade && mensalidade.length) {
+            guid_aluno: m.guid_aluno,
+            guid_responsavel: m.guid_responsavel,
 
-          const m = mensalidade[0];
+            aluno: m.ALUNO,
+            responsavel: m.responsavel,
 
-          const insert = await supabase
-            .from("financeiro_titulos")
-            .insert({
+            cpf_responsavel: m.cpf_responsavel,
 
-              id_mensalidade: m.ID_MENSALIDADE,
+            valor_original: m.valor_original,
+            valor_desconto: m.valor_desconto,
+            valor_final: m.valor_final,
 
-              guid_aluno: m.guid_aluno,
+            competencia_mes: m.competencia_mes,
+            competencia_ano: m.competencia_ano,
 
-              guid_responsavel: m.guid_responsavel,
+            forma_pagamento: "BOLETO",
 
-              aluno: m.ALUNO,
+            status: m.STATUS,
+            status_inter: m.status_inter,
 
-              responsavel: m.responsavel,
+            id_inter: m.id_inter,
 
-              cpf_responsavel: m.cpf_responsavel,
+            nosso_numero: m.nosso_numero,
+            seu_numero: m.seu_numero,
 
-              valor_original: m.valor_original,
+            linha_digitavel: m.linha_digitavel,
+            codigo_barras: m.codigo_barras,
 
-              valor_desconto: m.valor_desconto,
+            pix_copia_cola: m.pix_copia_cola,
+            url_pdf_boleto: m.url_pdf_boleto,
 
-              valor_final: m.valor_final,
+            data_vencimento: m.data_vencimento
 
-              competencia_mes: m.competencia_mes,
+          })
+          .select()
+          .single();
 
-              competencia_ano: m.competencia_ano,
+        if (insert.data) {
 
-              forma_pagamento: "BOLETO",
-
-              status: cobranca.situacao === "RECEBIDO"
-                ? "PAGO"
-                : cobranca.situacao,
-
-              status_inter: cobranca.situacao,
-
-              id_inter: idInter,
-
-              seu_numero: seuNumero,
-
-              nosso_numero: item.boleto?.nossoNumero || null,
-
-              linha_digitavel: item.boleto?.linhaDigitavel || null,
-
-              codigo_barras: item.boleto?.codigoBarras || null,
-
-              pix_copia_cola: item.pix?.pixCopiaECola || null,
-
-              url_pdf_boleto: item.pdf || null,
-
-              data_vencimento: cobranca.dataVencimento
-
+          await supabase
+            .from("mensalidades")
+            .update({
+              id_titulo: insert.data.id
             })
-            .select()
-            .single();
+            .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
 
-          if (insert.data) {
-
-            await supabase
-              .from("mensalidades")
-              .update({
-                id_titulo: insert.data.id
-              })
-              .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
-
-            criados++;
-
-          }
+          criados++;
 
         }
 
       }
 
-      // Atualiza situação do boleto
       await fetch(
         "https://inter-service.onrender.com/sincronizar/" +
-        idInter
+        m.id_inter
       );
 
       sincronizados++;
@@ -952,25 +900,17 @@ console.log("ENCONTROU:", mensalidade);
     }
 
     res.json({
-
       sucesso: true,
-
-      boletos_inter: cobrancas.length,
-
+      mensalidades: mensalidades.length,
       titulos_criados: criados,
-
       sincronizados
-
     });
 
   } catch (e) {
 
     res.status(500).json({
-
       sucesso: false,
-
       erro: String(e)
-
     });
 
   }
