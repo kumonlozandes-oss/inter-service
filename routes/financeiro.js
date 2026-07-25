@@ -11,9 +11,7 @@ router.get("/consultar/:codigo", async (req, res) => {
     try {
 
         const resultado = await inter.consultarBoleto(
-
             req.params.codigo
-
         );
 
         res.json(resultado);
@@ -23,10 +21,34 @@ router.get("/consultar/:codigo", async (req, res) => {
         console.error(erro);
 
         res.status(500).json({
-
             sucesso: false,
             erro: erro.message
+        });
 
+    }
+
+});
+
+/**
+ * Sincroniza um boleto
+ */
+router.get("/sincronizar/:codigo", async (req, res) => {
+
+    try {
+
+        const resultado = await inter.sincronizarBoleto(
+            req.params.codigo
+        );
+
+        res.json(resultado);
+
+    } catch (erro) {
+
+        console.error(erro);
+
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
         });
 
     }
