@@ -838,10 +838,12 @@ app.get("/sincronizar-todos", async (req, res) => {
       }
 
       const { data: mensalidade } = await supabase
-        .from("mensalidades")
-        .select("*")
-        .eq("seu_numero", seuNumero)
-        .limit(1);
+  .from("mensalidades")
+  .select("*")
+  .or(
+    `seu_numero.eq.${seuNumero},COMPETENCIA.eq.${seuNumero}`
+  )
+  .limit(1);
 
       if (!mensalidade || mensalidade.length === 0)
         continue;
