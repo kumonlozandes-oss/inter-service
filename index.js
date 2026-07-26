@@ -744,11 +744,11 @@ await supabase
 
     status_inter: cobranca.situacao,
 
-    data_pagamento: cobranca.dataPagamento || null,
+    data_pagamento: cobranca.dataSituacao || null,
 
     valor_recebido: cobranca.valorRecebido || 0,
 
-    data_baixa: cobranca.dataPagamento || null,
+        data_baixa: cobranca.dataSituacao || null,
 
     ultima_sincronizacao: new Date(),
 
@@ -766,9 +766,9 @@ await supabase
 
     status_inter: cobranca.situacao,
 
-    DATA_PAGAMENTO: cobranca.dataPagamento || null,
+    DATA_PAGAMENTO: cobranca.dataSituacao || null,
 
-    data_baixa: cobranca.dataPagamento || null,
+    data_baixa: cobranca.dataSituacao || null,
 
     ultima_sincronizacao: new Date(),
 
