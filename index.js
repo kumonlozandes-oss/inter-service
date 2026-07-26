@@ -879,10 +879,10 @@ app.get("/sincronizar-todos", async (req, res) => {
             item.pdf || null,
 
           data_baixa:
-            c.dataPagamento || null,
+  c.dataSituacao || null,
 
-          DATA_PAGAMENTO:
-            c.dataPagamento || null,
+DATA_PAGAMENTO:
+  c.dataSituacao || null,
 
           ultima_sincronizacao:
             new Date().toISOString()
