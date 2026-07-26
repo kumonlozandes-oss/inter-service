@@ -746,16 +746,15 @@ await supabase
 
     data_pagamento: cobranca.dataSituacao || null,
 
-    valor_recebido: cobranca.valorRecebido || 0,
+    valor_recebido: Number(cobranca.valorTotalRecebido || 0),
 
-        data_baixa: cobranca.dataSituacao || null,
+    data_baixa: cobranca.dataSituacao || null,
 
     ultima_sincronizacao: new Date(),
 
     sincronizado_inter: true
 
 })
-
 .eq("id_inter", idInter);
 
 await supabase
@@ -778,7 +777,6 @@ await supabase
             : cobranca.situacao
 
 })
-
 .eq("id_inter", idInter);
 
 res.json({
