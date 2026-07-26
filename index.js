@@ -890,10 +890,47 @@ DATA_PAGAMENTO:
         })
         .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
 
-      await fetch(
-        "https://inter-service.onrender.com/sincronizar/" +
-        c.codigoSolicitacao
-      );
+      await supabase
+.from("mensalidades")
+.update({
+
+  STATUS:
+    c.situacao === "RECEBIDO"
+      ? "PAGO"
+      : c.situacao,
+
+  status_inter:
+    c.situacao,
+
+  DATA_PAGAMENTO:
+    c.dataSituacao || null,
+
+  data_baixa:
+    c.dataSituacao || null,
+
+  nosso_numero:
+    item.boleto?.nossoNumero || null,
+
+  linha_digitavel:
+    item.boleto?.linhaDigitavel || null,
+
+  codigo_barras:
+    item.boleto?.codigoBarras || null,
+
+  pix_copia_cola:
+    item.pix?.pixCopiaECola || null,
+
+  id_inter:
+    c.codigoSolicitacao,
+
+  ultima_sincronizacao:
+    new Date().toISOString()
+
+})
+.eq(
+ "ID_MENSALIDADE",
+ m.ID_MENSALIDADE
+);
 
       conciliados++;
 
