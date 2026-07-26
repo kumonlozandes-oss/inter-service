@@ -903,10 +903,11 @@ DATA_PAGAMENTO:
     }
 
     res.json({
-      sucesso: true,
-      conciliados,
-      pagos
-    });
+  sucesso: true,
+  conciliados,
+  pagos,
+  ultima_mensagem: "sincronização executada"
+});
 
   } catch (e) {
 
