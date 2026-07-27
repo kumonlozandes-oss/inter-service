@@ -1978,35 +1978,28 @@ app.get("/padronizar-financeiro", async (req, res) => {
 
     for (const chave in grupos) {
 
-      const lista = grupos[chave];
+  const lista = grupos[chave];
+  const primeiro = lista[0];
 
-      console.log("================================");
+  await supabase
+    .from("financeiro_padrao")
+    .upsert({
 
-console.log("Responsável:", chave);
+      guid_responsavel: primeiro.guid_responsavel,
 
-lista.forEach(b => {
+      guid_aluno: primeiro.guid_aluno,
 
-  console.log({
+      cpf_responsavel: primeiro.cpf_responsavel,
 
-    competencia: b.competencia,
+      responsavel: primeiro.responsavel,
 
-    valor: b.valor_original,
+      ultima_sincronizacao: new Date().toISOString()
 
-    desconto: b.valor_desconto,
+    });
 
-    vencimento: b.data_vencimento,
+  processados++;
 
-    disciplina: b.disciplina,
-
-    status: b.status_inter
-
-  });
-
-});
-
-processados++;
-
-    }
+}
 
     res.json({
 
