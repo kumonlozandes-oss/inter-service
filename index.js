@@ -1979,25 +1979,53 @@ app.get("/padronizar-financeiro", async (req, res) => {
     for (const chave in grupos) {
 
   const lista = grupos[chave];
+
+  lista.sort((a, b) =>
+    String(a.seu_numero).localeCompare(String(b.seu_numero))
+  );
+
   const primeiro = lista[0];
 
-  const resultado = await supabase
-  .from("financeiro_padrao")
-  .upsert({
+  const disciplinas = [
+    ...new Set(
+      lista.map(x => x.disciplina).filter(Boolean)
+    )
+  ];
 
-    guid_responsavel: primeiro.guid_responsavel,
+  const valores = [
+    ...new Set(
+      lista.map(x => Number(x.valor_original || 0))
+    )
+  ];
 
-    guid_aluno: primeiro.guid_aluno,
+  const descontos = [
+    ...new Set(
+      lista.map(x => Number(x.valor_desconto || 0))
+    )
+  ];
 
-    cpf_responsavel: primeiro.cpf_responsavel,
+  const vencimentos = [
+    ...new Set(
+      lista.map(x =>
+        x.data_vencimento
+          ? new Date(x.data_vencimento).getDate()
+          : null
+      )
+    )
+  ];
 
+  console.log({
     responsavel: primeiro.responsavel,
-
-    ultima_sincronizacao: new Date().toISOString()
-
+    cpf: primeiro.cpf_responsavel,
+    guid: primeiro.guid_responsavel,
+    quantidade_boletos: lista.length,
+    primeira_competencia: lista[0].seu_numero,
+    ultima_competencia: lista[lista.length - 1].seu_numero,
+    disciplinas,
+    valores,
+    descontos,
+    vencimentos
   });
-
-console.log(resultado);
 
   processados++;
 
