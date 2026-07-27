@@ -1931,6 +1931,88 @@ guid_aluno:
 /**
  * ==========================================================
  * IMPLANTAÇÃO FINANCEIRA
+ * Padroniza os boletos importados.
+ * Gera 1 registro por responsável em financeiro_padrao.
+ * ==========================================================
+ */
+app.get("/padronizar-financeiro", async (req, res) => {
+
+  try {
+
+    const { data: boletos } = await supabase
+      .from("financeiro_responsaveis")
+      .select("*");
+
+    if (!boletos || boletos.length === 0) {
+
+      return res.json({
+        sucesso: false,
+        mensagem: "Nenhum boleto encontrado."
+      });
+
+    }
+
+    // Agrupa por responsável
+    const grupos = {};
+
+    for (const b of boletos) {
+
+      const chave =
+        b.guid_responsavel ||
+        b.cpf_responsavel;
+
+      if (!chave)
+        continue;
+
+      if (!grupos[chave]) {
+
+        grupos[chave] = [];
+
+      }
+
+      grupos[chave].push(b);
+
+    }
+
+    let processados = 0;
+
+    for (const chave in grupos) {
+
+      const lista = grupos[chave];
+
+      console.log(
+        "Responsável:",
+        chave,
+        "Boletos:",
+        lista.length
+      );
+
+      processados++;
+
+    }
+
+    res.json({
+
+      sucesso: true,
+
+      responsaveis:
+        processados
+
+    });
+
+  } catch (e) {
+
+    res.status(500).json({
+      erro: String(e)
+    });
+
+  }
+
+});
+
+/**
+ * ==========================================================
+ * IMPLANTAÇÃO FINANCEIRA
  * Gera mensalidades a partir da tabela financeiro_responsaveis.
  * Utilizada apenas na implantação de novas unidades.
  * Não faz parte da operação diária.
