@@ -1984,52 +1984,68 @@ app.get("/padronizar-financeiro", async (req, res) => {
 
   const lista = grupos[chave];
 
-  lista.sort((a, b) =>
-    String(a.seu_numero).localeCompare(String(b.seu_numero))
-  );
+lista.sort((a, b) =>
+  String(a.seu_numero).localeCompare(String(b.seu_numero))
+);
 
-  const primeiro = lista[0];
+const primeiro = lista[0];
 
-  const disciplinas = [
-    ...new Set(
-      lista.map(x => x.disciplina).filter(Boolean)
-    )
-  ];
+const recebido =
+  lista.find(x => x.status_inter === "RECEBIDO") ||
+  primeiro;
 
-  const valores = [
-    ...new Set(
-      lista.map(x => Number(x.valor_original || 0))
-    )
-  ];
+const resultado = await supabase
+  .from("financeiro_padrao")
+  .insert({
 
-  const descontos = [
-    ...new Set(
-      lista.map(x => Number(x.valor_desconto || 0))
-    )
-  ];
+    guid_aluno: recebido.guid_aluno,
 
-  const vencimentos = [
-    ...new Set(
-      lista.map(x =>
-        x.data_vencimento
-          ? new Date(x.data_vencimento).getDate()
-          : null
-      )
-    )
-  ];
+    guid_responsavel: recebido.guid_responsavel,
 
-  console.log({
-    responsavel: primeiro.responsavel,
-    cpf: primeiro.cpf_responsavel,
-    guid: primeiro.guid_responsavel,
-    quantidade_boletos: lista.length,
-    primeira_competencia: lista[0].seu_numero,
-    ultima_competencia: lista[lista.length - 1].seu_numero,
-    disciplinas,
-    valores,
-    descontos,
-    vencimentos
+    aluno: "",
+
+    responsavel: recebido.responsavel,
+
+    cpf_responsavel: recebido.cpf_responsavel,
+
+    email_responsavel: recebido.email_responsavel,
+
+    telefone_responsavel: recebido.telefone_responsavel,
+
+    disciplina: "PENDENTE",
+
+    valor_original: recebido.valor_original,
+
+    valor_desconto: recebido.valor_desconto,
+
+    valor_final: recebido.valor_final,
+
+    dia_vencimento: recebido.data_vencimento
+      ? new Date(recebido.data_vencimento).getDate()
+      : 5,
+
+    forma_pagamento: recebido.forma_pagamento,
+
+    tipo_cobranca: recebido.tipo_cobranca,
+
+    quantidade_boletos_analisados: lista.length,
+
+    primeira_competencia: lista[0].competencia,
+
+    ultima_competencia_paga:
+      recebido.status_inter === "RECEBIDO"
+        ? recebido.competencia
+        : null,
+
+    data_padronizacao: new Date(),
+
+    algoritmo_padronizacao: "IMPLANTACAO_V1"
+
   });
+
+if (resultado.error) {
+  console.log(resultado.error);
+}
 
   processados++;
 
