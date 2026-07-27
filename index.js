@@ -1996,7 +1996,7 @@ const recebido =
 
 const resultado = await supabase
   .from("financeiro_padrao")
-  .insert({
+  .upsert({
 
     guid_aluno: recebido.guid_aluno,
 
