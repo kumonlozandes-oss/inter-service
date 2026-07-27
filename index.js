@@ -1990,6 +1990,10 @@ lista.sort((a, b) =>
 
 const primeiro = lista[0];
 
+      if (!primeiro.guid_aluno || !primeiro.guid_responsavel) {
+  continue;
+}
+
 const recebido =
   lista.find(x => x.status_inter === "RECEBIDO") ||
   primeiro;
@@ -2044,13 +2048,7 @@ const resultado = await supabase
   });
 
 if (resultado.error) {
-
   console.log(resultado.error);
-
-  return res.status(500).json({
-    erro: resultado.error
-  });
-
 }
 
   processados++;
