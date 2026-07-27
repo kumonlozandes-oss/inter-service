@@ -1630,6 +1630,15 @@ while (pagina < totalPaginas) {
     ...(resultado.cobrancas || [])
   );
 
+  console.log(
+    "Página:",
+    pagina,
+    "Registros:",
+    (resultado.cobrancas || []).length,
+    "Total páginas:",
+    resultado.totalPaginas
+);
+
   pagina++;
 
 }
@@ -1640,6 +1649,8 @@ console.log(
 );
 
 const retorno = [];
+
+console.log("TOTAL NO ARRAY:", cobrancas.length);
 
 for (const item of cobrancas) {
 
