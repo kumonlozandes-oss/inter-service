@@ -1811,6 +1811,8 @@ for (const registro of retorno) {
 
         seu_numero: registro.seu_numero,
 
+        competencia: registro.seu_numero,
+        
         nosso_numero: registro.nosso_numero,
 
         data_vencimento: registro.vencimento || null,
