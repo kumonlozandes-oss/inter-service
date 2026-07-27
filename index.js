@@ -1980,14 +1980,31 @@ app.get("/padronizar-financeiro", async (req, res) => {
 
       const lista = grupos[chave];
 
-      console.log(
-        "Responsável:",
-        chave,
-        "Boletos:",
-        lista.length
-      );
+      console.log("================================");
 
-      processados++;
+console.log("Responsável:", chave);
+
+lista.forEach(b => {
+
+  console.log({
+
+    competencia: b.competencia,
+
+    valor: b.valor_original,
+
+    desconto: b.valor_desconto,
+
+    vencimento: b.data_vencimento,
+
+    disciplina: b.disciplina,
+
+    status: b.status_inter
+
+  });
+
+});
+
+processados++;
 
     }
 
