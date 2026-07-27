@@ -2044,7 +2044,13 @@ const resultado = await supabase
   });
 
 if (resultado.error) {
+
   console.log(resultado.error);
+
+  return res.status(500).json({
+    erro: resultado.error
+  });
+
 }
 
   processados++;
