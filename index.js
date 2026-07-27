@@ -1744,10 +1744,19 @@ for (const item of cobrancas) {
     detalhe.boleto?.codigoBarras || null,
 
   pix_copia_cola:
-    detalhe.pix?.pixCopiaECola || null,
+  detalhe.pix?.pixCopiaECola || null,
 
-  codigo:
-    codigo
+codigo_pix:
+  detalhe.pix?.txid || null,
+
+qr_code_pix:
+  detalhe.pix?.imagemQrcode || null,
+
+url_pdf_boleto:
+  detalhe.pdf || null,
+
+codigo:
+  codigo
 
 });
 
@@ -1763,90 +1772,64 @@ for (const item of cobrancas) {
 
 }
 
+
 for (const registro of retorno) {
 
   if (!registro.cpf) continue;
-  const existente =
-  await supabase
-    .from("financeiro_responsaveis")
-    .select("id")
-    .eq(
-      "ultimo_codigo_inter",
-      registro.codigo
-    )
-    .limit(1);
-
-if (
-  existente.data &&
-  existente.data.length > 0
-) {
-
-  await supabase
-    .from("financeiro_responsaveis")
-    .update({
-
-      data_vencimento:
-        registro.vencimento || null,
-
-      nosso_numero:
-        registro.nosso_numero || null,
-
-      linha_digitavel:
-        registro.linha_digitavel || null,
-
-      codigo_barras:
-        registro.codigo_barras || null,
-
-      pix_copia_cola:
-        registro.pix_copia_cola || null,
-
-      status_inter:
-  registro.status_inter
-
-    })
-    .eq(
-      "ultimo_codigo_inter",
-      registro.codigo
-    );
-
-  continue;
-
-}
 
   const resultadoInsert =
-await supabase
-  .from("financeiro_responsaveis")
-  .insert({
+    await supabase
+      .from("financeiro_responsaveis")
+      .insert({
 
-    cpf: registro.cpf,
-    nome_responsavel: registro.nome,
+        cpf_responsavel: registro.cpf,
 
-    valor_mensalidade: registro.valor_nominal,
-    valor_desconto: registro.desconto,
-    valor_com_desconto: registro.valor_recebido,
+        responsavel: registro.nome,
 
-    ultimo_codigo_inter: registro.codigo,
-    ultimo_seu_numero: registro.seu_numero,
+        valor_original: Number(registro.valor_nominal || 0),
 
-    data_vencimento: registro.vencimento || null,
-    nosso_numero: registro.nosso_numero || null,
-    linha_digitavel: registro.linha_digitavel || null,
-    codigo_barras: registro.codigo_barras || null,
-    pix_copia_cola: registro.pix_copia_cola || null,
-    status_inter:
-  registro.status_inter,
+        valor_desconto: Number(registro.desconto || 0),
 
-    ultima_sincronizacao: new Date().toISOString()
+        valor_final:
+          Number(registro.valor_nominal || 0) -
+          Number(registro.desconto || 0),
 
-  });
+        valor_recebido: Number(registro.valor_recebido || 0),
 
-console.log(
-  "INSERT:",
-  JSON.stringify(resultadoInsert)
-);
+        id_inter: registro.codigo,
+
+        seu_numero: registro.seu_numero,
+
+        nosso_numero: registro.nosso_numero,
+
+        data_vencimento: registro.vencimento || null,
+
+        status_inter: registro.status_inter,
+
+        linha_digitavel: registro.linha_digitavel || null,
+
+        codigo_barras: registro.codigo_barras || null,
+
+        pix_copia_cola: registro.pix_copia_cola || null,
+
+        codigo_pix: registro.codigo_pix || null,
+
+        qr_code_pix: registro.qr_code_pix || null,
+
+        url_pdf_boleto: registro.url_pdf_boleto || null,
+
+        origem: "INTER",
+
+        ultima_sincronizacao: new Date().toISOString()
+
+      });
+
+  console.log(
+    "INSERT:",
+    JSON.stringify(resultadoInsert)
+  );
 
 }
-
     
 res.json({
   sucesso: true,
@@ -1907,10 +1890,10 @@ try {
       .update({
 
         guid_responsavel:
-          encontrado.GUID_RESPONSAVEL,
+  encontrado.guid_responsavel,
 
-        guid_aluno:
-          encontrado.GUID_ALUNO
+guid_aluno:
+  encontrado.guid_aluno
 
       })
       .eq("id", fin.id);
