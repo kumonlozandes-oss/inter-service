@@ -1884,29 +1884,31 @@ try {
   for (const fin of financeiros) {
 
     const cpfFinanceiro =
-      String(fin.cpf || "")
-        .replace(/\D/g, "");
+  String(fin.cpf_responsavel || "")
+    .replace(/\D/g, "");
 
-    const encontrado =
-      ksis.find(r =>
-        String(r.CPF || "")
-          .replace(/\D/g, "") === cpfFinanceiro
-      );
+const encontrado =
+  ksis.find(r =>
+    String(r.cpf || "")
+      .replace(/\D/g, "") === cpfFinanceiro
+  );
 
     if (!encontrado)
       continue;
 
     await supabase
-      .from("financeiro_responsaveis")
-      .update({
+  .from("financeiro_responsaveis")
+  .update({
 
-        guid_responsavel:
-  encontrado.guid_responsavel,
+    guid_responsavel: encontrado.guid_responsavel,
 
-guid_aluno:
-  encontrado.guid_aluno
+    guid_aluno: encontrado.guid_aluno,
 
-      })
+    email_responsavel: encontrado.email,
+
+    telefone_responsavel: encontrado.celular
+
+  })
       .eq("id", fin.id);
 
     atualizados++;
