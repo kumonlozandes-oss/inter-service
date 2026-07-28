@@ -883,6 +883,11 @@ if (!titulo || titulo.length === 0) {
     .eq("seu_numero", seuNumero)
     .limit(1);
 
+  console.log({
+  procurandoSeuNumero: seuNumero,
+  mensalidade
+});
+  
   if (!mensalidade || mensalidade.length === 0)
     continue;
 
@@ -934,6 +939,13 @@ titulo = [novoTitulo];
 }
 
 const m = titulo[0];
+
+      console.log({
+  codigoInter: c.codigoSolicitacao,
+  seuNumero,
+  tituloEncontrado: !!titulo?.length,
+  titulo
+});
 
 await supabase
   .from("financeiro_titulos")
