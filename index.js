@@ -856,6 +856,10 @@ app.get("/sincronizar-todos", async (req, res) => {
     for (const item of cobrancas) {
 
       const c = item.cobranca || {};
+      
+console.log("-------------------------");
+console.log("INTER:", c.codigoSolicitacao);
+console.log("SEU NUMERO:", c.seuNumero);
 
       let seuNumero = (c.seuNumero || "").trim();
 
@@ -874,6 +878,8 @@ app.get("/sincronizar-todos", async (req, res) => {
   .select("id,id_mensalidade")
   .eq("id_inter", c.codigoSolicitacao)
   .maybeSingle();
+
+      console.log("TITULO:", titulo);
 
 if (!titulo) {
   continue;
