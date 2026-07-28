@@ -930,15 +930,13 @@ if (!titulo || titulo.length === 0) {
     })
     .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
 
-  titulo = [novoTitulo];
+titulo = [novoTitulo];
 }
 
 const m = titulo[0];
 
-const m = titulo[0];
-      
-      await supabase
-    .from("financeiro_titulos")
+await supabase
+  .from("financeiro_titulos")
         .update({
 
           id_inter: c.codigoSolicitacao,
