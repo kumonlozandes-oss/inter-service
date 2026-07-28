@@ -869,14 +869,71 @@ app.get("/sincronizar-todos", async (req, res) => {
           seuNumero.slice(-2);
       }
 
-    const { data: titulo } = await supabase
+    let { data: titulo } = await supabase
   .from("financeiro_titulos")
   .select("*")
   .eq("id_inter", c.codigoSolicitacao)
   .limit(1);
 
-if (!titulo || titulo.length === 0)
-  continue;
+if (!titulo || titulo.length === 0) {
+
+  const { data: mensalidade } = await supabase
+    .from("mensalidades")
+    .select("*")
+    .eq("seu_numero", seuNumero)
+    .limit(1);
+
+  if (!mensalidade || mensalidade.length === 0)
+    continue;
+
+  const m = mensalidade[0];
+
+  const { data: novoTitulo } = await supabase
+    .from("financeiro_titulos")
+    .insert({
+
+      id_mensalidade: m.ID_MENSALIDADE,
+
+      guid_aluno: m.ID_ALUNO,
+
+      aluno: m.ALUNO,
+
+      responsavel: m.responsavel,
+
+      cpf_responsavel: m.cpf_responsavel,
+
+      valor_original: m.valor_original,
+
+      valor_desconto: m.valor_desconto,
+
+      valor_final: m.valor_final,
+
+      forma_pagamento: "BOLETO",
+
+      id_inter: c.codigoSolicitacao,
+
+      status_inter: c.situacao,
+
+      status: c.situacao === "RECEBIDO" ? "PAGO" : c.situacao
+
+    })
+    .select()
+    .single();
+
+  if (!novoTitulo)
+    continue;
+
+  await supabase
+    .from("mensalidades")
+    .update({
+      id_titulo: novoTitulo.id
+    })
+    .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
+
+  titulo = [novoTitulo];
+}
+
+const m = titulo[0];
 
 const m = titulo[0];
       
