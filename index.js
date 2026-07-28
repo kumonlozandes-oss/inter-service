@@ -871,14 +871,13 @@ app.get("/sincronizar-todos", async (req, res) => {
 
      const { data: titulo } = await supabase
   .from("financeiro_titulos")
-  .select("*")
+  .select("id,id_mensalidade")
   .eq("id_inter", c.codigoSolicitacao)
-  .limit(1);
+  .maybeSingle();
 
-if (!titulo || titulo.length === 0)
+if (!titulo) {
   continue;
-
-const m = titulo[0];
+}
 
       await supabase
     .from("financeiro_titulos")
@@ -918,7 +917,7 @@ DATA_PAGAMENTO:
             new Date().toISOString()
 
         })
-        .eq("id", m.id);
+        .eq("id", titulo.id);
 
       await supabase
 .from("mensalidades")
@@ -958,8 +957,8 @@ DATA_PAGAMENTO:
 
 })
 .eq(
- "ID_MENSALIDADE",
- m.ID_MENSALIDADE
+  "ID_MENSALIDADE",
+  titulo.id_mensalidade
 );
 
       conciliados++;
