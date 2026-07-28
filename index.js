@@ -840,7 +840,7 @@ erro:String(e)
  */
 app.get("/sincronizar-todos", async (req, res) => {
 
- {
+  try {
 
     const resposta = await fetch(
       "https://inter-service.onrender.com/boletos"
@@ -869,37 +869,17 @@ app.get("/sincronizar-todos", async (req, res) => {
           seuNumero.slice(-2);
       }
 
-    const { data: titulos } = await supabase
+    const { data: titulo } = await supabase
   .from("financeiro_titulos")
   .select("*")
   .eq("id_inter", c.codigoSolicitacao)
   .limit(1);
 
-let titulo = titulos?.[0];
+if (!titulo || titulo.length === 0)
+  continue;
 
-if (!titulo) {
-
-  const { data: novoTitulo } = await supabase
-    .from("financeiro_titulos")
-    .insert({
-      id_inter: c.codigoSolicitacao,
-      status: c.situacao === "RECEBIDO" ? "PAGO" : c.situacao,
-      status_inter: c.situacao,
-      nosso_numero: item.boleto?.nossoNumero || null,
-      linha_digitavel: item.boleto?.linhaDigitavel || null,
-      codigo_barras: item.boleto?.codigoBarras || null,
-      pix_copia_cola: item.pix?.pixCopiaECola || null,
-      url_pdf_boleto: item.pdf || null,
-      ultima_sincronizacao: new Date().toISOString()
-    })
-    .select()
-    .single();
-
-  if (!novoTitulo)
-    continue;
-
-  titulo = novoTitulo;
-}
+const m = titulo[0];
+      
       await supabase
     .from("financeiro_titulos")
         .update({
@@ -938,7 +918,7 @@ DATA_PAGAMENTO:
             new Date().toISOString()
 
         })
-        .eq("id", titulo.id);
+        .eq("id", m.id);
 
       await supabase
 .from("mensalidades")
@@ -979,7 +959,7 @@ DATA_PAGAMENTO:
 })
 .eq(
   "ID_MENSALIDADE",
-  titulo.id_mensalidade
+  m.ID_MENSALIDADE
 );
 
       conciliados++;
