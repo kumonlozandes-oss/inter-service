@@ -869,15 +869,17 @@ app.get("/sincronizar-todos", async (req, res) => {
           seuNumero.slice(-2);
       }
 
-     let { data: titulo } = await supabase
+    const { data: titulos } = await supabase
   .from("financeiro_titulos")
-  .select("id,id_mensalidade")
+  .select("*")
   .eq("id_inter", c.codigoSolicitacao)
-  .maybeSingle();
+  .limit(1);
+
+let titulo = titulos?.[0];
 
 if (!titulo) {
 
-  const insert = await supabase
+  const { data: novoTitulo } = await supabase
     .from("financeiro_titulos")
     .insert({
       id_inter: c.codigoSolicitacao,
@@ -890,16 +892,14 @@ if (!titulo) {
       url_pdf_boleto: item.pdf || null,
       ultima_sincronizacao: new Date().toISOString()
     })
-    .select("id,id_mensalidade")
+    .select()
     .single();
 
-  if (!insert.data) {
+  if (!novoTitulo)
     continue;
-  }
 
-  titulo = insert.data;
+  titulo = novoTitulo;
 }
-
       await supabase
     .from("financeiro_titulos")
         .update({
