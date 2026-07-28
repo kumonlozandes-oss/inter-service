@@ -857,10 +857,6 @@ app.get("/sincronizar-todos", async (req, res) => {
 
       const c = item.cobranca || {};
       
-console.log("-------------------------");
-console.log("INTER:", c.codigoSolicitacao);
-console.log("SEU NUMERO:", c.seuNumero);
-
       let seuNumero = (c.seuNumero || "").trim();
 
       if (
@@ -878,8 +874,6 @@ console.log("SEU NUMERO:", c.seuNumero);
   .select("id,id_mensalidade")
   .eq("id_inter", c.codigoSolicitacao)
   .maybeSingle();
-
-      console.log("TITULO:", titulo);
 
 if (!titulo) {
   continue;
