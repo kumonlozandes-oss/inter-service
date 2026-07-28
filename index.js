@@ -840,9 +840,7 @@ erro:String(e)
  */
 app.get("/sincronizar-todos", async (req, res) => {
 
-  console.log("========== SINCRONIZAR-TODOS NOVA VERSÃO ==========");
-
-  try {
+ {
 
     const resposta = await fetch(
       "https://inter-service.onrender.com/boletos"
@@ -995,7 +993,7 @@ DATA_PAGAMENTO:
   sucesso: true,
   conciliados,
   pagos,
-  ultima_mensagem: "sincronização executada"
+  teste: "VERSAO_NOVA_001"
 });
 
   } catch (e) {
