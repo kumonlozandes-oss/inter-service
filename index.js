@@ -470,6 +470,38 @@ console.log(
   JSON.stringify(bodyInter, null, 2)
 );
 
+// Atualiza financeiro_titulos
+await supabase
+  .from("financeiro_titulos")
+  .update({
+    id_inter: detalhe.cobranca?.codigoSolicitacao,
+    status_inter: detalhe.cobranca?.situacao,
+    status: detalhe.cobranca?.situacao === "RECEBIDO" ? "PAGO" : detalhe.cobranca?.situacao,
+    nosso_numero: detalhe.boleto?.nossoNumero,
+    linha_digitavel: detalhe.boleto?.linhaDigitavel,
+    codigo_barras: detalhe.boleto?.codigoBarras,
+    pix_copia_cola: detalhe.pix?.pixCopiaECola,
+    url_pdf_boleto: detalhe.pdf,
+    ultima_sincronizacao: new Date().toISOString()
+  })
+  .eq("id", req.body.id_titulo);
+
+// Atualiza mensalidades
+await supabase
+  .from("mensalidades")
+  .update({
+    id_inter: detalhe.cobranca?.codigoSolicitacao,
+    status_inter: detalhe.cobranca?.situacao,
+    STATUS: detalhe.cobranca?.situacao === "RECEBIDO" ? "PAGO" : detalhe.cobranca?.situacao,
+    nosso_numero: detalhe.boleto?.nossoNumero,
+    linha_digitavel: detalhe.boleto?.linhaDigitavel,
+    codigo_barras: detalhe.boleto?.codigoBarras,
+    pix_copia_cola: detalhe.pix?.pixCopiaECola,
+    url_pdf_boleto: detalhe.pdf,
+    ultima_sincronizacao: new Date().toISOString()
+  })
+  .eq("ID_MENSALIDADE", req.body.id_mensalidade);
+
 return res.json({
 
   sucesso: resultado.status >= 200 && resultado.status < 300,
