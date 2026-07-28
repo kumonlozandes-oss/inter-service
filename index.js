@@ -869,14 +869,35 @@ app.get("/sincronizar-todos", async (req, res) => {
           seuNumero.slice(-2);
       }
 
-     const { data: titulo } = await supabase
+     let { data: titulo } = await supabase
   .from("financeiro_titulos")
   .select("id,id_mensalidade")
   .eq("id_inter", c.codigoSolicitacao)
   .maybeSingle();
 
 if (!titulo) {
-  continue;
+
+  const insert = await supabase
+    .from("financeiro_titulos")
+    .insert({
+      id_inter: c.codigoSolicitacao,
+      status: c.situacao === "RECEBIDO" ? "PAGO" : c.situacao,
+      status_inter: c.situacao,
+      nosso_numero: item.boleto?.nossoNumero || null,
+      linha_digitavel: item.boleto?.linhaDigitavel || null,
+      codigo_barras: item.boleto?.codigoBarras || null,
+      pix_copia_cola: item.pix?.pixCopiaECola || null,
+      url_pdf_boleto: item.pdf || null,
+      ultima_sincronizacao: new Date().toISOString()
+    })
+    .select("id,id_mensalidade")
+    .single();
+
+  if (!insert.data) {
+    continue;
+  }
+
+  titulo = insert.data;
 }
 
       await supabase
