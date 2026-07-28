@@ -840,6 +840,8 @@ erro:String(e)
  */
 app.get("/sincronizar-todos", async (req, res) => {
 
+  console.log("========== SINCRONIZAR-TODOS NOVA VERSÃO ==========");
+
   try {
 
     const resposta = await fetch(
