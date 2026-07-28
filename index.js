@@ -463,7 +463,7 @@ const detalhe = await new Promise((resolve, reject) => {
 
 });
 
-  console.log("STATUS:", resultado.status);
+  console.log("status:", resultado.status);
 
 console.log(
   "BODY INTER:",
@@ -837,26 +837,26 @@ app.get("/sincronizar-todos", async (req, res) => {
           seuNumero.slice(-2);
       }
 
-     const { data: mensalidade } = await supabase
-  .from("mensalidades")
+     const { data: titulo } = await supabase
+  .from("financeiro_titulos")
   .select("*")
   .eq("id_inter", c.codigoSolicitacao)
   .limit(1);
 
-      if (!mensalidade || mensalidade.length === 0)
-        continue;
+if (!titulo || titulo.length === 0)
+  continue;
 
-      const m = mensalidade[0];
+const m = titulo[0];
 
       await supabase
-        .from("mensalidades")
+    .from("financeiro_titulos")
         .update({
 
           id_inter: c.codigoSolicitacao,
 
           status_inter: c.situacao,
 
-          STATUS:
+          status:
             c.situacao === "RECEBIDO"
               ? "PAGO"
               : c.situacao,
@@ -886,7 +886,7 @@ DATA_PAGAMENTO:
             new Date().toISOString()
 
         })
-        .eq("ID_MENSALIDADE", m.ID_MENSALIDADE);
+        .eq("id", m.id);
 
       await supabase
 .from("mensalidades")
@@ -2575,6 +2575,44 @@ res.json({
 });
 
 });
+
+/**
+ * ==========================================================
+ * SINCRONIZAÇÃO AUTOMÁTICA
+ * ==========================================================
+ */
+
+async function sincronizacaoAutomatica() {
+
+  try {
+
+    const resposta = await fetch(
+  "http://localhost:" + PORT + "/sincronizar-todos"
+);
+
+    const json = await resposta.json();
+
+    console.log(
+      "[INTER] Sincronização automática:",
+      json
+    );
+
+  } catch (e) {
+
+    console.error(
+      "[INTER] Erro na sincronização:",
+      e
+    );
+
+  }
+
+}
+
+// executa 1 minuto após iniciar
+setTimeout(sincronizacaoAutomatica, 60000);
+
+// executa a cada 10 minutos
+setInterval(sincronizacaoAutomatica, 10 * 60 * 1000);
 
 
 app.listen(PORT);
