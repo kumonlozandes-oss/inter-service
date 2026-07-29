@@ -337,6 +337,7 @@ app.get("/teste-api", async (req, res) => {
 });
 
 app.post("/gerar-boleto", async (req, res) => {
+  console.log(req.body);
   try {
     const corpo = JSON.stringify({
       seuNumero: req.body.seuNumero,
