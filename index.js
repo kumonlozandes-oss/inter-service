@@ -126,6 +126,12 @@ function hojeISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function dataISOHa90Dias() {
+    const data = new Date();
+    data.setDate(data.getDate() - 90);
+    return data.toISOString().slice(0, 10);
+}
+
 async function listarCobrancasInter({ dataInicial = DATA_INICIAL_INTER, dataFinal = hojeISO() } = {}) {
   const { token } = await obterTokenInter();
   const cobrancas = [];
@@ -472,7 +478,10 @@ app.get("/sincronizar-todos", async (req, res) => {
 
     try {
 
-        const { cobrancas } = await listarCobrancasInter();
+        const { cobrancas } = await listarCobrancasInter({
+    dataInicial: dataISOHa90Dias(),
+    dataFinal: hojeISO()
+});
 
         resumo.total_boletos_inter = cobrancas.length;
 
