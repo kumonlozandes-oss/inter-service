@@ -285,22 +285,7 @@ function tituloInicial(dados, mensalidade) {
   };
 }
 
-async function criarTituloSeNecessario(dados, mensalidade) {
-  const { data, error } = await supabase
-    .from("financeiro_titulos")
-    .insert(tituloInicial(dados, mensalidade))
-    .select("*")
-    .single();
-  if (error) throw error;
-  if (mensalidade?.ID_MENSALIDADE && data?.id) {
-    const { error: erroMensalidade } = await supabase
-      .from("mensalidades")
-      .update({ id_titulo: data.id })
-      .eq("ID_MENSALIDADE", mensalidade.ID_MENSALIDADE);
-    if (erroMensalidade) throw erroMensalidade;
-  }
-  return data;
-}
+
 
 async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   const alteracoes = camposAlterados(atual, desejado);
@@ -366,9 +351,12 @@ async function sincronizarBoletoDetalhe(detalhe) {
   let atualizou = false;
 
   if (!titulo) {
-    titulo = await criarTituloSeNecessario(dados, mensalidade);
-    atualizou = true;
-  } else {
+    return {
+        atualizou: false,
+        pago: dados.status_inter === "RECEBIDO",
+        motivo: "titulo_nao_encontrado"
+    };
+} else {
     atualizou = await atualizarRegistro(
       "financeiro_titulos", "id", titulo.id, titulo, dadosTitulo(dados)
     ) || atualizou;
