@@ -1071,9 +1071,7 @@ function agendarProximaExecucao() {
 
     const minuto = proxima.getMinutes();
 
-    const minuto = proxima.getMinutes();
-
-let proximoMultiplo = Math.ceil((minuto + 1) / 10) * 10;
+    let proximoMultiplo = Math.ceil((minuto + 1) / 10) * 10;
 
     if (proximoMultiplo === 60) {
 
@@ -1087,10 +1085,10 @@ let proximoMultiplo = Math.ceil((minuto + 1) / 10) * 10;
     }
 
     if (proxima <= agora) {
-    proxima.setMinutes(proxima.getMinutes() + 10);
-}
+        proxima.setMinutes(proxima.getMinutes() + 10);
+    }
 
-const espera = proxima.getTime() - agora.getTime();
+    const espera = proxima.getTime() - agora.getTime();
 
     console.log("[AUTO] Próxima sincronização às", proxima.toLocaleTimeString("pt-BR"));
 
