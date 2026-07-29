@@ -450,9 +450,11 @@ app.get("/sincronizar-todos", async (req, res) => {
 
                 const resultado = await sincronizarCodigoInter(item);
 
-                if (resultado.sucesso) {
-                    resumo.importados++;
-                }
+console.log("Resultado:", resultado);
+
+if (resultado?.sucesso === true) {
+    resumo.importados++;
+}
 
             } catch (erro) {
 
