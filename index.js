@@ -281,8 +281,6 @@ async function buscarTituloPorBoleto(dados) {
 function tituloInicial(dados, mensalidade) {
   return {
     id_mensalidade: mensalidade?.ID_MENSALIDADE || null,
-    guid_aluno: mensalidade?.guid_aluno || mensalidade?.ID_ALUNO || null,
-    guid_responsavel: mensalidade?.guid_responsavel || null,
     forma_pagamento: mensalidade?.FORMA_PAGAMENTO || "BOLETO",
     ...dadosTitulo(dados),
     ultima_sincronizacao: new Date().toISOString()
