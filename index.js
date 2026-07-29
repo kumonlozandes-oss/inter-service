@@ -987,13 +987,7 @@ function dentroHorarioComercial() {
 
 }
 
-setTimeout(() => {
-
-    sincronizacaoAutomatica();
-
-}, 60 * 1000);
-
-setInterval(async () => {
+async function executarEspelhamentoAutomatico() {
 
     if (!dentroHorarioComercial()) {
         return;
@@ -1001,10 +995,58 @@ setInterval(async () => {
 
     console.log("[AUTO] Iniciando espelhamento Banco Inter...");
 
-    await sincronizacaoAutomatica();
+    try {
 
-    console.log("[AUTO] Espelhamento concluído.");
+        await sincronizacaoAutomatica();
 
-}, 10 * 60 * 1000);
+        console.log("[AUTO] Espelhamento concluído.");
+
+    } catch (erro) {
+
+        console.error("[AUTO] Erro:", erro);
+
+    }
+
+}
+
+function agendarProximaExecucao() {
+
+    const agora = new Date();
+
+    const proxima = new Date(agora);
+
+    proxima.setSeconds(0);
+    proxima.setMilliseconds(0);
+
+    const minuto = proxima.getMinutes();
+
+    const proximoMultiplo = Math.ceil(minuto / 10) * 10;
+
+    if (proximoMultiplo === 60) {
+
+        proxima.setHours(proxima.getHours() + 1);
+        proxima.setMinutes(0);
+
+    } else {
+
+        proxima.setMinutes(proximoMultiplo);
+
+    }
+
+    const espera = proxima.getTime() - agora.getTime();
+
+    console.log("[AUTO] Próxima sincronização às", proxima.toLocaleTimeString("pt-BR"));
+
+    setTimeout(async () => {
+
+        await executarEspelhamentoAutomatico();
+
+        agendarProximaExecucao();
+
+    }, espera);
+
+}
+
+agendarProximaExecucao();
 
 app.listen(PORT, () => log("Servidor iniciado", { porta: PORT }));
