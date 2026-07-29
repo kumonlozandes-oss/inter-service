@@ -275,48 +275,21 @@ async function sincronizarCodigoInter(codigo, token) {
     const boleto = detalhe.boleto;
     const pix = detalhe.pix;
 
-    const { data: titulo, error } = await supabase
-    .from("financeiro_titulos")
-    .select(`
-        *,
-        mensalidades!inner(
-            id_mensalidade,
-            competencia,
-            valor_final
-        )
-    `)
-    .eq("mensalidades.competencia", cobranca.seuNumero)
-    .eq("mensalidades.valor_final", cobranca.valorNominal)
-    .maybeSingle();
-
-    if (error) throw error;
-
-    if (!titulo) {
-        return {
-            sucesso: false,
-            motivo: "titulo_nao_encontrado",
-            seuNumero: cobranca.seuNumero
-        };
-    }
-
-    await supabase
-        .from("financeiro_titulos")
-        .update({
-            id_inter: cobranca.codigoSolicitacao,
-            seu_numero: cobranca.seuNumero,
-            nosso_numero: boleto.nossoNumero,
-            codigo_barras: boleto.codigoBarras,
-            linha_digitavel: boleto.linhaDigitavel,
-            pix_copia_cola: pix?.pixCopiaECola ?? null,
-            status_inter: cobranca.situacao,
-            json_inter: detalhe,
-            data_atualizacao: new Date().toISOString()
-        })
-        .eq("id", titulo.id);
+    const registro = {
+        id_inter: cobranca.codigoSolicitacao,
+        seu_numero: cobranca.seuNumero,
+        nosso_numero: boleto.nossoNumero,
+        codigo_barras: boleto.codigoBarras,
+        linha_digitavel: boleto.linhaDigitavel,
+        pix_copia_cola: pix?.pixCopiaECola ?? null,
+        status_inter: cobranca.situacao,
+        json_inter: detalhe,
+        data_atualizacao: new Date().toISOString()
+    };
 
     return {
         sucesso: true,
-        titulo: titulo.id
+        registro
     };
 
 }
