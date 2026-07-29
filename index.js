@@ -956,6 +956,7 @@ app.get("/mensalidades-sem-titulo", async (req, res) => {
 });
 
 async function sincronizacaoAutomatica() {
+  console.log("========== INÍCIO SINCRONIZAÇÃO AUTOMÁTICA ==========");
   try {
     const { cobrancas, token } = await listarCobrancasInter();
     let erros = 0;
@@ -973,6 +974,7 @@ async function sincronizacaoAutomatica() {
   } catch (erro) {
     log("Erro na sincronização automática", { erro: String(erro) });
   }
+  console.log("========== FIM SINCRONIZAÇÃO AUTOMÁTICA ==========");
 }
 
 function dentroHorarioComercial() {
