@@ -505,8 +505,18 @@ app.get("/sincronizar-todos", async (req, res) => {
                 );
 
                 if (resultado.sucesso) {
-                    resumo.atualizados++;
-                }
+
+    resumo.atualizados++;
+
+} else {
+
+    resumo.erros.push({
+        id_inter: titulo.id_inter,
+        motivo: resultado.motivo,
+        seu_numero: resultado.seu_numero
+    });
+
+}
 
             } catch (erro) {
 
