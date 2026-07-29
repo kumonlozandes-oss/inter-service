@@ -285,33 +285,17 @@ const detalhe = item;
         json_inter: detalhe,
     };
 
-    const { data: titulo, error } = await supabase
-        .from("financeiro_titulos")
-        .select("id")
-        .is("id_inter", null)
-        .limit(1)
-        .maybeSingle();
-
-    if (error) throw error;
-
-    if (!titulo) {
-        return {
-            sucesso: false,
-            motivo: "nenhum_titulo_disponivel"
-        };
-    }
-
     const { error: erroUpdate } = await supabase
-        .from("financeiro_titulos")
-        .update(dados)
-        .eq("id", titulo.id);
+    .from("financeiro_titulos")
+    .upsert(dados, {
+        onConflict: "id_inter"
+    });
 
-    if (erroUpdate) throw erroUpdate;
+if (erroUpdate) throw erroUpdate;
 
-    return {
-        sucesso: true,
-        titulo: titulo.id
-    };
+   return {
+    sucesso: true
+};
 }
 
 
