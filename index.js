@@ -217,20 +217,7 @@ function dadosDoBoleto(detalhe) {
 
 function dadosMensalidade(dados) {
   return {
-    id_inter: dados.id_inter,
-    seu_numero: dados.seu_numero,
-    status_inter: dados.status_inter,
-    STATUS: dados.status,
-    nosso_numero: dados.nosso_numero,
-    linha_digitavel: dados.linha_digitavel,
-    codigo_barras: dados.codigo_barras,
-    pix_copia_cola: dados.pix_copia_cola,
-    codigo_pix: dados.codigo_pix,
-    qr_code_pix: dados.qr_code_pix,
-    url_pdf_boleto: dados.url_pdf_boleto,
-    VENCIMENTO: dados.data_vencimento,
-    DATA_PAGAMENTO: dados.DATA_PAGAMENTO,
-    data_baixa: dados.data_baixa
+    status: dados.status
   };
 }
 
@@ -261,24 +248,7 @@ async function buscarMensalidadePorBoleto(dados) {
     dados.seu_numero,
     normalizarSeuNumero(dados.seu_numero)
   ].filter(Boolean))];
-  if (dados.id_inter) {
-    const { data, error } = await supabase
-      .from("mensalidades")
-      .select("*")
-      .eq("id_inter", dados.id_inter)
-      .limit(1);
-    if (error) throw error;
-    if (data?.[0]) return data[0];
-  }
-  for (const seuNumero of candidatos) {
-    const { data, error } = await supabase
-      .from("mensalidades")
-      .select("*")
-      .eq("seu_numero", seuNumero)
-      .limit(1);
-    if (error) throw error;
-    if (data?.[0]) return data[0];
-  }
+ 
   return null;
 }
 
@@ -416,16 +386,14 @@ async function sincronizarBoletoDetalhe(detalhe) {
     mensalidade = data?.[0] || null;
   }
   if (mensalidade) {
-    atualizou = await atualizarRegistro(
-      "mensalidades", "ID_MENSALIDADE", mensalidade.ID_MENSALIDADE,
-      mensalidade, dadosMensalidade(dados)
-    ) || atualizou;
-  } else {
-    log("Boleto sem mensalidade correspondente", {
-      id_inter: dados.id_inter,
-      seu_numero: dados.seu_numero
-    });
-  }
+  atualizou = await atualizarRegistro(
+    "mensalidades",
+    "id_mensalidade",
+    mensalidade.id_mensalidade,
+    mensalidade,
+    dadosMensalidade(dados)
+  ) || atualizou;
+}
 
   const recebimentoAtualizado = await sincronizarRecebimento(dados, mensalidade, titulo);
   return { atualizou: atualizou || recebimentoAtualizado, pago: dados.status_inter === "RECEBIDO" };
