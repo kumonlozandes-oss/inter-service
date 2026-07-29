@@ -267,50 +267,8 @@ async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   return true;
 }
 
-async function sincronizarBoletoDetalhe(detalhe) {
 
-    const dados = dadosDoBoleto(detalhe);
 
-    const { data: titulo, error } = await supabase
-        .from("financeiro_titulos")
-        .select("*")
-        .eq("id_inter", dados.id_inter)
-        .maybeSingle();
-
-    if (error) throw error;
-
-    if (!titulo) {
-
-        return {
-            atualizou: false,
-            pago: dados.status_inter === "RECEBIDO",
-            motivo: "titulo_nao_encontrado"
-        };
-
-    }
-
-    await atualizarRegistro(
-        "financeiro_titulos",
-        "id",
-        titulo.id,
-        titulo,
-        dadosTitulo(dados)
-    );
-
-    return {
-        atualizou: true,
-        pago: dados.status_inter === "RECEBIDO"
-    };
-
-}
-
-async function sincronizarCodigoInter(codigo, token) {
-
-    const detalhe = await consultarCobranca(codigo, token);
-
-    return await sincronizarBoletoDetalhe(detalhe);
-
-}
 
 function responderErro(res, erro) {
     console.error("ERRO COMPLETO:");
@@ -799,80 +757,7 @@ app.get("/sincronizar-movimentacoes", async (req, res) => {
   }
 });
 
-app.get("/preencher-titulos", async (req, res) => {
 
-  const resultado = {
-    atualizados: 0,
-    naoEncontrados: 0,
-    erros: []
-  };
-
-  try {
-
-    const { data: titulos, error } = await supabase
-      .from("financeiro_titulos")
-      .select("*");
-
-    if (error) throw error;
-
-    const { cobrancas, token } = await listarCobrancasInter();
-
-    for (const item of cobrancas) {
-
-      try {
-
-        const codigo = item.cobranca?.codigoSolicitacao;
-
-        if (!codigo) continue;
-
-        const detalhe = await consultarCobranca(codigo, token);
-
-        const dados = dadosDoBoleto(detalhe);
-
-        const seuNumero = normalizarSeuNumero(dados.seu_numero);
-
-        const competencia = seuNumero?.substring(0, 7);
-
-        if (!competencia) {
-          resultado.naoEncontrados++;
-          continue;
-        }
-
-        const titulo = titulos.find(t =>
-          t.competencia === competencia
-        );
-
-        if (!titulo) {
-          resultado.naoEncontrados++;
-          continue;
-        }
-
-        const { error } = await supabase
-          .from("financeiro_titulos")
-          .update(dadosTitulo(dados))
-          .eq("id", titulo.id);
-
-        if (error) throw error;
-
-        resultado.atualizados++;
-
-      } catch (e) {
-
-        resultado.erros.push(e.message);
-
-      }
-
-    }
-
-    res.json(resultado);
-
-  } catch (e) {
-
-    responderErro(res, e);
-
-  }
-
-});
 
 app.get("/diagnostico-financeiro", async (req, res) => {
   try {
