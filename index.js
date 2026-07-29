@@ -284,7 +284,6 @@ async function sincronizarCodigoInter(codigo, token) {
         pix_copia_cola: pix?.pixCopiaECola ?? null,
         status_inter: cobranca.situacao,
         json_inter: detalhe,
-        data_atualizacao: new Date().toISOString()
     };
 
     const { data: titulo, error } = await supabase
