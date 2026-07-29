@@ -205,9 +205,21 @@ app.get("/importar-boletos", async (req, res) => {
 
                 const novo = dadosTitulo(dados);
 
-                const { error } = await supabase
+// Não importa boletos que ainda não possuem mensalidade vinculada
+if (!novo.id_mensalidade) {
+    console.log(
+        "[IMPORTAÇÃO] Ignorado:",
+        novo.seu_numero,
+        "- sem id_mensalidade"
+    );
+    continue;
+}
+
+const { error } = await supabase
     .from("financeiro_titulos")
     .insert(novo);
+
+if (error) throw error;
 
 if (error) {
     console.error(error);
