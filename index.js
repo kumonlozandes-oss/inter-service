@@ -380,7 +380,7 @@ app.post("/gerar-boleto", async (req, res) => {
   console.log(req.body);
   try {
     const corpo = JSON.stringify({
-      seuNumero: req.body.seuNumero,
+      seuNumero: `MEN-${req.body.id_mensalidade}`,
       valorNominal: Number(req.body.valorNominal),
       dataVencimento: req.body.dataVencimento,
       numDiasAgenda: 30,
@@ -423,11 +423,28 @@ if (
 }
 
     if (req.body.id_titulo) {
-      const { data: titulo, error } = await supabase
-        .from("financeiro_titulos").select("*").eq("id", req.body.id_titulo).single();
-      if (error) throw error;
-      await atualizarRegistro("financeiro_titulos", "id", titulo.id, titulo, dadosTitulo(dados));
-    }
+
+    const { data: titulo, error } = await supabase
+        .from("financeiro_titulos")
+        .select("*")
+        .eq("id", req.body.id_titulo)
+        .single();
+
+    if (error) throw error;
+
+    const dadosAtualizados = dadosTitulo(dados);
+
+    dadosAtualizados.id_mensalidade = req.body.id_mensalidade;
+
+    await atualizarRegistro(
+        "financeiro_titulos",
+        "id",
+        titulo.id,
+        titulo,
+        dadosAtualizados
+    );
+
+}
     if (req.body.id_mensalidade) {
       const { data: mensalidade, error } = await supabase
         .from("mensalidades").select("*")
