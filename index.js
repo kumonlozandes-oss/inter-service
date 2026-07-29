@@ -373,18 +373,80 @@ app.get("/consultar/:codigo", async (req, res) => {
 
 async function sincronizarCodigoInter(idInter) {
 
-    const { token } = await obterTokenInter();
+    const detalhe = await consultarCobranca(idInter);
 
-    const { json } = await requisicaoInter({
-        path: `/cobranca/v3/cobrancas/${idInter}`,
-        token
-    });
+    const dados = dadosDoBoleto(detalhe);
 
-    console.log(json);
+    let titulo = null;
+
+    if (dados.id_inter) {
+
+        const { data } = await supabase
+            .from("financeiro_titulos")
+            .select("*")
+            .eq("id_inter", dados.id_inter)
+            .maybeSingle();
+
+        titulo = data;
+    }
+
+    if (!titulo && dados.seu_numero) {
+
+        const { data } = await supabase
+            .from("financeiro_titulos")
+            .select("*")
+            .eq("seu_numero", normalizarSeuNumero(dados.seu_numero))
+            .maybeSingle();
+
+        titulo = data;
+    }
+
+    if (!titulo) {
+
+        return {
+            sucesso: false,
+            motivo: "Título não encontrado",
+            seu_numero: dados.seu_numero,
+            id_inter: dados.id_inter
+        };
+
+    }
+
+    await atualizarRegistro(
+        "financeiro_titulos",
+        "id",
+        titulo.id,
+        titulo,
+        dadosTitulo(dados)
+    );
+
+    if (titulo.id_mensalidade) {
+
+        const { data: mensalidade } = await supabase
+            .from("mensalidades")
+            .select("*")
+            .eq("ID_MENSALIDADE", titulo.id_mensalidade)
+            .maybeSingle();
+
+        if (mensalidade) {
+
+            await atualizarRegistro(
+                "mensalidades",
+                "ID_MENSALIDADE",
+                mensalidade.ID_MENSALIDADE,
+                mensalidade,
+                dadosMensalidade(dados)
+            );
+
+        }
+
+    }
 
     return {
         sucesso: true,
-        cobranca: json
+        id_inter: dados.id_inter,
+        seu_numero: dados.seu_numero,
+        status: dados.status
     };
 
 }
