@@ -271,10 +271,45 @@ async function sincronizarCodigoInter(codigo, token) {
 
     const detalhe = await consultarCobranca(codigo, token);
 
+    const cobranca = detalhe.cobranca;
+    const boleto = detalhe.boleto;
+    const pix = detalhe.pix;
+
+    const { data: titulo, error } = await supabase
+    .from("financeiro_titulos")
+    .select("*")
+    .eq("status", "PENDENTE")
+    .limit(1)
+    .maybeSingle();
+
+    if (error) throw error;
+
+    if (!titulo) {
+        return {
+            sucesso: false,
+            motivo: "titulo_nao_encontrado",
+            seuNumero: cobranca.seuNumero
+        };
+    }
+
+    await supabase
+        .from("financeiro_titulos")
+        .update({
+            id_inter: cobranca.codigoSolicitacao,
+            seu_numero: cobranca.seuNumero,
+            nosso_numero: boleto.nossoNumero,
+            codigo_barras: boleto.codigoBarras,
+            linha_digitavel: boleto.linhaDigitavel,
+            pix_copia_cola: pix?.pixCopiaECola ?? null,
+            status_inter: cobranca.situacao,
+            json_inter: detalhe,
+            data_atualizacao: new Date().toISOString()
+        })
+        .eq("id", titulo.id);
+
     return {
         sucesso: true,
-        codigo,
-        detalhe
+        titulo: titulo.id
     };
 
 }
