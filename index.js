@@ -436,20 +436,16 @@ async function sincronizarCodigoInter(codigo, token) {
 }
 
 function responderErro(res, erro) {
-  log("Erro", { mensagem: String(erro), resposta: erro.respostaInter });
-  res.status(500).json({ erro: String(erro), resposta_inter: erro.respostaInter });
+    console.error("ERRO COMPLETO:");
+    console.error(erro);
+
+    res.status(500).json({
+        message: erro.message,
+        stack: erro.stack,
+        resposta_inter: erro.respostaInter,
+        details: erro
+    });
 }
-
-app.get("/", (req, res) => res.json({ status: "ok" }));
-
-app.get("/oauth", async (req, res) => {
-  try {
-    const { resultado } = await obterTokenInter();
-    res.json(resultado);
-  } catch (erro) {
-    responderErro(res, erro);
-  }
-});
 
 app.get("/teste-api", async (req, res) => {
   try {
@@ -573,7 +569,13 @@ app.get("/sincronizar-todos", async (req, res) => {
         if (resultado.pago) resumo.pagos += 1;
         log("Boleto sincronizado", { codigo, ...resultado });
       } catch (erro) {
-        const registro = { codigo, erro: String(erro) };
+        const registro = {
+  codigo,
+  erro: erro.message,
+  stack: erro.stack,
+  respostaInter: erro.respostaInter,
+  detalhes: erro
+};
         resumo.erros.push(registro);
         log("Falha ao sincronizar boleto", registro);
       }
@@ -581,7 +583,13 @@ app.get("/sincronizar-todos", async (req, res) => {
     res.json(resumo);
   } catch (erro) {
     resumo.sucesso = false;
-    resumo.erros.push({ codigo: null, erro: String(erro) });
+    resumo.erros.push({
+  codigo: null,
+  erro: erro.message,
+  stack: erro.stack,
+  respostaInter: erro.respostaInter,
+  detalhes: erro
+});
     res.status(500).json(resumo);
   }
 });
