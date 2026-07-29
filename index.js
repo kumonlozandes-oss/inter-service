@@ -278,8 +278,7 @@ async function sincronizarCodigoInter(codigo, token) {
     const { data: titulo, error } = await supabase
     .from("financeiro_titulos")
     .select("*")
-    .eq("status", "PENDENTE")
-    .limit(1)
+    .eq("id_mensalidade", codigo)
     .maybeSingle();
 
     if (error) throw error;
