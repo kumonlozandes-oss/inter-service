@@ -483,7 +483,7 @@ app.get("/sincronizar-todos", async (req, res) => {
 
             try {
 
-                const resultado = await sincronizarCodigoInter(item);
+                const resultado = await sincronizarCodigoInter(codigo);
 
 console.log("Resultado:", resultado);
 
