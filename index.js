@@ -267,7 +267,17 @@ async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   return true;
 }
 
+async function sincronizarCodigoInter(codigo, token) {
 
+    const detalhe = await consultarCobranca(codigo, token);
+
+    return {
+        sucesso: true,
+        codigo,
+        detalhe
+    };
+
+}
 
 
 function responderErro(res, erro) {
