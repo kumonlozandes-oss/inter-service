@@ -330,6 +330,22 @@ app.post("/gerar-boleto", async (req, res) => {
     const detalhe = await consultarCobranca(codigo, emissao.token);
     const dados = dadosDoBoleto(detalhe);
 
+    const { data: boletoExistente, error: erroDuplicidade } = await supabase
+    .from("financeiro_titulos")
+    .select("id,id_mensalidade")
+    .eq("id_inter", dados.id_inter);
+
+if (erroDuplicidade) throw erroDuplicidade;
+
+if (
+    boletoExistente.length > 0 &&
+    (!req.body.id_titulo || boletoExistente[0].id !== req.body.id_titulo)
+) {
+    throw new Error(
+        `O id_inter ${dados.id_inter} já está vinculado a outro título.`
+    );
+}
+
     if (req.body.id_titulo) {
       const { data: titulo, error } = await supabase
         .from("financeiro_titulos").select("*").eq("id", req.body.id_titulo).single();
