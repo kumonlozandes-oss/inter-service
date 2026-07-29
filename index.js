@@ -161,6 +161,74 @@ async function listarCobrancasInter({ dataInicial = DATA_INICIAL_INTER, dataFina
   return { cobrancas, token };
 }
 
+app.post("/importar-boletos", async (req, res) => {
+
+    try {
+
+        const { cobrancas } = await listarCobrancasInter({
+            dataInicial: "2026-01-01",
+            dataFinal: "2027-12-31"
+        });
+
+        let inseridos = 0;
+        let atualizados = 0;
+
+        for (const boleto of cobrancas) {
+
+            const dados = dadosDoBoleto(boleto);
+
+            const { data: existente } = await supabase
+                .from("financeiro_titulos")
+                .select("id")
+                .eq("id_inter", dados.id_inter)
+                .maybeSingle();
+
+            if (existente) {
+
+                const { data: registro } = await supabase
+                    .from("financeiro_titulos")
+                    .select("*")
+                    .eq("id", existente.id)
+                    .single();
+
+                await atualizarRegistro(
+                    "financeiro_titulos",
+                    "id",
+                    registro.id,
+                    registro,
+                    dadosTitulo(dados)
+                );
+
+                atualizados++;
+
+            } else {
+
+                const novo = dadosTitulo(dados);
+
+                await supabase
+                    .from("financeiro_titulos")
+                    .insert(novo);
+
+                inseridos++;
+
+            }
+
+        }
+
+        res.json({
+            total: cobrancas.length,
+            inseridos,
+            atualizados
+        });
+
+    } catch (erro) {
+
+        responderErro(res, erro);
+
+    }
+
+});
+
 function normalizarSeuNumero(valor) {
   const texto = String(valor || "").trim();
   if (!texto || texto.includes("/") || texto.length < 7) return texto;
