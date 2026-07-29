@@ -161,7 +161,7 @@ async function listarCobrancasInter({ dataInicial = DATA_INICIAL_INTER, dataFina
   return { cobrancas, token };
 }
 
-app.post("/importar-boletos", async (req, res) => {
+app.get("/importar-boletos", async (req, res) => {
 
     try {
 
