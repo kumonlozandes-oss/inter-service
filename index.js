@@ -267,36 +267,7 @@ async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   return true;
 }
 
-async function sincronizarCodigoInter(item) {
 
-    const cobranca = item.cobranca;
-const boleto = item.boleto;
-const pix = item.pix;
-const detalhe = item;
-
-    const dados = {
-        id_inter: cobranca.codigoSolicitacao,
-        seu_numero: cobranca.seuNumero,
-        nosso_numero: boleto.nossoNumero,
-        codigo_barras: boleto.codigoBarras,
-        linha_digitavel: boleto.linhaDigitavel,
-        pix_copia_cola: pix?.pixCopiaECola ?? null,
-        status_inter: cobranca.situacao,
-        json_inter: detalhe,
-    };
-
-    const { error: erroUpdate } = await supabase
-    .from("financeiro_titulos")
-    .upsert(dados, {
-        onConflict: "id_inter"
-    });
-
-if (erroUpdate) throw erroUpdate;
-
-   return {
-    sucesso: true
-};
-}
 
 
 function responderErro(res, erro) {
@@ -399,6 +370,24 @@ app.get("/consultar/:codigo", async (req, res) => {
     responderErro(res, erro);
   }
 });
+
+async function sincronizarCodigoInter(idInter) {
+
+    const { token } = await obterTokenInter();
+
+    const { json } = await requisicaoInter({
+        path: `/cobranca/v3/cobrancas/${idInter}`,
+        token
+    });
+
+    console.log(json);
+
+    return {
+        sucesso: true,
+        cobranca: json
+    };
+
+}
 
 app.get("/sincronizar/:idInter", async (req, res) => {
   try {
