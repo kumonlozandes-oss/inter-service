@@ -1027,7 +1027,7 @@ async function sincronizacaoAutomatica() {
   }
 }
 
-setTimeout(sincronizacaoAutomatica, 60_000);
-setInterval(sincronizacaoAutomatica, 10 * 60_000);
+// setTimeout(sincronizacaoAutomatica, 60_000);
+// setInterval(sincronizacaoAutomatica, 10 * 60_000);
 
 app.listen(PORT, () => log("Servidor iniciado", { porta: PORT }));
