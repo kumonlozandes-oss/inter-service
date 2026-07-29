@@ -427,53 +427,56 @@ app.get("/sincronizar/:idInter", async (req, res) => {
 });
 
 app.get("/sincronizar-todos", async (req, res) => {
-  const resumo = {
-    sucesso: true,
-    total_boletos: 0,
-    processados: 0,
-    atualizados: 0,
-    pagos: 0,
-    erros: []
-  };
-  try {
-    const { cobrancas, token } = await listarCobrancasInter();
-    resumo.total_boletos = cobrancas.length;
-    for (const item of cobrancas) {
-      const codigo = item?.cobranca?.codigoSolicitacao;
-      if (!codigo) {
-        resumo.erros.push({ codigo: null, erro: "Registro do Inter sem codigoSolicitacao" });
-        continue;
-      }
-      try {
-        const resultado = await sincronizarCodigoInter(codigo, token);
-        resumo.processados += 1;
-        if (resultado.atualizou) resumo.atualizados += 1;
-        if (resultado.pago) resumo.pagos += 1;
-        log("Boleto sincronizado", { codigo, ...resultado });
-      } catch (erro) {
-        const registro = {
-  codigo,
-  erro: erro.message,
-  stack: erro.stack,
-  respostaInter: erro.respostaInter,
-  detalhes: erro
-};
-        resumo.erros.push(registro);
-        log("Falha ao sincronizar boleto", registro);
-      }
+
+    const resumo = {
+        sucesso: true,
+        total_boletos: 0,
+        importados: 0,
+        erros: []
+    };
+
+    try {
+
+        const { cobrancas, token } = await listarCobrancasInter();
+
+        resumo.total_boletos = cobrancas.length;
+
+        for (const item of cobrancas) {
+
+            const codigo = item?.cobranca?.codigoSolicitacao;
+
+            if (!codigo) continue;
+
+            try {
+
+                const resultado = await sincronizarCodigoInter(codigo, token);
+
+                if (resultado.sucesso) {
+                    resumo.importados++;
+                }
+
+            } catch (erro) {
+
+                resumo.erros.push({
+                    codigo,
+                    erro: erro.message
+                });
+
+            }
+
+        }
+
+        res.json(resumo);
+
+    } catch (erro) {
+
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+
     }
-    res.json(resumo);
-  } catch (erro) {
-    resumo.sucesso = false;
-    resumo.erros.push({
-  codigo: null,
-  erro: erro.message,
-  stack: erro.stack,
-  respostaInter: erro.respostaInter,
-  detalhes: erro
-});
-    res.status(500).json(resumo);
-  }
+
 });
 
 app.get("/boletos", async (req, res) => {
