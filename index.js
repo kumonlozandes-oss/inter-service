@@ -470,45 +470,48 @@ app.get("/sincronizar-todos", async (req, res) => {
 
     const resumo = {
         sucesso: true,
-        total_boletos_inter: 0,
+        total_titulos: 0,
         atualizados: 0,
-        nao_encontrados: 0,
+        sem_id_inter: 0,
         erros: []
     };
 
     try {
 
-        const { cobrancas, token } = await listarCobrancasInter({
-    dataInicial: dataISOHa90Dias(),
-    dataFinal: hojeISO()
-});
+        const { token } = await obterTokenInter();
 
-        resumo.total_boletos_inter = cobrancas.length;
+        const { data: titulos, error } = await supabase
+            .from("financeiro_titulos")
+            .select("id,id_inter,seu_numero,id_mensalidade");
 
-        for (const item of cobrancas) {
+        if (error) throw error;
 
-            const codigo = item?.cobranca?.codigoSolicitacao;
+        resumo.total_titulos = titulos.length;
 
-            if (!codigo) continue;
+        for (const titulo of titulos) {
+
+            if (!titulo.id_inter) {
+
+                resumo.sem_id_inter++;
+                continue;
+
+            }
 
             try {
 
-                const resultado = await sincronizarCodigoInter(codigo, token);
+                const resultado = await sincronizarCodigoInter(
+                    titulo.id_inter,
+                    token
+                );
 
                 if (resultado.sucesso) {
-
                     resumo.atualizados++;
-
-                } else {
-
-                    resumo.nao_encontrados++;
-
                 }
 
             } catch (erro) {
 
                 resumo.erros.push({
-                    codigo,
+                    id_inter: titulo.id_inter,
                     erro: erro.message
                 });
 
