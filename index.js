@@ -955,25 +955,77 @@ app.get("/mensalidades-sem-titulo", async (req, res) => {
 });
 
 async function sincronizacaoAutomatica() {
-  console.log("========== INÍCIO SINCRONIZAÇÃO AUTOMÁTICA ==========");
-  try {
-    const { cobrancas, token } = await listarCobrancasInter();
-    let erros = 0;
-    for (const item of cobrancas) {
-      const codigo = item.cobranca?.codigoSolicitacao;
-      if (!codigo) { erros += 1; continue; }
-      try {
-        await sincronizarCodigoInter(codigo, token);
-      } catch (erro) {
-        erros += 1;
-        log("Falha na sincronização automática", { codigo, erro: String(erro) });
-      }
+
+    console.log("========== INÍCIO SINCRONIZAÇÃO AUTOMÁTICA ==========");
+
+    const resumo = {
+        total_titulos: 0,
+        atualizados: 0,
+        sem_id_inter: 0,
+        erros: 0
+    };
+
+    try {
+
+        const { token } = await obterTokenInter();
+
+        const { data: titulos, error } = await supabase
+            .from("financeiro_titulos")
+            .select("id,id_inter,seu_numero,id_mensalidade")
+            .not("id_inter", "is", null);
+
+        if (error) throw error;
+
+        resumo.total_titulos = titulos.length;
+
+        const idsProcessados = new Set();
+
+        for (const titulo of titulos) {
+
+            if (idsProcessados.has(titulo.id_inter)) continue;
+            idsProcessados.add(titulo.id_inter);
+
+            if (!titulo.id_inter) {
+                resumo.sem_id_inter++;
+                continue;
+            }
+
+            try {
+
+                const resultado = await sincronizarCodigoInter(
+                    titulo.id_inter,
+                    token
+                );
+
+                if (resultado.sucesso) {
+                    resumo.atualizados++;
+                } else {
+                    resumo.erros++;
+                }
+
+            } catch (erro) {
+
+                resumo.erros++;
+
+                console.error("[AUTO] Erro ao sincronizar:", titulo.id_inter, erro.message);
+
+            }
+
+        }
+
+        console.log("[AUTO] Total de títulos:", resumo.total_titulos);
+        console.log("[AUTO] Atualizados:", resumo.atualizados);
+        console.log("[AUTO] Sem id_inter:", resumo.sem_id_inter);
+        console.log("[AUTO] Erros:", resumo.erros);
+
+    } catch (erro) {
+
+        console.error("[AUTO] Falha geral:", erro);
+
     }
-    log("Sincronização automática concluída", { total: cobrancas.length, erros });
-  } catch (erro) {
-    log("Erro na sincronização automática", { erro: String(erro) });
-  }
-  console.log("========== FIM SINCRONIZAÇÃO AUTOMÁTICA ==========");
+
+    console.log("========== FIM SINCRONIZAÇÃO AUTOMÁTICA ==========");
+
 }
 
 function dentroHorarioComercial() {
