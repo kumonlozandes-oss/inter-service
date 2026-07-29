@@ -306,7 +306,6 @@ async function criarTituloSeNecessario(dados, mensalidade) {
 async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   const alteracoes = camposAlterados(atual, desejado);
   if (!Object.keys(alteracoes).length) return false;
-  alteracoes.ultima_sincronizacao = new Date().toISOString();
   const { error } = await supabase.from(tabela).update(alteracoes).eq(chave, id);
   if (error) throw error;
   return true;
