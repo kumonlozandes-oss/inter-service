@@ -283,11 +283,6 @@ function tituloInicial(dados, mensalidade) {
     id_mensalidade: mensalidade?.ID_MENSALIDADE || null,
     guid_aluno: mensalidade?.guid_aluno || mensalidade?.ID_ALUNO || null,
     guid_responsavel: mensalidade?.guid_responsavel || null,
-    aluno: mensalidade?.ALUNO || null,
-    responsavel: mensalidade?.responsavel || null,
-    cpf_responsavel: mensalidade?.cpf_responsavel || null,
-    competencia_mes: mensalidade?.competencia_mes || null,
-    competencia_ano: mensalidade?.competencia_ano || null,
     forma_pagamento: mensalidade?.FORMA_PAGAMENTO || "BOLETO",
     ...dadosTitulo(dados),
     ultima_sincronizacao: new Date().toISOString()
