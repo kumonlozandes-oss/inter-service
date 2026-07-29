@@ -282,7 +282,6 @@ function tituloInicial(dados, mensalidade) {
     id_mensalidade: mensalidade?.ID_MENSALIDADE || null,
     forma_pagamento: mensalidade?.FORMA_PAGAMENTO || "BOLETO",
     ...dadosTitulo(dados),
-    ultima_sincronizacao: new Date().toISOString()
   };
 }
 
