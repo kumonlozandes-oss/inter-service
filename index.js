@@ -242,35 +242,6 @@ function dadosTitulo(dados) {
   };
 }
 
-async function buscarMensalidadePorBoleto() {
-    return null;
-}
-
-async function buscarTituloPorBoleto(dados) {
-  if (dados.id_inter) {
-    const { data, error } = await supabase
-      .from("financeiro_titulos")
-      .select("*")
-      .eq("id_inter", dados.id_inter)
-      .limit(1);
-    if (error) throw error;
-    if (data?.[0]) return data[0];
-  }
-  const candidatos = [...new Set([
-    dados.seu_numero,
-    normalizarSeuNumero(dados.seu_numero)
-  ].filter(Boolean))];
-  for (const seuNumero of candidatos) {
-    const { data, error } = await supabase
-      .from("financeiro_titulos")
-      .select("*")
-      .eq("seu_numero", seuNumero)
-      .limit(1);
-    if (error) throw error;
-    if (data?.[0]) return data[0];
-  }
-  return null;
-}
 
 function tituloInicial(dados, mensalidade) {
   return {
@@ -279,8 +250,6 @@ function tituloInicial(dados, mensalidade) {
     ...dadosTitulo(dados),
   };
 }
-
-
 
 async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   const alteracoes = camposAlterados(atual, desejado);
@@ -298,90 +267,49 @@ async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   return true;
 }
 
-async function sincronizarRecebimento(dados, mensalidade, titulo) {
-  if (dados.status_inter !== "RECEBIDO") return false;
-  const idMensalidade = mensalidade?.ID_MENSALIDADE || titulo?.id_mensalidade;
-  if (!idMensalidade) {
-    log("Recebimento não criado: boleto sem mensalidade vinculada", { id_inter: dados.id_inter });
-    return false;
-  }
-  const { data: existentes, error: erroBusca } = await supabase
-    .from("recebimentos")
-    .select("*")
-    .eq("ID_MENSALIDADE", idMensalidade)
-    .limit(1);
-  if (erroBusca) throw erroBusca;
-  const desejado = {
-    ID_MENSALIDADE: idMensalidade,
-    ALUNO: mensalidade?.ALUNO || titulo?.aluno || null,
-    VALOR: String(dados.valor_recebido ?? dados.valor_original ?? 0),
-    DATA_RECEBIMENTO: dados.data_pagamento || new Date().toISOString(),
-    FORMA_PAGAMENTO: "BOLETO",
-    OBSERVACAO: dados.seu_numero || dados.id_inter,
-    STATUS: "PAGO"
-  };
-  if (existentes?.[0]) {
-    const alteracoes = camposAlterados(existentes[0], desejado);
-    if (!Object.keys(alteracoes).length) return false;
-    const { error } = await supabase
-      .from("recebimentos")
-      .update(alteracoes)
-      .eq("ID_RECEBIMENTO", existentes[0].ID_RECEBIMENTO);
-    if (error) throw error;
-    return true;
-  }
-  const { error } = await supabase.from("recebimentos").insert({
-    ID_RECEBIMENTO: randomUUID(),
-    ...desejado
-  });
-  if (error) throw error;
-  return true;
-}
-
 async function sincronizarBoletoDetalhe(detalhe) {
-  const dados = dadosDoBoleto(detalhe);
-  if (!dados.id_inter) throw new Error("Cobrança sem codigoSolicitacao");
-  let titulo = await buscarTituloPorBoleto(dados);
-  let mensalidade = await buscarMensalidadePorBoleto(dados);
-  let atualizou = false;
 
-  if (!titulo) {
-    return {
-        atualizou: false,
-        pago: dados.status_inter === "RECEBIDO",
-        motivo: "titulo_nao_encontrado"
-    };
-} else {
-    atualizou = await atualizarRegistro(
-      "financeiro_titulos", "id", titulo.id, titulo, dadosTitulo(dados)
-    ) || atualizou;
-  }
+    const dados = dadosDoBoleto(detalhe);
 
-  if (!mensalidade && titulo?.id_mensalidade) {
-    const { data, error } = await supabase
-      .from("mensalidades")
-      .select("*")
-      .eq("ID_MENSALIDADE", titulo.id_mensalidade)
-      .limit(1);
+    const { data: titulo, error } = await supabase
+        .from("financeiro_titulos")
+        .select("*")
+        .eq("id_inter", dados.id_inter)
+        .maybeSingle();
+
     if (error) throw error;
-    mensalidade = data?.[0] || null;
-  }
-  if (mensalidade) {
-  atualizou = await atualizarRegistro(
-    "mensalidades",
-    "id_mensalidade",
-    mensalidade.id_mensalidade,
-    mensalidade,
-    dadosMensalidade(dados)
-  ) || atualizou;
-}
 
-  const recebimentoAtualizado = await sincronizarRecebimento(dados, mensalidade, titulo);
-  return { atualizou: atualizou || recebimentoAtualizado, pago: dados.status_inter === "RECEBIDO" };
+    if (!titulo) {
+
+        return {
+            atualizou: false,
+            pago: dados.status_inter === "RECEBIDO",
+            motivo: "titulo_nao_encontrado"
+        };
+
+    }
+
+    await atualizarRegistro(
+        "financeiro_titulos",
+        "id",
+        titulo.id,
+        titulo,
+        dadosTitulo(dados)
+    );
+
+    return {
+        atualizou: true,
+        pago: dados.status_inter === "RECEBIDO"
+    };
+
 }
 
 async function sincronizarCodigoInter(codigo, token) {
-  return sincronizarBoletoDetalhe(await consultarCobranca(codigo, token));
+
+    const detalhe = await consultarCobranca(codigo, token);
+
+    return await sincronizarBoletoDetalhe(detalhe);
+
 }
 
 function responderErro(res, erro) {
