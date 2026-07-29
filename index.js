@@ -261,8 +261,7 @@ async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   const alteracoes = camposAlterados(atual, desejado);
   if (!Object.keys(alteracoes).length) return false;
 
-  console.log("TABELA:", tabela);
-  console.log("ALTERACOES:", alteracoes);
+
 
   const { error } = await supabase
     .from(tabela)
