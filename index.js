@@ -243,11 +243,28 @@ function dadosTitulo(dados) {
 }
 
 async function buscarMensalidadePorBoleto(dados) {
-  const candidatos = [...new Set([
+
+  const candidatos = [
     dados.seu_numero,
     normalizarSeuNumero(dados.seu_numero)
-  ].filter(Boolean))];
- 
+  ].filter(Boolean);
+
+  for (const numero of candidatos) {
+
+    const { data, error } = await supabase
+      .from("mensalidades")
+      .select("*")
+      .eq("seu_numero", numero)
+      .limit(1);
+
+    if (error) throw error;
+
+    if (data?.length) {
+      return data[0];
+    }
+
+  }
+
   return null;
 }
 
