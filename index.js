@@ -464,16 +464,17 @@ app.get("/sincronizar-todos", async (req, res) => {
 
     const resumo = {
         sucesso: true,
-        total_boletos: 0,
-        importados: 0,
+        total_boletos_inter: 0,
+        atualizados: 0,
+        nao_encontrados: 0,
         erros: []
     };
 
     try {
 
-        const { cobrancas, token } = await listarCobrancasInter();
+        const { cobrancas } = await listarCobrancasInter();
 
-        resumo.total_boletos = cobrancas.length;
+        resumo.total_boletos_inter = cobrancas.length;
 
         for (const item of cobrancas) {
 
@@ -485,11 +486,15 @@ app.get("/sincronizar-todos", async (req, res) => {
 
                 const resultado = await sincronizarCodigoInter(codigo);
 
-console.log("Resultado:", resultado);
+                if (resultado.sucesso) {
 
-if (resultado?.sucesso === true) {
-    resumo.importados++;
-}
+                    resumo.atualizados++;
+
+                } else {
+
+                    resumo.nao_encontrados++;
+
+                }
 
             } catch (erro) {
 
@@ -506,10 +511,7 @@ if (resultado?.sucesso === true) {
 
     } catch (erro) {
 
-        res.status(500).json({
-            sucesso: false,
-            erro: erro.message
-        });
+        responderErro(res, erro);
 
     }
 
