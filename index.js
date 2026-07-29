@@ -267,13 +267,12 @@ async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   return true;
 }
 
-async function sincronizarCodigoInter(codigo, token) {
+async function sincronizarCodigoInter(item) {
 
-    const detalhe = await consultarCobranca(codigo, token);
-
-    const cobranca = detalhe.cobranca;
-    const boleto = detalhe.boleto;
-    const pix = detalhe.pix;
+    const cobranca = item.cobranca;
+const boleto = item.boleto;
+const pix = item.pix;
+const detalhe = item;
 
     const dados = {
         id_inter: cobranca.codigoSolicitacao,
@@ -449,7 +448,7 @@ app.get("/sincronizar-todos", async (req, res) => {
 
             try {
 
-                const resultado = await sincronizarCodigoInter(codigo, token);
+                const resultado = await sincronizarCodigoInter(item);
 
                 if (resultado.sucesso) {
                     resumo.importados++;
