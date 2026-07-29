@@ -234,7 +234,7 @@ function dadosTitulo(dados) {
     codigo_pix: dados.codigo_pix,
     qr_code_pix: dados.qr_code_pix,
     url_pdf_boleto: dados.url_pdf_boleto,
-    data_vencimento: dados.data_vencimento,
+    vencimento: dados.data_vencimento,
     data_pagamento: dados.data_pagamento,
     data_baixa: dados.data_baixa,
     valor_recebido: dados.valor_recebido,
