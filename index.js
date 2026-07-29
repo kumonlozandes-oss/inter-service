@@ -377,9 +377,9 @@ app.get("/consultar/:codigo", async (req, res) => {
   }
 });
 
-async function sincronizarCodigoInter(idInter) {
+async function sincronizarCodigoInter(idInter, token) {
 
-    const detalhe = await consultarCobranca(idInter);
+    const detalhe = await consultarCobranca(idInter, token);
 
     const dados = dadosDoBoleto(detalhe);
 
@@ -478,7 +478,7 @@ app.get("/sincronizar-todos", async (req, res) => {
 
     try {
 
-        const { cobrancas } = await listarCobrancasInter({
+        const { cobrancas, token } = await listarCobrancasInter({
     dataInicial: dataISOHa90Dias(),
     dataFinal: hojeISO()
 });
@@ -493,7 +493,7 @@ app.get("/sincronizar-todos", async (req, res) => {
 
             try {
 
-                const resultado = await sincronizarCodigoInter(codigo);
+                const resultado = await sincronizarCodigoInter(codigo, token);
 
                 if (resultado.sucesso) {
 
