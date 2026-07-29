@@ -496,15 +496,24 @@ app.get("/sincronizar-todos", async (req, res) => {
 
         const { token } = await obterTokenInter();
 
-        const { data: titulos, error } = await supabase
-            .from("financeiro_titulos")
-            .select("id,id_inter,seu_numero,id_mensalidade");
+       const { data: titulos, error } = await supabase
+    .from("financeiro_titulos")
+    .select("id,id_inter,seu_numero,id_mensalidade")
+    .not("id_inter", "is", null);
 
         if (error) throw error;
 
         resumo.total_titulos = titulos.length;
 
+      const idsProcessados = new Set();
+
         for (const titulo of titulos) {
+
+          if (idsProcessados.has(titulo.id_inter)) {
+    continue;
+}
+
+idsProcessados.add(titulo.id_inter);
 
             if (!titulo.id_inter) {
 
@@ -966,7 +975,34 @@ async function sincronizacaoAutomatica() {
   }
 }
 
-// setTimeout(sincronizacaoAutomatica, 60_000);
-// setInterval(sincronizacaoAutomatica, 10 * 60_000);
+function dentroHorarioComercial() {
+
+    const agora = new Date();
+
+    const hora = agora.getHours();
+
+    return hora >= 8 && hora < 19;
+
+}
+
+setTimeout(() => {
+
+    sincronizacaoAutomatica();
+
+}, 60 * 1000);
+
+setInterval(async () => {
+
+    if (!dentroHorarioComercial()) {
+        return;
+    }
+
+    console.log("[AUTO] Iniciando espelhamento Banco Inter...");
+
+    await sincronizacaoAutomatica();
+
+    console.log("[AUTO] Espelhamento concluído.");
+
+}, 10 * 60 * 1000);
 
 app.listen(PORT, () => log("Servidor iniciado", { porta: PORT }));
