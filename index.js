@@ -275,7 +275,7 @@ async function sincronizarCodigoInter(codigo, token) {
     const boleto = detalhe.boleto;
     const pix = detalhe.pix;
 
-    const registro = {
+    const dados = {
         id_inter: cobranca.codigoSolicitacao,
         seu_numero: cobranca.seuNumero,
         nosso_numero: boleto.nossoNumero,
@@ -287,11 +287,34 @@ async function sincronizarCodigoInter(codigo, token) {
         data_atualizacao: new Date().toISOString()
     };
 
+    const { data: titulo, error } = await supabase
+        .from("financeiro_titulos")
+        .select("id")
+        .is("id_inter", null)
+        .order("created_at")
+        .limit(1)
+        .maybeSingle();
+
+    if (error) throw error;
+
+    if (!titulo) {
+        return {
+            sucesso: false,
+            motivo: "nenhum_titulo_disponivel"
+        };
+    }
+
+    const { error: erroUpdate } = await supabase
+        .from("financeiro_titulos")
+        .update(dados)
+        .eq("id", titulo.id);
+
+    if (erroUpdate) throw erroUpdate;
+
     return {
         sucesso: true,
-        registro
+        titulo: titulo.id
     };
-
 }
 
 
