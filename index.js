@@ -291,7 +291,6 @@ async function sincronizarCodigoInter(codigo, token) {
         .from("financeiro_titulos")
         .select("id")
         .is("id_inter", null)
-        .order("id")
         .limit(1)
         .maybeSingle();
 
