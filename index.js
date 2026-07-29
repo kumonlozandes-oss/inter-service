@@ -305,7 +305,15 @@ async function criarTituloSeNecessario(dados, mensalidade) {
 async function atualizarRegistro(tabela, chave, id, atual, desejado) {
   const alteracoes = camposAlterados(atual, desejado);
   if (!Object.keys(alteracoes).length) return false;
-  const { error } = await supabase.from(tabela).update(alteracoes).eq(chave, id);
+
+  console.log("TABELA:", tabela);
+  console.log("ALTERACOES:", alteracoes);
+
+  const { error } = await supabase
+    .from(tabela)
+    .update(alteracoes)
+    .eq(chave, id);
+
   if (error) throw error;
   return true;
 }
