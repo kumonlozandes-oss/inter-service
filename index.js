@@ -238,8 +238,7 @@ function dadosTitulo(dados) {
     data_pagamento: dados.data_pagamento,
     data_baixa: dados.data_baixa,
     valor_recebido: dados.valor_recebido,
-    valor_original: dados.valor_original,
-    sincronizado_inter: true
+    valor_original: dados.valor_original
   };
 }
 
