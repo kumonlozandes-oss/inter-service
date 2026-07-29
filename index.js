@@ -998,18 +998,30 @@ async function sincronizacaoAutomatica() {
                 );
 
                 if (resultado.sucesso) {
-                    resumo.atualizados++;
-                } else {
-                    resumo.erros++;
-                }
+
+    resumo.atualizados++;
+
+} else {
+
+    resumo.erros++;
+
+    console.error("[AUTO] Título não sincronizado:");
+    console.error("       id_inter:", resultado.id_inter);
+    console.error("       seu_numero:", resultado.seu_numero);
+    console.error("       motivo:", resultado.motivo);
+
+}
 
             } catch (erro) {
 
-                resumo.erros++;
+    resumo.erros++;
 
-                console.error("[AUTO] Erro ao sincronizar:", titulo.id_inter, erro.message);
+    console.error("[AUTO] Erro inesperado");
+    console.error("       id_inter:", titulo.id_inter);
+    console.error("       seu_numero:", titulo.seu_numero);
+    console.error("       erro:", erro.message);
 
-            }
+}
 
         }
 
