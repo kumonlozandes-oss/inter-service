@@ -205,9 +205,14 @@ app.get("/importar-boletos", async (req, res) => {
 
                 const novo = dadosTitulo(dados);
 
-                await supabase
-                    .from("financeiro_titulos")
-                    .insert(novo);
+                const { error } = await supabase
+    .from("financeiro_titulos")
+    .insert(novo);
+
+if (error) {
+    console.error(error);
+    throw error;
+}
 
                 inseridos++;
 
