@@ -900,10 +900,10 @@ app.get("/gerar-mensalidades", async (req, res) => {
     let ignoradas = 0;
     for (const item of boletos || []) {
       const { data: existente, error: erroBusca } = await supabase
-        .from("mensalidades").select("ID_MENSALIDADE").eq("id_inter", item.ultimo_codigo_inter).limit(1);
+        .from("mensalidades").select("ID_MENSALIDADE").eq("id_inter", item.id_inter).limit(1);
       if (erroBusca) throw erroBusca;
       if (existente?.length) { ignoradas += 1; continue; }
-      const valorOriginal = Number(item.valor_mensalidade || 0);
+      const valorOriginal = Number(item.valor_original || 0);
       const desconto = Number(item.valor_desconto || 0);
       const { error: erroInsert } = await supabase.from("mensalidades").insert({
         ID_MENSALIDADE: randomUUID(),
@@ -917,15 +917,15 @@ app.get("/gerar-mensalidades", async (req, res) => {
         STATUS: item.status_inter === "RECEBIDO" ? "PAGO" : "ABERTO",
         DATA_PAGAMENTO: item.ultima_sincronizacao,
         FORMA_PAGAMENTO: "BOLETO",
-        responsavel: item.nome_responsavel,
-        cpf_responsavel: item.cpf,
+        responsavel: item.responsavel,
+        cpf_responsavel: item.cpf_responsavel,
         origem: "INTER",
         tipo_cobranca: "BOLETO",
         valor_original: valorOriginal,
         valor_desconto: desconto,
         valor_final: valorOriginal - desconto,
         seu_numero: item.seu_numero,
-        id_inter: item.ultimo_codigo_inter,
+        id_inter: item.id_inter,
         status_inter: item.status_inter
       });
       if (erroInsert) throw erroInsert;
@@ -947,6 +947,100 @@ function competenciaParaMesAno(competencia) {
     };
 
 }
+
+app.get("/implantar-titulos", async (req, res) => {
+  try {
+
+    const { data: boletos, error } = await supabase
+      .from("financeiro_responsaveis")
+      .select("*");
+
+    if (error) throw error;
+
+    let criados = 0;
+    let existentes = 0;
+
+    for (const boleto of boletos) {
+
+      const { data: mensalidade } = await supabase
+        .from("mensalidades")
+        .select("id_mensalidade,id")
+        .eq("guid_aluno", boleto.guid_aluno)
+        .eq("competencia", boleto.competencia)
+        .maybeSingle();
+
+      if (!mensalidade) continue;
+
+      const { data: tituloExistente } = await supabase
+        .from("financeiro_titulos")
+        .select("id")
+        .eq("id_inter", boleto.id_inter)
+        .maybeSingle();
+
+      if (tituloExistente) {
+        existentes++;
+        continue;
+      }
+
+      const { data: titulo, error: erroTitulo } = await supabase
+        .from("financeiro_titulos")
+        .insert({
+          id_mensalidade: mensalidade.id_mensalidade,
+
+          id_inter: boleto.id_inter,
+
+          valor_original: boleto.valor_original,
+          valor_desconto: boleto.valor_desconto,
+          valor_final: boleto.valor_final,
+
+          vencimento: boleto.data_vencimento,
+
+          status: boleto.status_inter === "RECEBIDO" ? "PAGO" : "ABERTO",
+          status_inter: boleto.status_inter,
+
+          forma_pagamento: boleto.forma_pagamento,
+
+          data_pagamento: boleto.data_pagamento,
+
+          nosso_numero: boleto.nosso_numero,
+          seu_numero: boleto.seu_numero,
+
+          linha_digitavel: boleto.linha_digitavel,
+          codigo_barras: boleto.codigo_barras,
+
+          codigo_pix: boleto.codigo_pix,
+          qr_code_pix: boleto.qr_code_pix,
+          pix_copia_cola: boleto.pix_copia_cola,
+
+          url_pdf_boleto: boleto.url_pdf_boleto,
+
+          origem: "IMPLANTACAO"
+        })
+        .select()
+        .single();
+
+      if (erroTitulo) throw erroTitulo;
+
+      await supabase
+        .from("mensalidades")
+        .update({
+          id_titulo: titulo.id
+        })
+        .eq("id_mensalidade", mensalidade.id_mensalidade);
+
+      criados++;
+    }
+
+    res.json({
+      sucesso: true,
+      criados,
+      existentes
+    });
+
+  } catch (erro) {
+    responderErro(res, erro);
+  }
+});
 
 app.get("/gerar-mensalidades-competencia", async (req, res) => {
 
