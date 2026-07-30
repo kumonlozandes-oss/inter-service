@@ -991,14 +991,36 @@ const alunosAptos = financeiros
     })
     .filter(Boolean);
 
-res.json({
+      const { data: mensalidades, error: erroMensalidades } = await supabase
+    .from("mensalidades")
+    .select("guid_aluno,competencia_mes,competencia_ano")
+    .eq("competencia_mes", competencia_mes)
+    .eq("competencia_ano", competencia_ano);
+
+if (erroMensalidades) throw erroMensalidades;
+
+      const mensalidadesExistentes = new Set(
+    mensalidades.map(m =>
+        `${m.guid_aluno}-${m.competencia_mes}-${m.competencia_ano}`
+    )
+);
+
+const alunosParaGerar = alunosAptos.filter(aluno => {
+
+    const chave =
+        `${aluno.guid}-${competencia_mes}-${competencia_ano}`;
+
+    return !mensalidadesExistentes.has(chave);
+
+});
+      
+    res.json({
     sucesso: true,
     competencia,
-    competencia_mes,
-    competencia_ano,
-    registros_financeiro: financeiros.length,
     alunos_aptos: alunosAptos.length,
-    alunos: alunosAptos
+    mensalidades_existentes: mensalidades.length,
+    alunos_para_gerar: alunosParaGerar.length,
+    alunos: alunosParaGerar
 });
 
     } catch (erro) {
