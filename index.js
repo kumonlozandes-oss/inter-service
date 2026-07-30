@@ -1150,7 +1150,10 @@ const mapaMensalidades = new Map(
 );
 
 const mapaTitulos = new Map(
-    titulos.map(t => [t.id_mensalidade, t])
+    titulos.map(t => [
+        `${t.guid_aluno}-${t.competencia}`,
+        t
+    ])
 );
 
 const mapaRecebimentos = new Map(
