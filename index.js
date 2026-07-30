@@ -986,6 +986,7 @@ app.get("/gerar-mensalidades-competencia", async (req, res) => {
             competencia_ano,
             alunos_ativos: alunos.length,
             cadastros_financeiros: financeiros.length,
+guids_unicos: mapaFinanceiro.size,
             sem_cadastro_financeiro: semCadastro.length,
             lista_sem_cadastro: semCadastro
         });
