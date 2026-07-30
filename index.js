@@ -958,22 +958,38 @@ app.get("/gerar-mensalidades-competencia", async (req, res) => {
         const { competencia_mes, competencia_ano } =
             competenciaParaMesAno(competencia);
 
-        const { data: financeiros, error: erroFinanceiro } = await supabase
+       const { data: financeiros, error: erroFinanceiro } = await supabase
     .from("financeiro_padrao")
-    .select(`
-        *,
-        alunos_master (
-            guid,
-            nome,
-            status
-        )
-    `);
+    .select("*");
 
 if (erroFinanceiro) throw erroFinanceiro;
-      const alunosAptos = financeiros.filter(item =>
-    item.alunos_master &&
-    item.alunos_master.status === "ATIVO"
+
+const { data: alunos, error: erroAlunos } = await supabase
+    .from("alunos_master")
+    .select("guid,nome,status");
+
+if (erroAlunos) throw erroAlunos;const mapaAlunos = new Map(
+    alunos.map(aluno => [aluno.guid, aluno])
 );
+
+const alunosAptos = financeiros
+    .map(financeiro => {
+
+        const aluno = mapaAlunos.get(financeiro.guid_aluno);
+
+        if (!aluno || aluno.status !== "ATIVO") {
+            return null;
+        }
+
+        return {
+            guid: financeiro.guid_aluno,
+            nome: aluno.nome,
+            valor: financeiro.valor_original,
+            vencimento: financeiro.dia_vencimento
+        };
+
+    })
+    .filter(Boolean);
 
 res.json({
     sucesso: true,
@@ -982,12 +998,7 @@ res.json({
     competencia_ano,
     registros_financeiro: financeiros.length,
     alunos_aptos: alunosAptos.length,
-    alunos: alunosAptos.map(item => ({
-        guid: item.guid_aluno,
-        nome: item.alunos_master.nome,
-        valor: item.valor_original,
-        vencimento: item.dia_vencimento
-    }))
+    alunos: alunosAptos
 });
 
     } catch (erro) {
