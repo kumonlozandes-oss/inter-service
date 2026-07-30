@@ -958,6 +958,22 @@ app.get("/gerar-mensalidades-competencia", async (req, res) => {
         const { competencia_mes, competencia_ano } =
             competenciaParaMesAno(competencia);
 
+      const { data: alunos, error: erroAlunos } = await supabase
+    .from("alunos_master")
+    .select("guid,nome,status")
+    .eq("status", "ATIVO");
+
+if (erroAlunos) throw erroAlunos;
+
+res.json({
+    sucesso: true,
+    competencia,
+    competencia_mes,
+    competencia_ano,
+    alunos_ativos: alunos.length,
+    alunos
+});
+
         res.json({
             sucesso: true,
             competencia,
