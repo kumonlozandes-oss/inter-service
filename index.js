@@ -1792,10 +1792,7 @@ app.get("/migrar-financeiro", async (req, res) => {
 
           url_pdf_boleto: boleto.url_pdf_boleto,
 
-          guid_aluno: boleto.guid_aluno,
-          guid_responsavel: boleto.guid_responsavel,
 
-          origem: "IMPLANTACAO"
         });
 
       if (erroInsert) throw erroInsert;
