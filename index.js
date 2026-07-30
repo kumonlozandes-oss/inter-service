@@ -1121,18 +1121,16 @@ const { data: mensalidades, error: erroMensalidades } =
 if (erroMensalidades) throw erroMensalidades;
 
 // Títulos
-const { data: titulos, error: erroTitulos } =
-    await supabase
-        .from("financeiro_titulos")
-        .select("*");
+const { data: titulos, error: erroTitulos } = await supabase
+    .from("financeiro_titulos")
+    .select("*");
 
 if (erroTitulos) throw erroTitulos;
 
 // Recebimentos
-const { data: recebimentos, error: erroRecebimentos } =
-    await supabase
-        .from("recebimentos")
-        .select("*");
+const { data: recebimentos, error: erroRecebimentos } = await supabase
+    .from("recebimentos")
+    .select("*");
 
 if (erroRecebimentos) throw erroRecebimentos;
 
