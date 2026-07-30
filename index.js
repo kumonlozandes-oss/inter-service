@@ -1011,7 +1011,7 @@ const alunosAptos = financeiros
 
 if (erroMensalidades) throw erroMensalidades;
 
-      const mensalidadesExistentes = new Set(
+    const mensalidadesExistentes = new Set(
     mensalidades.map(m =>
         `${m.guid_aluno}-${m.competencia_mes}-${m.competencia_ano}`
     )
