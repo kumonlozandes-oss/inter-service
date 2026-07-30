@@ -967,9 +967,10 @@ app.get("/gerar-mensalidades-competencia", async (req, res) => {
 
         const { data: financeiros, error: erroFinanceiro } = await supabase
             .from("financeiro_padrao")
-            .select("guid_aluno,valor_original,dia_vencimento");
+            .select("id,guid_aluno,valor_original,dia_vencimento");
 
         if (erroFinanceiro) throw erroFinanceiro;
+      const semGuid = financeiros.filter(item => !item.guid_aluno);
 
         const mapaFinanceiro = new Map(
             financeiros.map(item => [item.guid_aluno, item])
@@ -980,16 +981,17 @@ app.get("/gerar-mensalidades-competencia", async (req, res) => {
         );
 
         res.json({
-            sucesso: true,
-            competencia,
-            competencia_mes,
-            competencia_ano,
-            alunos_ativos: alunos.length,
-            cadastros_financeiros: financeiros.length,
-guids_unicos: mapaFinanceiro.size,
-            sem_cadastro_financeiro: semCadastro.length,
-            lista_sem_cadastro: semCadastro
-        });
+    sucesso: true,
+    competencia,
+    competencia_mes,
+    competencia_ano,
+    alunos_ativos: alunos.length,
+    cadastros_financeiros: financeiros.length,
+    guids_unicos: mapaFinanceiro.size,
+    sem_guid: semGuid.length,
+    sem_cadastro_financeiro: semCadastro.length,
+    lista_sem_cadastro: semCadastro
+});
 
     } catch (erro) {
 
