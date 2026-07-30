@@ -1218,6 +1218,34 @@ for (const financeiro of financeiros) {
 
 }
 
+      // ======================================================
+// REGRA 3 - Valor divergente
+// ======================================================
+
+for (const mensalidade of mensalidades) {
+
+    const financeiro = mapaFinanceiro.get(mensalidade.guid_aluno);
+
+    if (!financeiro) continue;
+
+    if (
+        Number(financeiro.valor_final) !==
+        Number(mensalidade.valor_final)
+    ) {
+
+        inconsistencias.push({
+            tipo: "VALOR_DIVERGENTE",
+            guid_aluno: mensalidade.guid_aluno,
+            aluno: mensalidade.aluno,
+            competencia,
+            descricao:
+                `Financeiro: ${financeiro.valor_final} | Mensalidade: ${mensalidade.valor_final}`
+        });
+
+    }
+
+}
+
 res.json({
 
     sucesso: true,
