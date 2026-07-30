@@ -1278,6 +1278,37 @@ for (const aluno of alunos) {
 
 }
 
+// ======================================================
+// REGRA 5 - Mensalidade para aluno inativo
+// ======================================================
+
+for (const mensalidade of mensalidades) {
+
+    const aluno = mapaAlunos.get(mensalidade.guid_aluno);
+
+    if (!aluno) continue;
+
+    if (aluno.status !== "ATIVO") {
+
+        inconsistencias.push({
+
+            tipo: "MENSALIDADE_ALUNO_INATIVO",
+
+            guid_aluno: aluno.guid,
+
+            aluno: aluno.nome,
+
+            competencia,
+
+            descricao:
+                `Aluno com status "${aluno.status}" possui mensalidade gerada.`
+
+        });
+
+    }
+
+}
+
 res.json({
 
     sucesso: true,
