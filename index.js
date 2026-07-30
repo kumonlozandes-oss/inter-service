@@ -1114,7 +1114,7 @@ if (erroAlunos) throw erroAlunos;
 const { data: mensalidades, error: erroMensalidades } =
     await supabase
         .from("mensalidades")
-        .select("*")feito
+        .select("*")
         .eq("competencia_mes", competencia_mes)
         .eq("competencia_ano", competencia_ano);
 
