@@ -1082,10 +1082,33 @@ app.get("/auditoria-financeira", async (req, res) => {
 
     try {
 
-        res.json({
-            sucesso: true,
-            mensagem: "Rota de auditoria criada."
-        });
+        const { competencia } = req.query;
+
+if (!competencia) {
+    return res.status(400).json({
+        sucesso: false,
+        mensagem: "Informe a competência. Ex.: 11/2026"
+    });
+}
+
+const { competencia_mes, competencia_ano } =
+    competenciaParaMesAno(competencia);
+
+// Remove auditorias antigas desta competência
+const { error: erroDelete } = await supabase
+    .from("auditoria_financeira")
+    .delete()
+    .eq("competencia", competencia);
+
+if (erroDelete) throw erroDelete;
+
+res.json({
+    sucesso: true,
+    competencia,
+    competencia_mes,
+    competencia_ano,
+    mensagem: "Competência recebida com sucesso."
+});
 
     } catch (erro) {
 
