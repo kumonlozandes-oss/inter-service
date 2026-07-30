@@ -1249,6 +1249,36 @@ for (const mensalidade of mensalidades) {
 
 }
 
+      // ======================================================
+// REGRA 4 - Mensalidade sem título financeiro
+// ======================================================
+
+for (const mensalidade of mensalidades) {
+
+    const chave =
+        `${mensalidade.guid_aluno}-${mensalidade.competencia}`;
+
+    if (!mapaTitulos.has(chave)) {
+
+        inconsistencias.push({
+
+            tipo: "SEM_TITULO_FINANCEIRO",
+
+            guid_aluno: mensalidade.guid_aluno,
+
+            aluno: mensalidade.aluno,
+
+            competencia,
+
+            descricao:
+                "Mensalidade gerada sem título financeiro."
+
+        });
+
+    }
+
+}
+
 res.json({
 
     sucesso: true,
