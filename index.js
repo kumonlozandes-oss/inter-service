@@ -1811,6 +1811,39 @@ app.get("/migrar-financeiro", async (req, res) => {
   }
 });
 
+app.get("/auditoria-migracao", async (req, res) => {
+  try {
+    const { data: origem, error } = await supabase
+      .from("financeiro_responsaveis")
+      .select("id_inter");
+
+    if (error) throw error;
+
+    const faltando = [];
+
+    for (const item of origem) {
+      const { data: existe } = await supabase
+        .from("financeiro_titulos")
+        .select("id")
+        .eq("id_inter", item.id_inter)
+        .maybeSingle();
+
+      if (!existe) {
+        faltando.push(item.id_inter);
+      }
+    }
+
+    res.json({
+      total_origem: origem.length,
+      faltando: faltando.length,
+      ids_faltando: faltando
+    });
+
+  } catch (e) {
+    responderErro(res, e);
+  }
+});
+
 agendarProximaExecucao();
 
 app.listen(PORT, () => log("Servidor iniciado", { porta: PORT }));
