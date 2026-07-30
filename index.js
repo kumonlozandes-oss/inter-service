@@ -1279,6 +1279,35 @@ for (const mensalidade of mensalidades) {
 
 }
 
+      // ======================================================
+// REGRA 4 - Aluno ativo sem cadastro financeiro
+// ======================================================
+
+for (const aluno of alunos) {
+
+    if (aluno.status !== "ATIVO") continue;
+
+    if (!mapaFinanceiro.has(aluno.guid)) {
+
+        inconsistencias.push({
+
+            tipo: "SEM_CADASTRO_FINANCEIRO",
+
+            guid_aluno: aluno.guid,
+
+            aluno: aluno.nome,
+
+            competencia,
+
+            descricao:
+                "Aluno ativo sem cadastro no financeiro."
+
+        });
+
+    }
+
+}
+
 res.json({
 
     sucesso: true,
