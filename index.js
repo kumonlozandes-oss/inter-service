@@ -1120,32 +1120,63 @@ const { data: mensalidades, error: erroMensalidades } =
 
 if (erroMensalidades) throw erroMensalidades;
 
+// Títulos
+const { data: titulos, error: erroTitulos } =
+    await supabase
+        .from("financeiro_titulos")
+        .select("*");
+
+if (erroTitulos) throw erroTitulos;
+
+// Recebimentos
+const { data: recebimentos, error: erroRecebimentos } =
+    await supabase
+        .from("recebimentos")
+        .select("*");
+
+if (erroRecebimentos) throw erroRecebimentos;
+
+// Índices
 const mapaAlunos = new Map(
-    alunos.map(aluno => [aluno.guid, aluno])
+    alunos.map(a => [a.guid, a])
 );
 
-const mensalidadesExistentes = new Set(
-    mensalidades.map(m => m.guid_aluno)
+const mapaFinanceiro = new Map(
+    financeiros.map(f => [f.guid_aluno, f])
+);
+
+const mapaMensalidades = new Map(
+    mensalidades.map(m => [m.guid_aluno, m])
+);
+
+const mapaTitulos = new Map(
+    titulos.map(t => [t.id_mensalidade, t])
+);
+
+const mapaRecebimentos = new Map(
+    recebimentos.map(r => [r.id_mensalidade, r])
 );
 
 const inconsistencias = [];
+
+// ======================================================
+// REGRA 1 - Aluno ativo sem mensalidade
+// ======================================================
 
 for (const financeiro of financeiros) {
 
     const aluno = mapaAlunos.get(financeiro.guid_aluno);
 
-    if (!aluno || aluno.status !== "ATIVO") {
-        continue;
-    }
+    if (!aluno || aluno.status !== "ATIVO") continue;
 
-    if (!mensalidadesExistentes.has(financeiro.guid_aluno)) {
+    if (!mapaMensalidades.has(financeiro.guid_aluno)) {
 
         inconsistencias.push({
             tipo: "SEM_MENSALIDADE",
             guid_aluno: aluno.guid,
             aluno: aluno.nome,
             competencia,
-            descricao: "Aluno ativo possui cadastro financeiro, mas não possui mensalidade."
+            descricao: "Aluno ativo sem mensalidade."
         });
 
     }
@@ -1153,11 +1184,25 @@ for (const financeiro of financeiros) {
 }
 
 res.json({
+
     sucesso: true,
+
     competencia,
-    alunos_analisados: financeiros.length,
+
+    resumo: {
+
+        financeiros: financeiros.length,
+        alunos: alunos.length,
+        mensalidades: mensalidades.length,
+        titulos: titulos.length,
+        recebimentos: recebimentos.length
+
+    },
+
     inconsistencias: inconsistencias.length,
+
     dados: inconsistencias
+
 });
 
     } catch (erro) {
