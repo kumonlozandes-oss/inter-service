@@ -535,27 +535,40 @@ async function sincronizarCodigoInter(idInter, token) {
         dadosTitulo(dados)
     );
 
-    if (titulo.id_mensalidade) {
+    const dadosAtualizados = dadosTitulo(dados);
 
-        const { data: mensalidade } = await supabase
-            .from("mensalidades")
-            .select("*")
-            .eq("ID_MENSALIDADE", titulo.id_mensalidade)
-            .maybeSingle();
+// Mantém o vínculo com a mensalidade
+dadosAtualizados.id_mensalidade = titulo.id_mensalidade;
 
-        if (mensalidade) {
+await atualizarRegistro(
+    "financeiro_titulos",
+    "id",
+    titulo.id,
+    titulo,
+    dadosAtualizados
+);
 
-            await atualizarRegistro(
-                "mensalidades",
-                "ID_MENSALIDADE",
-                mensalidade.ID_MENSALIDADE,
-                mensalidade,
-                dadosMensalidade(dados)
-            );
+if (titulo.id_mensalidade) {
 
-        }
+    const { data: mensalidade } = await supabase
+        .from("mensalidades")
+        .select("*")
+        .eq("id", titulo.id_mensalidade)
+        .maybeSingle();
+
+    if (mensalidade) {
+
+        await atualizarRegistro(
+            "mensalidades",
+            "id",
+            mensalidade.id,
+            mensalidade,
+            dadosMensalidade(dados)
+        );
 
     }
+
+}
 
     return {
         sucesso: true,
