@@ -866,8 +866,14 @@ app.get("/padronizar-financeiro", async (req, res) => {
         telefone_responsavel: recebido.telefone_responsavel,
         disciplina: "PENDENTE",
         valor_original: recebido.valor_original,
-        valor_desconto: recebido.valor_desconto,
-        valor_final: recebido.valor_final,
+
+desconto_pontualidade: recebido.desconto_pontualidade || 0,
+desconto_comercial: recebido.desconto_comercial || 0,
+desconto_bolsa: recebido.desconto_bolsa || 0,
+acrescimos: recebido.acrescimos || 0,
+
+valor_desconto: recebido.valor_desconto,
+valor_final: recebido.valor_final,
         dia_vencimento: recebido.data_vencimento ? new Date(recebido.data_vencimento).getDate() : 5,
         forma_pagamento: recebido.forma_pagamento,
         tipo_cobranca: recebido.tipo_cobranca,
@@ -993,8 +999,14 @@ const alunosAptos = financeiros
     curso: financeiro.disciplina,
 
     valor_original: Number(financeiro.valor_original),
-    valor_desconto: Number(financeiro.valor_desconto || 0),
-    valor_final: Number(financeiro.valor_final),
+
+desconto_pontualidade: Number(financeiro.desconto_pontualidade || 0),
+desconto_comercial: Number(financeiro.desconto_comercial || 0),
+desconto_bolsa: Number(financeiro.desconto_bolsa || 0),
+acrescimos: Number(financeiro.acrescimos || 0),
+
+valor_desconto: Number(financeiro.valor_desconto || 0),
+valor_final: Number(financeiro.valor_final),
 
     vencimento: financeiro.dia_vencimento
 
@@ -1045,8 +1057,14 @@ const alunosParaGerar = alunosAptos.filter(aluno => {
     competencia_ano,
 
     valor_original: aluno.valor_original,
-    valor_desconto: aluno.valor_desconto,
-    valor_final: aluno.valor_final,
+
+desconto_pontualidade: aluno.desconto_pontualidade,
+desconto_comercial: aluno.desconto_comercial,
+desconto_bolsa: aluno.desconto_bolsa,
+acrescimos: aluno.acrescimos,
+
+valor_desconto: aluno.valor_desconto,
+valor_final: aluno.valor_final,
 
     status: "ABERTO",
 
@@ -1221,33 +1239,6 @@ for (const financeiro of financeiros) {
 
 }
 
-      // ======================================================
-// REGRA 3 - Valor divergente
-// ======================================================
-
-for (const mensalidade of mensalidades) {
-
-    const financeiro = mapaFinanceiro.get(mensalidade.guid_aluno);
-
-    if (!financeiro) continue;
-
-    if (
-        Number(financeiro.valor_final) !==
-        Number(mensalidade.valor_final)
-    ) {
-
-        inconsistencias.push({
-            tipo: "VALOR_DIVERGENTE",
-            guid_aluno: mensalidade.guid_aluno,
-            aluno: mensalidade.aluno,
-            competencia,
-            descricao:
-                `Financeiro: ${financeiro.valor_final} | Mensalidade: ${mensalidade.valor_final}`
-        });
-
-    }
-
-}
 
 // ======================================================
 // REGRA 4 - Aluno ativo sem cadastro financeiro
