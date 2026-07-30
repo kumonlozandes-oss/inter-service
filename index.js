@@ -1095,12 +1095,12 @@ const { competencia_mes, competencia_ano } =
     competenciaParaMesAno(competencia);
 
 // Remove auditorias antigas desta competência
-const { error: erroDelete } = await supabase
-    .from("auditoria_financeira")
-    .delete()
-    .eq("competencia", competencia);
+// const { error: erroDelete } = await supabase
+//     .from("auditoria_financeira")
+//    .delete()
+//    .eq("competencia", competencia);
 
-if (erroDelete) throw erroDelete;
+// if (erroDelete) throw erroDelete;
 
 res.json({
     sucesso: true,
