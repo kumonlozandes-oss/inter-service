@@ -942,11 +942,11 @@ function competenciaParaMesAno(competencia) {
 
 }
 
-app.post("/gerar-mensalidades-competencia", async (req, res) => {
+app.get("/gerar-mensalidades-competencia", async (req, res) => {
 
     try {
 
-        const { competencia } = req.body;
+        const competencia = req.query.competencia;
 
         if (!competencia) {
             return res.status(400).json({
