@@ -982,11 +982,23 @@ const alunosAptos = financeiros
         }
 
         return {
-            guid: financeiro.guid_aluno,
-            nome: aluno.nome,
-            valor: financeiro.valor_original,
-            vencimento: financeiro.dia_vencimento
-        };
+
+    guid: financeiro.guid_aluno,
+    guid_responsavel: financeiro.guid_responsavel,
+    id_aluno: financeiro.id_aluno,
+
+    nome: financeiro.aluno,
+    responsavel: financeiro.responsavel,
+
+    curso: financeiro.disciplina,
+
+    valor_original: Number(financeiro.valor_original),
+    valor_desconto: Number(financeiro.valor_desconto || 0),
+    valor_final: Number(financeiro.valor_final),
+
+    vencimento: financeiro.dia_vencimento
+
+};
 
     })
     .filter(Boolean);
@@ -1019,18 +1031,30 @@ const alunosParaGerar = alunosAptos.filter(aluno => {
     id_mensalidade: randomUUID(),
 
     guid_aluno: aluno.guid,
+    guid_responsavel: aluno.guid_responsavel,
+    id_aluno: aluno.id_aluno,
+
+    aluno: aluno.nome,
+    responsavel: aluno.responsavel,
+
+    curso: aluno.curso,
+    tipo: "MENSALIDADE",
 
     competencia,
     competencia_mes,
     competencia_ano,
 
-    aluno: aluno.nome,
+    valor_original: aluno.valor_original,
+    valor_desconto: aluno.valor_desconto,
+    valor_final: aluno.valor_final,
 
-    valor_original: aluno.valor,
-    valor_desconto: 0,
-    valor_final: aluno.valor,
+    status: "ABERTO",
 
-    status: "ABERTO"
+    criado_automaticamente: true,
+    conferido: false,
+
+    data_criacao: new Date(),
+    data_atualizacao: new Date()
 
 }));
 
