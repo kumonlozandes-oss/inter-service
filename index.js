@@ -1078,6 +1078,23 @@ res.json({
 
 });
 
+app.get("/auditoria-financeira", async (req, res) => {
+
+    try {
+
+        res.json({
+            sucesso: true,
+            mensagem: "Rota de auditoria criada."
+        });
+
+    } catch (erro) {
+
+        responderErro(res, erro);
+
+    }
+
+});
+
 app.get("/sincronizar-recebimentos", async (req, res) => {
   try {
     const { data: recebidos, error } = await supabase
