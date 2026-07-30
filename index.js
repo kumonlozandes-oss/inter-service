@@ -906,7 +906,7 @@ app.get("/gerar-mensalidades", async (req, res) => {
         CURSO: "",
         TIPO: "MENSALIDADE",
         VALOR: valorOriginal,
-        COMPETENCIA: item.ultimo_seu_numero,
+        COMPETENCIA: item.competencia,
         VENCIMENTO: item.data_vencimento,
         STATUS: item.status_inter === "RECEBIDO" ? "PAGO" : "ABERTO",
         DATA_PAGAMENTO: item.ultima_sincronizacao,
@@ -918,7 +918,7 @@ app.get("/gerar-mensalidades", async (req, res) => {
         valor_original: valorOriginal,
         valor_desconto: desconto,
         valor_final: valorOriginal - desconto,
-        seu_numero: item.ultimo_seu_numero,
+        seu_numero: item.seu_numero,
         id_inter: item.ultimo_codigo_inter,
         status_inter: item.status_inter
       });
@@ -929,6 +929,48 @@ app.get("/gerar-mensalidades", async (req, res) => {
   } catch (erro) {
     responderErro(res, erro);
   }
+});
+
+function competenciaParaMesAno(competencia) {
+
+    const [mes, ano] = competencia.split("/");
+
+    return {
+        competencia_mes: Number(mes),
+        competencia_ano: Number(ano)
+    };
+
+}
+
+app.post("/gerar-mensalidades-competencia", async (req, res) => {
+
+    try {
+
+        const { competencia } = req.body;
+
+        if (!competencia) {
+            return res.status(400).json({
+                sucesso: false,
+                mensagem: "Informe a competência. Ex.: 09/2026"
+            });
+        }
+
+        const { competencia_mes, competencia_ano } =
+            competenciaParaMesAno(competencia);
+
+        res.json({
+            sucesso: true,
+            competencia,
+            competencia_mes,
+            competencia_ano
+        });
+
+    } catch (erro) {
+
+        responderErro(res, erro);
+
+    }
+
 });
 
 app.get("/sincronizar-recebimentos", async (req, res) => {
