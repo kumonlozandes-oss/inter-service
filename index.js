@@ -905,29 +905,55 @@ app.get("/gerar-mensalidades", async (req, res) => {
       if (existente?.length) { ignoradas += 1; continue; }
       const valorOriginal = Number(item.valor_original || 0);
       const desconto = Number(item.valor_desconto || 0);
-      const { error: erroInsert } = await supabase.from("mensalidades").insert({
-        ID_MENSALIDADE: randomUUID(),
-        ID_ALUNO: item.guid_aluno,
-        ALUNO: item.nome_responsavel,
-        CURSO: "",
-        TIPO: "MENSALIDADE",
-        VALOR: valorOriginal,
-        COMPETENCIA: item.competencia,
-        VENCIMENTO: item.data_vencimento,
-        STATUS: item.status_inter === "RECEBIDO" ? "PAGO" : "ABERTO",
-        DATA_PAGAMENTO: item.ultima_sincronizacao,
-        FORMA_PAGAMENTO: "BOLETO",
-        responsavel: item.responsavel,
-        cpf_responsavel: item.cpf_responsavel,
-        origem: "INTER",
-        tipo_cobranca: "BOLETO",
-        valor_original: valorOriginal,
-        valor_desconto: desconto,
-        valor_final: valorOriginal - desconto,
-        seu_numero: item.seu_numero,
-        id_inter: item.id_inter,
-        status_inter: item.status_inter
-      });
+      const { error: erroInsert } = await supabase
+  .from("mensalidades")
+  .insert({
+    id_mensalidade: randomUUID(),
+
+    id_aluno: item.guid_aluno,
+    guid_aluno: item.guid_aluno,
+    guid_responsavel: item.guid_responsavel,
+
+    aluno: item.aluno,
+    responsavel: item.responsavel,
+    cpf_responsavel: item.cpf_responsavel,
+
+    curso: "",
+    tipo: "MENSALIDADE",
+
+    competencia: item.competencia,
+
+    competencia_mes: item.competencia_mes,
+    competencia_ano: item.competencia_ano,
+
+    origem: "INTER",
+    tipo_cobranca: "BOLETO",
+
+    status: item.status_inter === "RECEBIDO" ? "PAGO" : "ABERTO",
+
+    valor_original: valorOriginal,
+    valor_desconto: desconto,
+    valor_final: valorOriginal - desconto,
+
+    vencimento: item.data_vencimento,
+    forma_pagamento: "BOLETO",
+    data_pagamento: item.data_pagamento,
+
+    id_inter: item.id_inter,
+    status_inter: item.status_inter,
+
+    seu_numero: item.seu_numero,
+    nosso_numero: item.nosso_numero,
+
+    linha_digitavel: item.linha_digitavel,
+    codigo_barras: item.codigo_barras,
+
+    codigo_pix: item.codigo_pix,
+    qr_code_pix: item.qr_code_pix,
+    pix_copia_cola: item.pix_copia_cola,
+
+    url_pdf_boleto: item.url_pdf_boleto
+  });
       if (erroInsert) throw erroInsert;
       criadas += 1;
     }
@@ -1713,6 +1739,80 @@ function agendarProximaExecucao() {
     }, espera);
 
 }
+
+app.get("/migrar-financeiro", async (req, res) => {
+  try {
+
+    const { data: origem, error } = await supabase
+      .from("financeiro_responsaveis")
+      .select("*");
+
+    if (error) throw error;
+
+    let inseridos = 0;
+    let ignorados = 0;
+
+    for (const boleto of origem) {
+
+      const { data: existe } = await supabase
+        .from("financeiro_titulos")
+        .select("id")
+        .eq("id_inter", boleto.id_inter)
+        .maybeSingle();
+
+      if (existe) {
+        ignorados++;
+        continue;
+      }
+
+      const { error: erroInsert } = await supabase
+        .from("financeiro_titulos")
+        .insert({
+          id_inter: boleto.id_inter,
+
+          nosso_numero: boleto.nosso_numero,
+          seu_numero: boleto.seu_numero,
+
+          status: boleto.status_inter === "RECEBIDO" ? "PAGO" : "ABERTO",
+          status_inter: boleto.status_inter,
+
+          valor_original: boleto.valor_original,
+          valor_desconto: boleto.valor_desconto,
+          valor_final: boleto.valor_final,
+
+          vencimento: boleto.data_vencimento,
+          data_pagamento: boleto.data_pagamento,
+
+          linha_digitavel: boleto.linha_digitavel,
+          codigo_barras: boleto.codigo_barras,
+
+          codigo_pix: boleto.codigo_pix,
+          qr_code_pix: boleto.qr_code_pix,
+          pix_copia_cola: boleto.pix_copia_cola,
+
+          url_pdf_boleto: boleto.url_pdf_boleto,
+
+          guid_aluno: boleto.guid_aluno,
+          guid_responsavel: boleto.guid_responsavel,
+
+          origem: "IMPLANTACAO"
+        });
+
+      if (erroInsert) throw erroInsert;
+
+      inseridos++;
+    }
+
+    res.json({
+      sucesso: true,
+      inseridos,
+      ignorados
+    });
+
+  } catch (e) {
+    responderErro(res, e);
+  }
+});
 
 agendarProximaExecucao();
 
