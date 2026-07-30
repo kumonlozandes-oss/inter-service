@@ -1087,27 +1087,45 @@ app.get("/auditoria-financeira", async (req, res) => {
 if (!competencia) {
     return res.status(400).json({
         sucesso: false,
-        mensagem: "Informe a competência. Ex.: 11/2026"
+        mensagem: "Informe a competência."
     });
 }
 
 const { competencia_mes, competencia_ano } =
     competenciaParaMesAno(competencia);
 
-// Remove auditorias antigas desta competência
-// const { error: erroDelete } = await supabase
-//     .from("auditoria_financeira")
-//    .delete()
-//    .eq("competencia", competencia);
+// Financeiro
+const { data: financeiros, error: erroFinanceiro } =
+    await supabase
+        .from("financeiro_padrao")
+        .select("*");
 
-// if (erroDelete) throw erroDelete;
+if (erroFinanceiro) throw erroFinanceiro;
+
+// Alunos
+const { data: alunos, error: erroAlunos } =
+    await supabase
+        .from("alunos_master")
+        .select("guid,nome,status");
+
+if (erroAlunos) throw erroAlunos;
+
+// Mensalidades
+const { data: mensalidades, error: erroMensalidades } =
+    await supabase
+        .from("mensalidades")
+        .select("guid_aluno")
+        .eq("competencia_mes", competencia_mes)
+        .eq("competencia_ano", competencia_ano);
+
+if (erroMensalidades) throw erroMensalidades;
 
 res.json({
     sucesso: true,
     competencia,
-    competencia_mes,
-    competencia_ano,
-    mensagem: "Competência recebida com sucesso."
+    financeiros: financeiros.length,
+    alunos: alunos.length,
+    mensalidades: mensalidades.length
 });
 
     } catch (erro) {
