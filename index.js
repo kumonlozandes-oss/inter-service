@@ -1014,13 +1014,36 @@ const alunosParaGerar = alunosAptos.filter(aluno => {
 
 });
       
-    res.json({
+    const novasMensalidades = alunosParaGerar.map(aluno => ({
+
+    id_mensalidade: randomUUID(),
+
+    guid_aluno: aluno.guid,
+
+    competencia,
+    competencia_mes,
+    competencia_ano,
+
+    aluno: aluno.nome,
+
+    valor_original: aluno.valor,
+    valor_desconto: 0,
+    valor_final: aluno.valor,
+
+    status: "ABERTO"
+
+}));
+
+const { error: erroInsert } = await supabase
+    .from("mensalidades")
+    .insert(novasMensalidades);
+
+if (erroInsert) throw erroInsert;
+
+res.json({
     sucesso: true,
     competencia,
-    alunos_aptos: alunosAptos.length,
-    mensalidades_existentes: mensalidades.length,
-    alunos_para_gerar: alunosParaGerar.length,
-    alunos: alunosParaGerar
+    mensalidades_criadas: novasMensalidades.length
 });
 
     } catch (erro) {
