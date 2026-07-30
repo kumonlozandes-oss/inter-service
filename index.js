@@ -958,27 +958,36 @@ app.get("/gerar-mensalidades-competencia", async (req, res) => {
         const { competencia_mes, competencia_ano } =
             competenciaParaMesAno(competencia);
 
-      const { data: alunos, error: erroAlunos } = await supabase
-    .from("alunos_master")
-    .select("guid,nome,status")
-    .eq("status", "ATIVO");
+        const { data: alunos, error: erroAlunos } = await supabase
+            .from("alunos_master")
+            .select("guid,nome,status")
+            .eq("status", "ATIVO");
 
-if (erroAlunos) throw erroAlunos;
+        if (erroAlunos) throw erroAlunos;
 
-res.json({
-    sucesso: true,
-    competencia,
-    competencia_mes,
-    competencia_ano,
-    alunos_ativos: alunos.length,
-    alunos
-});
+        const { data: financeiros, error: erroFinanceiro } = await supabase
+            .from("financeiro_padrao")
+            .select("guid_aluno,valor_original,dia_vencimento");
+
+        if (erroFinanceiro) throw erroFinanceiro;
+
+        const mapaFinanceiro = new Map(
+            financeiros.map(item => [item.guid_aluno, item])
+        );
+
+        const semCadastro = alunos.filter(
+            aluno => !mapaFinanceiro.has(aluno.guid)
+        );
 
         res.json({
             sucesso: true,
             competencia,
             competencia_mes,
-            competencia_ano
+            competencia_ano,
+            alunos_ativos: alunos.length,
+            cadastros_financeiros: financeiros.length,
+            sem_cadastro_financeiro: semCadastro.length,
+            lista_sem_cadastro: semCadastro
         });
 
     } catch (erro) {
