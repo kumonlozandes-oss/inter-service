@@ -1159,6 +1159,41 @@ const mapaRecebimentos = new Map(
 
 const inconsistencias = [];
 
+    // ======================================================
+// REGRA 2 - Mensalidade duplicada
+// ======================================================
+
+const contadorMensalidades = new Map();
+
+for (const mensalidade of mensalidades) {
+
+    const quantidade = contadorMensalidades.get(mensalidade.guid_aluno) || 0;
+
+    contadorMensalidades.set(
+        mensalidade.guid_aluno,
+        quantidade + 1
+    );
+
+}
+
+for (const [guidAluno, quantidade] of contadorMensalidades) {
+
+    if (quantidade > 1) {
+
+        const aluno = mapaAlunos.get(guidAluno);
+
+        inconsistencias.push({
+            tipo: "MENSALIDADE_DUPLICADA",
+            guid_aluno: guidAluno,
+            aluno: aluno?.nome || "Aluno não encontrado",
+            competencia,
+            descricao: `${quantidade} mensalidades encontradas para a mesma competência.`
+        });
+
+    }
+
+}
+
 // ======================================================
 // REGRA 1 - Aluno ativo sem mensalidade
 // ======================================================
