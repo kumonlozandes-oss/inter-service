@@ -964,18 +964,18 @@ if (existente && existente.length) {
     continue;
 }
       const valorOriginal = Number(item.valor_original || 0);
-      const desconto = Number(item.valor_desconto || 0);
-      const { error: erroInsert } = await supabase
-  .from("mensalidades")
+const desconto = Number(item.valor_desconto || 0);
 
-        const competencia = item.competencia;
-
+const competencia = item.competencia;
 const [mes, ano] = competencia.split("/");
 
 const competencia_mes = Number(mes);
 const competencia_ano = Number(ano);
-        
+
+const { error: erroInsert } = await supabase
+  .from("mensalidades")
   .insert({
+    
     id_mensalidade: randomUUID(),
 
     id_aluno: item.guid_aluno,
