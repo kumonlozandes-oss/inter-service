@@ -1082,10 +1082,10 @@ competencia_ano,
       criadas += 1;
     }
     res.json({ sucesso: true, mensalidades_criadas: criadas, mensalidades_ignoradas: ignoradas });
-  } catch (erro) {
+} catch (erro) {
     responderErro(res, erro);
   }
-}
+});
 
 app.get("/padronizar-financeiro", async (req, res) => {
   try {
