@@ -147,10 +147,19 @@ async function listarCobrancasInter({ dataInicial = DATA_INICIAL_INTER, dataFina
   paginaAtual: String(pagina)
 });
     const { json } = await requisicaoInter({
-      path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
-      token
-    });
-    cobrancas.push(...(json.cobrancas || []));
+  path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
+  token
+});
+
+console.log({
+  pagina,
+  totalPaginas: json.totalPaginas,
+  registros: json.cobrancas?.length,
+  primeiro: json.cobrancas?.[0]?.cobranca?.codigoSolicitacao,
+  ultimo: json.cobrancas?.[json.cobrancas.length - 1]?.cobranca?.codigoSolicitacao
+});
+
+cobrancas.push(...(json.cobrancas || []));
     totalPaginas = Number(json.totalPaginas || 1);
     log("Página de cobranças consultada", {
       pagina: pagina + 1,
