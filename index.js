@@ -1072,14 +1072,26 @@ app.get("/gerar-mensalidades-competencia", async (req, res) => {
 
     try {
 
-        const competencia = req.query.competencia;
+        const competencia = String(req.query.competencia || "").trim();
 
-        if (!competencia) {
-            return res.status(400).json({
-                sucesso: false,
-                mensagem: "Informe a competência. Ex.: 09/2026"
-            });
-        }
+if (!competencia) {
+    return res.status(400).json({
+        sucesso: false,
+        mensagem: "Informe a competência."
+    });
+}
+
+const hoje = new Date();
+
+const competenciaAtual =
+    `${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
+
+if (competencia !== competenciaAtual) {
+    return res.status(403).json({
+        sucesso: false,
+        mensagem: `A geração da competência ${competencia} está bloqueada.`
+    });
+}
 
         const { competencia_mes, competencia_ano } =
             competenciaParaMesAno(competencia);
