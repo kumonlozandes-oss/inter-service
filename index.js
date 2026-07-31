@@ -997,11 +997,11 @@ inconsistencias: motivo.join(", "),
       if (erroUpsert) throw erroUpsert;
       processados += 1;
     }
-    res.json({ sucesso: true, responsaveis: processados });
+    return processados;
   } catch (erro) {
-    responderErro(res, erro);
+    throw erro;
   }
-});
+}
 
 app.get("/gerar-mensalidades", async (req, res) => {
   try {
