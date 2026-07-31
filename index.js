@@ -776,7 +776,10 @@ app.get("/sincronizar-boletos", async (req, res) => {
   let inseridos = 0;
   const erros = [];
   try {
-    const { cobrancas, token } = await listarCobrancasInter();
+    const { cobrancas, token } = await listarCobrancasInter({
+    dataInicial: dataISOHa90Dias(),
+    dataFinal: hojeISO()
+});
 
 // Mantém somente os 3 boletos mais recentes de cada CPF
 
