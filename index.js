@@ -821,11 +821,14 @@ const db = new Date(b.cobranca?.dataSituacao || b.cobranca?.dataVencimento || 0)
         const dados = dadosDoBoleto(detalhe);
         const cpf = detalhe.cobranca?.pagador?.cpfCnpj;
         if (!cpf) continue;
-        const { data: aluno, error: erroAluno } = await supabase
-          .from("alunos_master")
-          .select("guid, guid_responsavel")
-          .eq("responsavel_cpf", cpf)
-          .maybeSingle();
+        const { data: alunos, error: erroAluno } = await supabase
+  .from("alunos_master")
+  .select("guid, guid_responsavel")
+  .eq("responsavel_cpf", cpf);
+
+if (erroAluno) throw erroAluno;
+
+const aluno = alunos?.[0] ?? null;
         
         if (erroAluno) throw erroAluno;
         const { data: existente, error: erroBusca } = await supabase
