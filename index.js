@@ -954,7 +954,10 @@ app.get("/gerar-mensalidades", async (req, res) => {
     let ignoradas = 0;
     for (const item of boletos || []) {
       const { data: existente, error: erroBusca } = await supabase
-        .from("mensalidades").select("ID_MENSALIDADE").eq("id_inter", item.id_inter).limit(1);
+        .from("mensalidades")
+.select("id_mensalidade")
+.eq("id_inter", item.id_inter)
+.limit(1);
       if (erroBusca) throw erroBusca;
       if (existente?.length) { ignoradas += 1; continue; }
       const valorOriginal = Number(item.valor_original || 0);
