@@ -821,13 +821,23 @@ const db = new Date(b.cobranca?.dataSituacao || b.cobranca?.dataVencimento || 0)
         const dados = dadosDoBoleto(detalhe);
         const cpf = detalhe.cobranca?.pagador?.cpfCnpj;
         if (!cpf) continue;
+        const { data: aluno, error: erroAluno } = await supabase
+          .from("alunos_master")
+          .select("guid, guid_responsavel")
+          .eq("responsavel_cpf", cpf)
+          .maybeSingle();
+        
+        if (erroAluno) throw erroAluno;
         const { data: existente, error: erroBusca } = await supabase
           .from("financeiro_responsaveis").select("id").eq("id_inter", dados.id_inter).limit(1);
         if (erroBusca) throw erroBusca;
         if (existente?.length) continue;
         const { error } = await supabase.from("financeiro_responsaveis").insert({
           cpf_responsavel: cpf,
-          responsavel: detalhe.cobranca?.pagador?.nome || null,
+        responsavel: detalhe.cobranca?.pagador?.nome || null,
+        
+        guid_aluno: aluno?.guid ?? null,
+        guid_responsavel: aluno?.guid_responsavel ?? null,
           valor_original: dados.valor_original || 0,
           valor_desconto: Number(detalhe.cobranca?.descontos?.[0]?.valor || 0),
           valor_final: (dados.valor_original || 0) - Number(detalhe.cobranca?.descontos?.[0]?.valor || 0),
