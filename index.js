@@ -140,11 +140,12 @@ async function listarCobrancasInter({ dataInicial = DATA_INICIAL_INTER, dataFina
 
   while (pagina < totalPaginas) {
     const parametros = new URLSearchParams({
-      dataInicial,
-      dataFinal,
-      itensPorPagina: "100",
-      paginaAtual: String(pagina)
-    });
+  dataInicial,
+  dataFinal,
+  filtrarDataPor: "EMISSAO",
+  itensPorPagina: "1000",
+  paginaAtual: String(pagina)
+});
     const { json } = await requisicaoInter({
       path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
       token
