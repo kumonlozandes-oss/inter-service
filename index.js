@@ -342,7 +342,7 @@ function dadosTitulo(dados) {
 
 function tituloInicial(dados, mensalidade) {
   return {
-    id_mensalidade: mensalidade?.ID_MENSALIDADE || null,
+    id_mensalidade: mensalidade?.id_mensalidade || null,
     forma_pagamento: mensalidade?.FORMA_PAGAMENTO || "BOLETO",
     ...dadosTitulo(dados),
   };
@@ -462,10 +462,10 @@ if (
     if (req.body.id_mensalidade) {
       const { data: mensalidade, error } = await supabase
         .from("mensalidades").select("*")
-        .eq("ID_MENSALIDADE", req.body.id_mensalidade).single();
+        .eq("id_mensalidade", req.body.id_mensalidade).single();
       if (error) throw error;
       await atualizarRegistro(
-        "mensalidades", "ID_MENSALIDADE", mensalidade.ID_MENSALIDADE,
+        "mensalidades", "id_mensalidade", mensalidade.id_mensalidade,
         mensalidade, dadosMensalidade(dados)
       );
     }
@@ -953,13 +953,16 @@ app.get("/gerar-mensalidades", async (req, res) => {
     let criadas = 0;
     let ignoradas = 0;
     for (const item of boletos || []) {
-      const { data: existente, error: erroBusca } = await supabase
-        .from("mensalidades")
-.select("id_mensalidade")
-.eq("id_inter", item.id_inter)
-.limit(1);
-      if (erroBusca) throw erroBusca;
-      if (existente?.length) { ignoradas += 1; continue; }
+     const { data: existente, error: erroBusca } = await supabase
+  .from("mensalidades")
+  .select("id_mensalidade")
+  .eq("id_inter", item.id_inter)
+  .limit(1);
+
+if (existente && existente.length) {
+    ignoradas += 1;
+    continue;
+}
       const valorOriginal = Number(item.valor_original || 0);
       const desconto = Number(item.valor_desconto || 0);
       const { error: erroInsert } = await supabase
@@ -1159,18 +1162,18 @@ if (competencia !== competenciaAtual) {
 
 if (erroFinanceiro) throw erroFinanceiro;
 
-const { data: alunos, error: erroAlunos } = await supabase
+const { data: alunos, error: erroalunos } = await supabase
     .from("alunos_master")
     .select("guid,nome,status");
 
-if (erroAlunos) throw erroAlunos;const mapaAlunos = new Map(
+if (erroalunos) throw erroalunos;const mapaalunos = new Map(
     alunos.map(aluno => [aluno.guid, aluno])
 );
 
 const alunosAptos = financeiros
     .map(financeiro => {
 
-        const aluno = mapaAlunos.get(financeiro.guid_aluno);
+        const aluno = mapaalunos.get(financeiro.guid_aluno);
 
         if (!aluno || aluno.status !== "ATIVO") {
             return null;
@@ -1309,13 +1312,13 @@ const { data: financeiros, error: erroFinanceiro } =
 
 if (erroFinanceiro) throw erroFinanceiro;
 
-// Alunos
-const { data: alunos, error: erroAlunos } =
+// alunos
+const { data: alunos, error: erroalunos } =
     await supabase
         .from("alunos_master")
         .select("guid,nome,status");
 
-if (erroAlunos) throw erroAlunos;
+if (erroalunos) throw erroalunos;
 
 // Mensalidades
 const { data: mensalidades, error: erroMensalidades } =
@@ -1344,7 +1347,7 @@ const { data: recebimentos, error: erroRecebimentos } =
 if (erroRecebimentos) throw erroRecebimentos;
 
 // Índices
-const mapaAlunos = new Map(
+const mapaalunos = new Map(
     alunos.map(a => [a.guid, a])
 );
 
@@ -1386,16 +1389,16 @@ for (const mensalidade of mensalidades) {
 
 }
 
-for (const [guidAluno, quantidade] of contadorMensalidades) {
+for (const [guidaluno, quantidade] of contadorMensalidades) {
 
     if (quantidade > 1) {
 
-        const aluno = mapaAlunos.get(guidAluno);
+        const aluno = mapaalunos.get(guidaluno);
 
         inconsistencias.push({
             tipo: "MENSALIDADE_DUPLICADA",
-            guid_aluno: guidAluno,
-            aluno: aluno?.nome || "Aluno não encontrado",
+            guid_aluno: guidaluno,
+            aluno: aluno?.nome || "aluno não encontrado",
             competencia,
             descricao: `${quantidade} mensalidades encontradas para a mesma competência.`
         });
@@ -1405,12 +1408,12 @@ for (const [guidAluno, quantidade] of contadorMensalidades) {
 }
 
 // ======================================================
-// REGRA 1 - Aluno ativo sem mensalidade
+// REGRA 1 - aluno ativo sem mensalidade
 // ======================================================
 
 for (const financeiro of financeiros) {
 
-    const aluno = mapaAlunos.get(financeiro.guid_aluno);
+    const aluno = mapaalunos.get(financeiro.guid_aluno);
 
     if (!aluno || aluno.status !== "ATIVO") continue;
 
@@ -1421,7 +1424,7 @@ for (const financeiro of financeiros) {
             guid_aluno: aluno.guid,
             aluno: aluno.nome,
             competencia,
-            descricao: "Aluno ativo sem mensalidade."
+            descricao: "aluno ativo sem mensalidade."
         });
 
     }
@@ -1430,7 +1433,7 @@ for (const financeiro of financeiros) {
 
 
 // ======================================================
-// REGRA 4 - Aluno ativo sem cadastro financeiro
+// REGRA 4 - aluno ativo sem cadastro financeiro
 // ======================================================
 
 for (const aluno of alunos) {
@@ -1450,7 +1453,7 @@ for (const aluno of alunos) {
             competencia,
 
             descricao:
-                "Aluno ativo sem cadastro no financeiro."
+                "aluno ativo sem cadastro no financeiro."
 
         });
 
@@ -1464,7 +1467,7 @@ for (const aluno of alunos) {
 
 for (const mensalidade of mensalidades) {
 
-    const aluno = mapaAlunos.get(mensalidade.guid_aluno);
+    const aluno = mapaalunos.get(mensalidade.guid_aluno);
 
     if (!aluno) continue;
 
@@ -1472,7 +1475,7 @@ for (const mensalidade of mensalidades) {
 
         inconsistencias.push({
 
-            tipo: "MENSALIDADE_ALUNO_INATIVO",
+            tipo: "MENSALIDADE_aluno_INATIVO",
 
             guid_aluno: aluno.guid,
 
@@ -1481,7 +1484,7 @@ for (const mensalidade of mensalidades) {
             competencia,
 
             descricao:
-                `Aluno com status "${aluno.status}" possui mensalidade gerada.`
+                `aluno com status "${aluno.status}" possui mensalidade gerada.`
 
         });
 
@@ -1528,18 +1531,18 @@ app.get("/sincronizar-recebimentos", async (req, res) => {
     for (const item of recebidos || []) {
       const { data: existente, error: erroBusca } = await supabase
         .from("recebimentos").select("ID_RECEBIMENTO")
-        .eq("ID_MENSALIDADE", item.ultimo_codigo_inter).limit(1);
+        .eq("id_mensalidade", item.ultimo_codigo_inter).limit(1);
       if (erroBusca) throw erroBusca;
       if (existente?.length) continue;
       const { error: erroInsert } = await supabase.from("recebimentos").insert({
         ID_RECEBIMENTO: randomUUID(),
-        ID_MENSALIDADE: item.ultimo_codigo_inter,
-        ALUNO: item.nome_responsavel,
+        id_mensalidade: item.ultimo_codigo_inter,
+        aluno: item.nome_responsavel,
         VALOR: String(item.valor_mensalidade || 0),
         DATA_RECEBIMENTO: new Date().toISOString(),
         FORMA_PAGAMENTO: "BOLETO",
         OBSERVACAO: item.ultimo_seu_numero,
-        STATUS: "PAGO"
+        status: "PAGO"
       });
       if (erroInsert) throw erroInsert;
       inseridos += 1;
@@ -1566,11 +1569,11 @@ app.get("/sincronizar-movimentacoes", async (req, res) => {
         DATA_VENCIMENTO: item.DATA_RECEBIMENTO,
         TIPO: "RECEITA",
         CATEGORIA: "MENSALIDADE",
-        DESCRICAO: item.ALUNO,
+        DESCRICAO: item.aluno,
         VALOR: Number(item.VALOR || 0),
         FORMA_PAGAMENTO: item.FORMA_PAGAMENTO,
         ORIGEM: "INTER",
-        STATUS: "CONFIRMADO",
+        status: "CONFIRMADO",
         CENTRO_CUSTO: "ESCOLA",
         ID_ORIGEM: item.ID_RECEBIMENTO,
         DATA_PAGAMENTO: item.DATA_RECEBIMENTO,
@@ -1591,7 +1594,7 @@ app.get("/diagnostico-financeiro", async (req, res) => {
   try {
     const [titulos, mensalidades, alunos] = await Promise.all([
       supabase.from("financeiro_titulos").select("id,status,status_inter,id_inter,id_mensalidade"),
-      supabase.from("mensalidades").select("ID_MENSALIDADE,STATUS,id_inter"),
+      supabase.from("mensalidades").select("id_mensalidade,status,id_inter"),
       supabase.from("alunos_master").select("guid,nome,status")
     ]);
     if (titulos.error) throw titulos.error;
@@ -1616,19 +1619,19 @@ app.get("/diagnostico-financeiro", async (req, res) => {
 app.get("/diagnostico-mensalidades", async (req, res) => {
   try {
     const [mensalidades, titulos] = await Promise.all([
-      supabase.from("mensalidades").select("ID_MENSALIDADE,ALUNO,COMPETENCIA,id_inter,id_titulo,STATUS"),
+      supabase.from("mensalidades").select("id_mensalidade,aluno,competencia,id_inter,id_titulo,status"),
       supabase.from("financeiro_titulos").select("id,id_mensalidade,id_inter")
     ]);
     if (mensalidades.error) throw mensalidades.error;
     if (titulos.error) throw titulos.error;
     const porMensalidade = new Map((titulos.data || []).map((titulo) => [titulo.id_mensalidade, titulo]));
     res.json((mensalidades.data || []).map((mensalidade) => {
-      const titulo = porMensalidade.get(mensalidade.ID_MENSALIDADE);
+      const titulo = porMensalidade.get(mensalidade.id_mensalidade);
       return {
-        mensalidade: mensalidade.ID_MENSALIDADE,
-        aluno: mensalidade.ALUNO,
-        competencia: mensalidade.COMPETENCIA,
-        status: mensalidade.STATUS,
+        mensalidade: mensalidade.id_mensalidade,
+        aluno: mensalidade.aluno,
+        competencia: mensalidade.competencia,
+        status: mensalidade.status,
         possuiTitulo: Boolean(titulo),
         possuiInter: Boolean(titulo?.id_inter)
       };
@@ -1641,7 +1644,7 @@ app.get("/diagnostico-mensalidades", async (req, res) => {
 app.get("/mensalidades-sem-titulo", async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from("mensalidades").select("ID_MENSALIDADE,ALUNO,COMPETENCIA,STATUS").is("id_titulo", null);
+      .from("mensalidades").select("id_mensalidade,aluno,competencia,status").is("id_titulo", null);
     if (error) throw error;
     res.json({ total: (data || []).length, lista: data || [] });
   } catch (erro) {
