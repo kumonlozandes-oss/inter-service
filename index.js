@@ -876,7 +876,15 @@ competencia_ano: new Date(dados.data_vencimento).getFullYear(),
     });
 }
     }
-    res.json({ sucesso: erros.length === 0, inseridos, erros });
+
+    await padronizarFinanceiro();
+    const responsaveis = await padronizarFinanceiro();
+    res.json({
+    sucesso: erros.length === 0,
+    inseridos,
+    responsaveis_padronizados: responsaveis,
+    erros
+});
   } catch (erro) {
     responderErro(res, erro);
   }
@@ -912,7 +920,7 @@ app.get("/vincular-responsaveis", async (req, res) => {
   }
 });
 
-app.get("/padronizar-financeiro", async (req, res) => {
+async function padronizarFinanceiro() {
   try {
     const { data: boletos, error } = await supabase.from("financeiro_responsaveis").select("*");
     if (error) throw error;
@@ -1074,6 +1082,20 @@ competencia_ano,
       criadas += 1;
     }
     res.json({ sucesso: true, mensalidades_criadas: criadas, mensalidades_ignoradas: ignoradas });
+  } catch (erro) {
+    responderErro(res, erro);
+  }
+}
+
+app.get("/padronizar-financeiro", async (req, res) => {
+  try {
+    const processados = await padronizarFinanceiro();
+
+    res.json({
+      sucesso: true,
+      responsaveis: processados
+    });
+
   } catch (erro) {
     responderErro(res, erro);
   }
