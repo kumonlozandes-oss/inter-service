@@ -967,6 +967,14 @@ if (existente && existente.length) {
       const desconto = Number(item.valor_desconto || 0);
       const { error: erroInsert } = await supabase
   .from("mensalidades")
+
+        const competencia = item.competencia;
+
+const [mes, ano] = competencia.split("/");
+
+const competencia_mes = Number(mes);
+const competencia_ano = Number(ano);
+        
   .insert({
     id_mensalidade: randomUUID(),
 
@@ -982,8 +990,8 @@ if (existente && existente.length) {
 
     competencia: item.competencia,
 
-    competencia_mes: item.competencia_mes,
-    competencia_ano: item.competencia_ano,
+competencia_mes,
+competencia_ano,
 
     origem: "INTER",
     tipo_cobranca: "BOLETO",
