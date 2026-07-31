@@ -132,44 +132,223 @@ function dataISOHa90Dias() {
     return data.toISOString().slice(0, 10);
 }
 
-async function listarCobrancasInter({ dataInicial = DATA_INICIAL_INTER, dataFinal = hojeISO() } = {}) {
-  const { token } = await obterTokenInter();
-  const cobrancas = [];
-  let pagina = 0;
-  let totalPaginas = 1;
+async function listarCobrancasInter({
+    dataInicial = dataISOHa90Dias(),
+    dataFinal = hojeISO()
+} = {}) {
 
-  while (pagina < totalPaginas) {
-    const parametros = new URLSearchParams({
-  dataInicial,
-  dataFinal,
-  filtrarDataPor: "EMISSAO",
-  itensPorPagina: "1000",
-  paginaAtual: String(pagina + 1)
-});
-    const { json } = await requisicaoInter({
-  path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
-  token
-});
+    const { token } = await obterTokenInter();
 
-console.log({
-  pagina,
-  totalPaginas: json.totalPaginas,
-  registros: json.cobrancas?.length,
-  primeiro: json.cobrancas?.[0]?.cobranca?.codigoSolicitacao,
-  ultimo: json.cobrancas?.[json.cobrancas.length - 1]?.cobranca?.codigoSolicitacao
-});
+    const cobrancas = [];
+    const codigos = new Set();
 
-cobrancas.push(...(json.cobrancas || []));
-    totalPaginas = Number(json.totalPaginas || 1);
-    log("Página de cobranças consultada", {
-      pagina: pagina + 1,
-      totalPaginas,
-      registros: (json.cobrancas || []).length
-    });
-    pagina += 1;
-  }
-  return { cobrancas, token };
+    let pagina = 0;
+    let totalPaginas = 1;
+
+    while (pagina < totalPaginas) {
+
+        const parametros = new URLSearchParams({
+            dataInicial,
+            dataFinal,
+            filtrarDataPor: "EMISSAO",
+            itensPorPagina: "100",
+            paginaAtual: String(pagina)
+        });
+
+        const { json } = await requisicaoInter({
+            path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
+            token
+        });
+
+        totalPaginas = Number(json.totalPaginas || 1);
+
+        const lista = json.cobrancas || [];
+
+        console.log(
+            `[INTER] Página ${pagina + 1}/${totalPaginas} - ${lista.length} registros`
+        );
+
+        for (const item of lista) {
+
+            const codigo = item?.cobranca?.codigoSolicitacao;
+
+            if (!codigo) continue;
+
+            if (codigos.has(codigo)) {
+                continue;
+            }
+
+            codigos.add(codigo);
+
+            cobrancas.push(item);
+
+        }
+
+        pagina++;
+
+    }
+
+    console.log(
+        `[INTER] Total recebido: ${cobrancas.length} boletos únicos`
+    );
+
+    return {
+        cobrancas,
+        token
+    };
+
 }
+
+app.get("/sincronizar-boletos", async (req, res) => {
+
+    let inseridos = 0;
+    let atualizados = 0;
+    let ignorados = 0;
+
+    const erros = [];
+
+    try {
+
+        const { cobrancas, token } = await listarCobrancasInter({
+            dataInicial: dataISOHa90Dias(),
+            dataFinal: hojeISO()
+        });
+
+        for (const item of cobrancas) {
+
+            const codigo = item?.cobranca?.codigoSolicitacao;
+
+            if (!codigo) continue;
+
+            try {
+
+                const detalhe = await consultarCobranca(codigo, token);
+
+                const dados = dadosDoBoleto(detalhe);
+
+                const cpf =
+                    detalhe.cobranca?.pagador?.cpfCnpj || null;
+
+                const { data: alunos } = await supabase
+                    .from("alunos_master")
+                    .select("guid,guid_responsavel")
+                    .eq("responsavel_cpf", cpf);
+
+                const aluno = alunos?.[0] ?? null;
+
+                const { data: existente } = await supabase
+                    .from("financeiro_responsaveis")
+                    .select("*")
+                    .eq("id_inter", dados.id_inter)
+                    .maybeSingle();
+
+                const registro = {
+
+                    guid_aluno: aluno?.guid ?? null,
+                    guid_responsavel: aluno?.guid_responsavel ?? null,
+
+                    cpf_responsavel: cpf,
+                    responsavel: detalhe.cobranca?.pagador?.nome || null,
+
+                    valor_original: dados.valor_original,
+                    valor_desconto:
+                        Number(
+                            detalhe.cobranca?.descontos?.[0]?.valor || 0
+                        ),
+
+                    valor_final:
+                        Number(dados.valor_original || 0) -
+                        Number(
+                            detalhe.cobranca?.descontos?.[0]?.valor || 0
+                        ),
+
+                    valor_recebido: dados.valor_recebido,
+
+                    id_inter: dados.id_inter,
+
+                    seu_numero: dados.seu_numero,
+                    nosso_numero: dados.nosso_numero,
+
+                    competencia: competenciaPadrao(
+                        dados.data_vencimento
+                    ),
+
+                    data_vencimento: dados.data_vencimento,
+
+                    status_inter: dados.status_inter,
+                    linha_digitavel: dados.linha_digitavel,
+                    codigo_barras: dados.codigo_barras,
+
+                    pix_copia_cola: dados.pix_copia_cola,
+                    codigo_pix: dados.codigo_pix,
+                    qr_code_pix: dados.qr_code_pix,
+
+                    url_pdf_boleto: dados.url_pdf_boleto,
+
+                    origem: "INTER",
+
+                    ultima_sincronizacao: new Date().toISOString()
+                };
+
+                if (existente) {
+
+                    const { error } = await supabase
+                        .from("financeiro_responsaveis")
+                        .update(registro)
+                        .eq("id", existente.id);
+
+                    if (error) throw error;
+
+                    atualizados++;
+
+                } else {
+
+                    const { error } = await supabase
+                        .from("financeiro_responsaveis")
+                        .insert(registro);
+
+                    if (error) throw error;
+
+                    inseridos++;
+
+                }
+
+            } catch (erro) {
+
+                erros.push({
+                    codigo,
+                    erro: erro.message
+                });
+
+            }
+
+        }
+
+        const responsaveis = await padronizarFinanceiro();
+
+        res.json({
+
+            sucesso: erros.length === 0,
+
+            consultados: cobrancas.length,
+
+            inseridos,
+
+            atualizados,
+
+            responsaveis_padronizados: responsaveis,
+
+            erros
+
+        });
+
+    } catch (erro) {
+
+        responderErro(res, erro);
+
+    }
+
+});
 
 app.get("/importar-boletos", async (req, res) => {
 
@@ -777,125 +956,6 @@ app.get("/descontos-confirmados", async (req, res) => {
       }
     }
     res.json(lista);
-  } catch (erro) {
-    responderErro(res, erro);
-  }
-});
-
-app.get("/sincronizar-boletos", async (req, res) => {
-  let inseridos = 0;
-  const erros = [];
-  try {
-    const { cobrancas, token } = await listarCobrancasInter({
-    dataInicial: dataISOHa90Dias(),
-    dataFinal: hojeISO()
-});
-
-// Mantém somente os 3 boletos mais recentes de cada CPF
-
-const porCpf = new Map();
-
-for (const item of cobrancas) {
-
-    const cpf = item.cobranca?.pagador?.cpfCnpj;
-
-    if (!cpf) continue;
-
-    if (!porCpf.has(cpf)) {
-        porCpf.set(cpf, []);
-    }
-
-    porCpf.get(cpf).push(item);
-
-}
-
-const cobrancasFiltradas = [];
-
-for (const lista of porCpf.values()) {
-
-    lista.sort((a, b) => {
-
-const da = new Date(a.cobranca?.dataSituacao || a.cobranca?.dataVencimento || 0);
-const db = new Date(b.cobranca?.dataSituacao || b.cobranca?.dataVencimento || 0);
-
-        return db - da;
-
-    });
-
-    cobrancasFiltradas.push(...lista.slice(0, 3));
-
-}
-    
-    for (const item of cobrancasFiltradas) {
-      const codigo = item.cobranca?.codigoSolicitacao;
-      if (!codigo) continue;
-      try {
-        const detalhe = await consultarCobranca(codigo, token);
-        const dados = dadosDoBoleto(detalhe);
-        const cpf = detalhe.cobranca?.pagador?.cpfCnpj;
-        if (!cpf) continue;
-        const { data: alunos, error: erroAluno } = await supabase
-  .from("alunos_master")
-  .select("guid, guid_responsavel")
-  .eq("responsavel_cpf", cpf);
-
-if (erroAluno) throw erroAluno;
-
-const aluno = alunos?.[0] ?? null;
-        
-        if (erroAluno) throw erroAluno;
-        const { data: existente, error: erroBusca } = await supabase
-          .from("financeiro_responsaveis").select("id").eq("id_inter", dados.id_inter).limit(1);
-        if (erroBusca) throw erroBusca;
-        if (existente?.length) continue;
-        const { error } = await supabase.from("financeiro_responsaveis").insert({
-          cpf_responsavel: cpf,
-        responsavel: detalhe.cobranca?.pagador?.nome || null,
-        
-        guid_aluno: aluno?.guid ?? null,
-        guid_responsavel: aluno?.guid_responsavel ?? null,
-          valor_original: dados.valor_original || 0,
-          valor_desconto: Number(detalhe.cobranca?.descontos?.[0]?.valor || 0),
-          valor_final: (dados.valor_original || 0) - Number(detalhe.cobranca?.descontos?.[0]?.valor || 0),
-          valor_recebido: dados.valor_recebido || 0,
-          id_inter: dados.id_inter,
-          seu_numero: dados.seu_numero,
-          competencia: competenciaPadrao(dados.data_vencimento),
-
-
-          nosso_numero: dados.nosso_numero,
-          data_vencimento: dados.data_vencimento,
-          status_inter: dados.status_inter,
-          linha_digitavel: dados.linha_digitavel,
-          codigo_barras: dados.codigo_barras,
-          pix_copia_cola: dados.pix_copia_cola,
-          codigo_pix: dados.codigo_pix,
-          qr_code_pix: dados.qr_code_pix,
-          url_pdf_boleto: dados.url_pdf_boleto,
-          origem: "INTER",
-          ultima_sincronizacao: new Date().toISOString()
-        });
-        if (error) throw error;
-        inseridos += 1;
-      } 
-      catch (erro) {
-    console.error("Erro ao sincronizar:", erro);
-
-    erros.push({
-        codigo,
-        erro: erro.message || erro.details || JSON.stringify(erro)
-    });
-}
-    }
-
-    await padronizarFinanceiro();
-    const responsaveis = await padronizarFinanceiro();
-    res.json({
-    sucesso: erros.length === 0,
-    inseridos,
-    responsaveis_padronizados: responsaveis,
-    erros
-});
   } catch (erro) {
     responderErro(res, erro);
   }
