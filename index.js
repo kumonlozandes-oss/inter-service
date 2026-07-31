@@ -144,7 +144,7 @@ async function listarCobrancasInter({ dataInicial = DATA_INICIAL_INTER, dataFina
   dataFinal,
   filtrarDataPor: "EMISSAO",
   itensPorPagina: "1000",
-  paginaAtual: String(pagina)
+  paginaAtual: String(pagina + 1)
 });
     const { json } = await requisicaoInter({
   path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
