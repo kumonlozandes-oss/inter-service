@@ -863,9 +863,15 @@ competencia_ano: new Date(dados.data_vencimento).getFullYear(),
         });
         if (error) throw error;
         inseridos += 1;
-      } catch (erro) {
-        erros.push({ codigo, erro: String(erro) });
-      }
+      } 
+      catch (erro) {
+    console.error("Erro ao sincronizar:", erro);
+
+    erros.push({
+        codigo,
+        erro: erro.message || erro.details || JSON.stringify(erro)
+    });
+}
     }
     res.json({ sucesso: erros.length === 0, inseridos, erros });
   } catch (erro) {
