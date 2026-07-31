@@ -244,6 +244,20 @@ function normalizarSeuNumero(valor) {
   return `${texto.slice(0, -2)}/${texto.slice(-2)}`;
 }
 
+function competenciaPadrao(dataVencimento) {
+
+    const data = new Date(dataVencimento);
+
+    if (isNaN(data)) return null;
+
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+
+    const ano = data.getFullYear();
+
+    return `${mes}/${ano}`;
+
+}
+
 function statusInterno(situacao) {
   return situacao === "RECEBIDO" ? "PAGO" : situacao || null;
 }
@@ -763,7 +777,43 @@ app.get("/sincronizar-boletos", async (req, res) => {
   const erros = [];
   try {
     const { cobrancas, token } = await listarCobrancasInter();
-    for (const item of cobrancas) {
+
+// Mantém somente os 3 boletos mais recentes de cada CPF
+
+const porCpf = new Map();
+
+for (const item of cobrancas) {
+
+    const cpf = item.cobranca?.pagador?.cpfCnpj;
+
+    if (!cpf) continue;
+
+    if (!porCpf.has(cpf)) {
+        porCpf.set(cpf, []);
+    }
+
+    porCpf.get(cpf).push(item);
+
+}
+
+const cobrancasFiltradas = [];
+
+for (const lista of porCpf.values()) {
+
+    lista.sort((a, b) => {
+
+const da = new Date(a.cobranca?.dataSituacao || a.cobranca?.dataVencimento || 0);
+const db = new Date(b.cobranca?.dataSituacao || b.cobranca?.dataVencimento || 0);
+
+        return db - da;
+
+    });
+
+    cobrancasFiltradas.push(...lista.slice(0, 3));
+
+}
+    
+    for (const item of cobrancasFiltradas) {
       const codigo = item.cobranca?.codigoSolicitacao;
       if (!codigo) continue;
       try {
@@ -784,7 +834,11 @@ app.get("/sincronizar-boletos", async (req, res) => {
           valor_recebido: dados.valor_recebido || 0,
           id_inter: dados.id_inter,
           seu_numero: dados.seu_numero,
-          competencia: dados.seu_numero,
+          competencia: competenciaPadrao(dados.data_vencimento),
+
+competencia_mes: new Date(dados.data_vencimento).getMonth() + 1,
+
+competencia_ano: new Date(dados.data_vencimento).getFullYear(),
           nosso_numero: dados.nosso_numero,
           data_vencimento: dados.data_vencimento,
           status_inter: dados.status_inter,
