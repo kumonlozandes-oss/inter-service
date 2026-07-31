@@ -852,9 +852,7 @@ const aluno = alunos?.[0] ?? null;
           seu_numero: dados.seu_numero,
           competencia: competenciaPadrao(dados.data_vencimento),
 
-competencia_mes: new Date(dados.data_vencimento).getMonth() + 1,
 
-competencia_ano: new Date(dados.data_vencimento).getFullYear(),
           nosso_numero: dados.nosso_numero,
           data_vencimento: dados.data_vencimento,
           status_inter: dados.status_inter,
