@@ -976,8 +976,7 @@ if (existente && existente.length) {
 
     aluno: item.aluno,
     responsavel: item.responsavel,
-    cpf_responsavel: item.cpf_responsavel,
-
+   
     curso: "",
     tipo: "MENSALIDADE",
 
