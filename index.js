@@ -929,10 +929,38 @@ app.get("/padronizar-financeiro", async (req, res) => {
       const primeiro = lista[0];
       if (!primeiro.guid_aluno || !primeiro.guid_responsavel) continue;
       const recebido = lista.find((item) => item.status_inter === "RECEBIDO") || primeiro;
+      const { data: aluno } = await supabase
+  .from("alunos_master")
+  .select("id_aluno,nome")
+  .eq("guid", recebido.guid_aluno)
+  .maybeSingle();
+
+const possuiInconsistencia =
+    lista.some(b => Number(b.valor_original) !== Number(recebido.valor_original)) ||
+    lista.some(b => Number(b.valor_desconto || 0) !== Number(recebido.valor_desconto || 0)) ||
+    lista.some(b =>
+        (b.data_vencimento ? new Date(b.data_vencimento).getDate() : 5) !==
+        (recebido.data_vencimento ? new Date(recebido.data_vencimento).getDate() : 5)
+    );
+
+const motivo = [];
+
+if (lista.some(b => Number(b.valor_original) !== Number(recebido.valor_original)))
+    motivo.push("VALOR");
+
+if (lista.some(b => Number(b.valor_desconto || 0) !== Number(recebido.valor_desconto || 0)))
+    motivo.push("DESCONTO");
+
+if (lista.some(b =>
+    (b.data_vencimento ? new Date(b.data_vencimento).getDate() : 5) !==
+    (recebido.data_vencimento ? new Date(recebido.data_vencimento).getDate() : 5)
+))
+    motivo.push("VENCIMENTO");
       const { error: erroUpsert } = await supabase.from("financeiro_padrao").upsert({
         guid_aluno: recebido.guid_aluno,
         guid_responsavel: recebido.guid_responsavel,
-        aluno: "",
+        id_aluno: aluno?.id_aluno ?? null,
+aluno: aluno?.nome ?? "",
         responsavel: recebido.responsavel,
         cpf_responsavel: recebido.cpf_responsavel,
         email_responsavel: recebido.email_responsavel,
@@ -953,6 +981,8 @@ valor_final: recebido.valor_final,
         quantidade_boletos_analisados: lista.length,
         primeira_competencia: lista[0].competencia,
         ultima_competencia_paga: recebido.status_inter === "RECEBIDO" ? recebido.competencia : null,
+        possui_inconsistencia: possuiInconsistencia,
+inconsistencias: motivo.join(", "),
         data_padronizacao: new Date().toISOString(),
         algoritmo_padronizacao: "IMPLANTACAO_V1"
       });
