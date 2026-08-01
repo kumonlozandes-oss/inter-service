@@ -148,10 +148,6 @@ async function listarCobrancasInter({
     while (pagina < totalPaginas) {
 
         const parametros = new URLSearchParams({
-            dataInicial,
-            dataFinal,
-            filtrarDataPor: "EMISSAO",
-            const parametros = new URLSearchParams({
     dataInicial,
     dataFinal,
     filtrarDataPor: "EMISSAO"
