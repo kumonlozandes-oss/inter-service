@@ -166,6 +166,11 @@ const { json } = await requisicaoInter({
     token
 });
 
+console.log("===== JSON =====");
+console.log(JSON.stringify(json, null, 2));
+console.log("================");
+      
+
 totalPaginas = Number(json.totalPaginas || 1);
 
 const lista = json.cobrancas || [];
