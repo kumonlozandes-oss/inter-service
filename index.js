@@ -158,6 +158,9 @@ async function listarCobrancasInter({
             path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
             token
         });
+      console.log("===== RESPOSTA DA API INTER =====");
+      console.log(JSON.stringify(json, null, 2));
+      console.log("================================");
 
         totalPaginas = Number(json.totalPaginas || 1);
 
