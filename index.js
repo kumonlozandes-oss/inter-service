@@ -139,25 +139,58 @@ async function listarCobrancasInter({
 
     const { token } = await obterTokenInter();
 
-    const parametros = new URLSearchParams({
-        dataInicial,
-        dataFinal,
-        filtrarDataPor: "EMISSAO"
-    });
+    const cobrancas = [];
+    const codigos = new Set();
 
-    const { json } = await requisicaoInter({
-        path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
-        token
-    });
+    let pagina = 0;
+    let totalPaginas = 1;
 
-    const cobrancas = json.cobrancas || [];
+    while (pagina < totalPaginas) {
 
-    console.log(`[INTER] Total recebido: ${cobrancas.length} boletos`);
+        const parametros = new URLSearchParams({
+            dataInicial,
+            dataFinal,
+            filtrarDataPor: "EMISSAO",
+            paginaAtual: String(pagina)
+        });
+
+        const { json } = await requisicaoInter({
+            path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
+            token
+        });
+
+        totalPaginas = Number(json.totalPaginas || 1);
+
+        const lista = json.cobrancas || [];
+
+        console.log(
+            `[INTER] Página ${pagina + 1}/${totalPaginas} - ${lista.length} boletos`
+        );
+
+        for (const item of lista) {
+
+            const codigo = item?.cobranca?.codigoSolicitacao;
+
+            if (!codigo) continue;
+            if (codigos.has(codigo)) continue;
+
+            codigos.add(codigo);
+            cobrancas.push(item);
+
+        }
+
+        pagina++;
+    }
+
+    console.log(
+        `[INTER] Total recebido: ${cobrancas.length} boletos únicos`
+    );
 
     return {
         cobrancas,
         token
     };
+
 }
 
 app.get("/sincronizar-boletos", async (req, res) => {
