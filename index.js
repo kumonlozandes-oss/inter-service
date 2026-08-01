@@ -157,7 +157,14 @@ async function listarCobrancasInter({
             paginaAtual: String(pagina)
         });
 
-        const { json } = await requisicaoInter({
+const path = `/cobranca/v3/cobrancas?${parametros.toString()}`;
+
+console.log(path);
+
+const { json } = await requisicaoInter({
+    path,
+    token
+});
             path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
             token
         });
