@@ -156,7 +156,9 @@ async function listarCobrancasInter({
             paginaAtual: String(pagina)
         });
 
-      console.log(parametros.toString());
+      console.log("URL:", `/cobranca/v3/cobrancas?${parametros.toString()}`);
+console.log("pagina =", pagina);
+console.log("paginaAtual enviada =", parametros.get("paginaAtual"));
 
         const { json } = await requisicaoInter({
             path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
