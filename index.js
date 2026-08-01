@@ -145,28 +145,22 @@ async function listarCobrancasInter({
     let pagina = 0;
     let totalPaginas = 1;
 
-    while (pagina < totalPaginas) {
+    do {
 
-      console.log(`Buscando página ${pagina}`);
+        console.log(`[INTER] Buscando página ${pagina + 1}`);
 
         const parametros = new URLSearchParams({
             dataInicial,
             dataFinal,
             filtrarDataPor: "EMISSAO",
+            itensPorPagina: "100",
             paginaAtual: String(pagina)
         });
-
-      console.log("URL:", `/cobranca/v3/cobrancas?${parametros.toString()}`);
-console.log("pagina =", pagina);
-console.log("paginaAtual enviada =", parametros.get("paginaAtual"));
 
         const { json } = await requisicaoInter({
             path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
             token
         });
-      console.log("===== RESPOSTA DA API INTER =====");
-      console.log(JSON.stringify(json, null, 2));
-      console.log("================================");
 
         totalPaginas = Number(json.totalPaginas || 1);
 
@@ -181,25 +175,23 @@ console.log("paginaAtual enviada =", parametros.get("paginaAtual"));
             const codigo = item?.cobranca?.codigoSolicitacao;
 
             if (!codigo) continue;
+
             if (codigos.has(codigo)) continue;
 
             codigos.add(codigo);
             cobrancas.push(item);
-
         }
 
         pagina++;
-    }
 
-    console.log(
-        `[INTER] Total recebido: ${cobrancas.length} boletos únicos`
-    );
+    } while (pagina < totalPaginas);
+
+    console.log(`[INTER] Total final: ${cobrancas.length} boletos`);
 
     return {
         cobrancas,
         token
     };
-
 }
 
 app.get("/sincronizar-boletos", async (req, res) => {
