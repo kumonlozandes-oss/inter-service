@@ -149,12 +149,12 @@ async function listarCobrancasInter({
 
         console.log(`[INTER] Buscando página ${pagina + 1}`);
 
-        const parametros = new URLSearchParams({
+       const parametros = new URLSearchParams({
     dataInicial,
     dataFinal,
     filtrarDataPor: "EMISSAO",
-    itensPorPagina: "100",
-    paginaAtual: String(pagina)
+    "paginacao.itensPorPagina": "1000",
+    "paginacao.paginaAtual": String(pagina)
 });
 
 const path = `/cobranca/v3/cobrancas?${parametros.toString()}`;
