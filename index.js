@@ -1,7 +1,5 @@
 const express = require("express");
 const fs = require("fs");
-console.log("HEADERS");
-console.log(options.headers);
 const https = require("https");
 const querystring = require("querystring");
 const { randomUUID } = require("crypto");
@@ -156,7 +154,7 @@ async function listarCobrancasInter({
        const parametros = new URLSearchParams({
     dataInicial,
     dataFinal,
-    filtrarDataPor: "EMISSAO",
+    filtrarDataPor: "VENCIMENTO",
     "paginacao.itensPorPagina": "1000",
     "paginacao.paginaAtual": String(pagina)
 });
