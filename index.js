@@ -38,6 +38,8 @@ function certificadosInter() {
 }
 
 function requisicaoHttps(options, body) {
+  console.log("HTTPS OPTIONS");
+console.log(JSON.stringify(options, null, 2));
   return new Promise((resolve, reject) => {
     const request = https.request(options, (response) => {
       let data = "";
