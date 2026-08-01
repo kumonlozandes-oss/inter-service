@@ -150,28 +150,25 @@ async function listarCobrancasInter({
         console.log(`[INTER] Buscando página ${pagina + 1}`);
 
         const parametros = new URLSearchParams({
-            dataInicial,
-            dataFinal,
-            filtrarDataPor: "EMISSAO",
-            itensPorPagina: "100",
-            paginaAtual: String(pagina)
-        });
+    dataInicial,
+    dataFinal,
+    filtrarDataPor: "EMISSAO",
+    itensPorPagina: "100",
+    paginaAtual: String(pagina)
+});
 
 const path = `/cobranca/v3/cobrancas?${parametros.toString()}`;
 
-console.log(path);
+console.log("[INTER] URL:", path);
 
 const { json } = await requisicaoInter({
     path,
     token
 });
-            path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
-            token
-        });
 
-        totalPaginas = Number(json.totalPaginas || 1);
+totalPaginas = Number(json.totalPaginas || 1);
 
-        const lista = json.cobrancas || [];
+const lista = json.cobrancas || [];
 
         console.log(
             `[INTER] Página ${pagina + 1}/${totalPaginas} - ${lista.length} boletos`
