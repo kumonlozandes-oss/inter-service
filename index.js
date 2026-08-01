@@ -151,8 +151,11 @@ async function listarCobrancasInter({
             dataInicial,
             dataFinal,
             filtrarDataPor: "EMISSAO",
-            itensPorPagina: "100",
-            paginaAtual: String(pagina)
+            const parametros = new URLSearchParams({
+    dataInicial,
+    dataFinal,
+    filtrarDataPor: "EMISSAO"
+});
         });
 
         const { json } = await requisicaoInter({
