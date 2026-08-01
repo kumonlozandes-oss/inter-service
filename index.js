@@ -1,5 +1,7 @@
 const express = require("express");
 const fs = require("fs");
+console.log("HEADERS");
+console.log(options.headers);
 const https = require("https");
 const querystring = require("querystring");
 const { randomUUID } = require("crypto");
