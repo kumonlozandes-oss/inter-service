@@ -142,7 +142,7 @@ async function listarCobrancasInter({
     const cobrancas = [];
     const codigos = new Set();
 
-    let pagina = 0;
+    let pagina = 1;
     let totalPaginas = 1;
 
     do {
