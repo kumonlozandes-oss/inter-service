@@ -216,6 +216,64 @@ const lista = json.cobrancas || [];
     };
 }
 
+async function importarBoletosNovos() {
+
+    console.log("[AUTO] Verificando novos boletos...");
+
+    const primeiroDiaMesAtual = new Date();
+    primeiroDiaMesAtual.setDate(1);
+
+    const ultimoDiaProximoMes = new Date(
+        primeiroDiaMesAtual.getFullYear(),
+        primeiroDiaMesAtual.getMonth() + 2,
+        0
+    );
+
+    const { cobrancas, token } = await listarCobrancasInter({
+
+        dataInicial: primeiroDiaMesAtual.toISOString().slice(0,10),
+
+        dataFinal: ultimoDiaProximoMes.toISOString().slice(0,10)
+
+    });
+
+    let novos = 0;
+
+    for (const item of cobrancas) {
+
+        const codigo = item?.cobranca?.codigoSolicitacao;
+
+        if (!codigo) continue;
+
+        const { data: existe } = await supabase
+            .from("financeiro_titulos")
+            .select("id")
+            .eq("id_inter", codigo)
+            .maybeSingle();
+
+        if (existe) {
+            continue;
+        }
+
+        console.log("[AUTO] Novo boleto encontrado:", codigo);
+
+        const detalhe = await consultarCobranca(codigo, token);
+
+        const dados = dadosDoBoleto(detalhe);
+
+        const { error } = await supabase
+            .from("financeiro_titulos")
+            .insert(dadosTitulo(dados));
+
+        if (error) throw error;
+
+        novos++;
+
+    }
+
+    console.log(`[AUTO] ${novos} boletos novos importados.`);
+}
+
 app.get("/sincronizar-boletos", async (req, res) => {
 
     let inseridos = 0;
@@ -1829,9 +1887,11 @@ async function sincronizacaoAutomatica() {
         erros: 0
     };
 
-    try {
+   try {
 
-        const { token } = await obterTokenInter();
+    await importarBoletosNovos();
+
+    const { token } = await obterTokenInter();
 
         const { data: titulos, error } = await supabase
             .from("financeiro_titulos")
