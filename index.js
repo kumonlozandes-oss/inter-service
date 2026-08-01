@@ -38,8 +38,13 @@ function certificadosInter() {
 }
 
 function requisicaoHttps(options, body) {
-  console.log("HTTPS OPTIONS");
-console.log(JSON.stringify(options, null, 2));
+console.log("HTTPS");
+console.log({
+    hostname: options.hostname,
+    path: options.path,
+    method: options.method,
+    headers: options.headers
+});
   return new Promise((resolve, reject) => {
     const request = https.request(options, (response) => {
       let data = "";
@@ -134,6 +139,12 @@ function dataISOHa90Dias() {
     return data.toISOString().slice(0, 10);
 }
 
+function dataISOHa100Dias() {
+    const data = new Date();
+    data.setDate(data.getDate() - 100);
+    return data.toISOString().slice(0, 10);
+}
+
 async function listarCobrancasInter({
     dataInicial = dataISOHa100Dias(),
     dataFinal = hojeISO()
@@ -144,7 +155,7 @@ async function listarCobrancasInter({
     const cobrancas = [];
     const codigos = new Set();
 
-    let pagina = 1;
+    let pagina = 0;
     let totalPaginas = 1;
 
     do {
@@ -195,7 +206,7 @@ const lista = json.cobrancas || [];
 
         pagina++;
 
-    } while (pagina < totalPaginas);
+    } while (pagina <= totalPaginas);
 
     console.log(`[INTER] Total final: ${cobrancas.length} boletos`);
 
