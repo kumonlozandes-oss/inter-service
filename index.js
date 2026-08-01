@@ -133,69 +133,31 @@ function dataISOHa90Dias() {
 }
 
 async function listarCobrancasInter({
-    dataInicial = dataISOHa90Dias(),
+    dataInicial = dataISOHa100Dias(),
     dataFinal = hojeISO()
 } = {}) {
 
     const { token } = await obterTokenInter();
 
-    const cobrancas = [];
-    const codigos = new Set();
+    const parametros = new URLSearchParams({
+        dataInicial,
+        dataFinal,
+        filtrarDataPor: "EMISSAO"
+    });
 
-    let pagina = 0;
-    let totalPaginas = 1;
+    const { json } = await requisicaoInter({
+        path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
+        token
+    });
 
-    while (pagina < totalPaginas) {
+    const cobrancas = json.cobrancas || [];
 
-        const parametros = new URLSearchParams({
-    dataInicial,
-    dataFinal,
-    filtrarDataPor: "EMISSAO"
-});
-        });
-
-        const { json } = await requisicaoInter({
-            path: `/cobranca/v3/cobrancas?${parametros.toString()}`,
-            token
-        });
-
-        totalPaginas = Number(json.totalPaginas || 1);
-
-        const lista = json.cobrancas || [];
-
-        console.log(
-            `[INTER] Página ${pagina + 1}/${totalPaginas} - ${lista.length} registros`
-        );
-
-        for (const item of lista) {
-
-            const codigo = item?.cobranca?.codigoSolicitacao;
-
-            if (!codigo) continue;
-
-            if (codigos.has(codigo)) {
-                continue;
-            }
-
-            codigos.add(codigo);
-
-            cobrancas.push(item);
-
-        }
-
-        pagina++;
-
-    }
-
-    console.log(
-        `[INTER] Total recebido: ${cobrancas.length} boletos únicos`
-    );
+    console.log(`[INTER] Total recebido: ${cobrancas.length} boletos`);
 
     return {
         cobrancas,
         token
     };
-
 }
 
 app.get("/sincronizar-boletos", async (req, res) => {
