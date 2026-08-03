@@ -245,7 +245,9 @@ function dadosTitulo(detalhe) {
     const boleto = detalhe.boleto || {};
     const pix = detalhe.pix || {};
 
-    return {
+return {
+
+    origem: "INTER",
 
         id_inter: cobranca.codigoSolicitacao,
         seu_numero: cobranca.seuNumero,
