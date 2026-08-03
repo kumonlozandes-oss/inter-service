@@ -425,68 +425,61 @@ function competenciaAtual() {
 
 async function gerarMensalidades() {
 
-    try {
+    const { competencia, mes, ano } = competenciaAtual();
 
-        const { competencia, mes, ano } = competenciaAtual();
+    const { data: alunos, error } = await supabase
+        .from("alunos_master")
+        .select("guid,guid_responsavel,id_aluno,nome,responsavel")
+        .eq("status", "ATIVO");
 
-        const { data: alunos, error } = await supabase
-            .from("alunos_master")
-            .select("guid,guid_responsavel,id_aluno,nome,responsavel")
-            .eq("status", "ATIVO");
+    if (error) throw error;
 
-        if (error) throw error;
+    let criadas = 0;
 
-        let criadas = 0;
+    for (const aluno of alunos) {
 
-        for (const aluno of alunos) {
+        const { data: existe, error: erroBusca } = await supabase
+            .from("mensalidades")
+            .select("id_mensalidade")
+            .eq("guid_aluno", aluno.guid)
+            .eq("competencia_mes", mes)
+            .eq("competencia_ano", ano)
+            .maybeSingle();
 
-            const { data: existe } = await supabase
-                .from("mensalidades")
-                .select("id_mensalidade")
-                .eq("guid_aluno", aluno.guid)
-                .eq("competencia_mes", mes)
-                .eq("competencia_ano", ano)
-                .maybeSingle();
+        if (erroBusca) throw erroBusca;
 
-            if (existe) continue;
+        if (existe) continue;
 
-            const { error: erroInsert } = await supabase
-                .from("mensalidades")
-                .insert({
+        const { error: erroInsert } = await supabase
+            .from("mensalidades")
+            .insert({
 
-                    id_mensalidade: randomUUID(),
+                id_mensalidade: randomUUID(),
 
-                    guid_aluno: aluno.guid,
-                    guid_responsavel: aluno.guid_responsavel,
-                    id_aluno: aluno.id_aluno,
+                guid_aluno: aluno.guid,
+                guid_responsavel: aluno.guid_responsavel,
+                id_aluno: aluno.id_aluno,
 
-                    aluno: aluno.nome,
-                    responsavel: aluno.responsavel,
+                aluno: aluno.nome,
+                responsavel: aluno.responsavel,
 
-                    competencia,
-                    competencia_mes: mes,
-                    competencia_ano: ano,
+                competencia,
+                competencia_mes: mes,
+                competencia_ano: ano,
 
-                    status: "ABERTO",
+                status: "ABERTO",
 
-                    criado_em: new Date().toISOString()
+                criado_em: new Date().toISOString()
 
-                });
+            });
 
-            if (erroInsert) throw erroInsert;
+        if (erroInsert) throw erroInsert;
 
-            criadas++;
-
-        }
-
-        return criadas;
-
-    } catch (erro) {
-
-        console.error(erro);
-        throw erro;
+        criadas++;
 
     }
+
+    return criadas;
 
 }
 // ======================================================
