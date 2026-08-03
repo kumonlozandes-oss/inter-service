@@ -493,9 +493,9 @@ async function sincronizacaoAutomatica() {
 
     try {
 
-        await gerarMensalidades();
-
 const resumo = await sincronizarBoletos();
+
+await gerarMensalidades();
 
         log(`Total: ${resumo.total}`);
         log(`Novos: ${resumo.novos}`);
@@ -582,10 +582,12 @@ function agendarProximaExecucao() {
 // INICIALIZAÇÃO
 // ======================================================
 
-agendarProximaExecucao();
-
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
 
     log(`Servidor iniciado na porta ${PORT}`);
+
+    await executarEspelhamentoAutomatico();
+
+    agendarProximaExecucao();
 
 });
