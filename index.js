@@ -625,10 +625,29 @@ app.post("/gerar-boleto", async (req, res) => {
 
         });
 
-        res.json({
-            sucesso: true,
-            corpo: JSON.parse(corpo)
-        });
+const emissao = await requisicaoInter({
+
+    path: "/cobranca/v3/cobrancas",
+
+    method: "POST",
+
+    body: corpo
+
+});
+
+const codigo = emissao.json.codigoSolicitacao;
+
+const detalhe = await consultarCobranca(
+    codigo,
+    emissao.token
+);
+
+const dados = dadosTitulo(detalhe);
+
+res.json({
+    sucesso: true,
+    dados
+});
 
     } catch (erro) {
 
