@@ -338,16 +338,21 @@ async function salvarTitulo(dados) {
 
     const { data: existente, error } = await supabase
         .from("financeiro_titulos")
-        .select("id")
+        .select("*")
         .eq("id_inter", dados.id_inter)
         .maybeSingle();
 
     if (error) throw error;
 
-    const registro = {
-        ...dados,
-        ultima_sincronizacao: new Date().toISOString()
-    };
+const registro = {
+
+    ...(existente || {}),
+
+    ...dados,
+
+    ultima_sincronizacao: new Date().toISOString()
+
+};
 
     if (existente) {
 
@@ -706,9 +711,53 @@ await salvarTitulo({
 
 });
 
+const { error: erroMensalidade } = await supabase
+    .from("mensalidades")
+    .update({
+
+        id_inter: dados.id_inter,
+
+        status_inter: dados.status_inter,
+
+        status: dados.status,
+
+        valor_original: dados.valor_original,
+
+        valor_desconto: Number(valorDesconto || 0),
+        
+        valor_final: Number(valorNominal) - Number(valorDesconto || 0),
+        
+        vencimento: dados.vencimento,
+
+        nosso_numero: dados.nosso_numero,
+
+        seu_numero: dados.seu_numero,
+
+        linha_digitavel: dados.linha_digitavel,
+
+        codigo_barras: dados.codigo_barras,
+
+        codigo_pix: dados.codigo_pix,
+
+        pix_copia_cola: dados.pix_copia_cola,
+
+        qr_code_pix: dados.qr_code_pix,
+
+        url_pdf_boleto: dados.url_pdf_boleto
+
+    })
+    .eq("id_mensalidade", id_mensalidade);
+
+    if (erroMensalidade) {
+    throw erroMensalidade;
+}
+
 res.json({
+
     sucesso: true,
+
     dados
+
 });
 
     } catch (erro) {
