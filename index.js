@@ -771,6 +771,43 @@ res.json({
 
 });
 
+app.get("/teste-cobranca", async (req, res) => {
+
+    try {
+
+        const codigo = req.query.id;
+
+        if (!codigo) {
+
+            return res.status(400).json({
+                erro: "Informe o parâmetro id."
+            });
+
+        }
+
+        const token = await obterTokenInter();
+
+        const detalhe = await consultarCobranca(
+            codigo,
+            token
+        );
+
+        res.json(detalhe);
+
+    } catch (erro) {
+
+        res.status(500).json({
+
+            erro: erro.message,
+
+            resposta: erro.resposta || null
+
+        });
+
+    }
+
+});
+
 app.get("/", (req, res) => {
 
     res.json({
