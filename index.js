@@ -808,6 +808,42 @@ app.get("/teste-cobranca", async (req, res) => {
 
 });
 
+app.get("/teste-primeiro-boleto", async (req, res) => {
+
+    try {
+
+        const { token, cobrancas } = await listarCobrancasInter();
+
+        if (!cobrancas.length) {
+
+            return res.json({
+                erro: "Nenhuma cobrança encontrada."
+            });
+
+        }
+
+        const codigo =
+            cobrancas[0].cobranca.codigoSolicitacao;
+
+        const detalhe =
+            await consultarCobranca(codigo, token);
+
+        res.json(detalhe);
+
+    } catch (erro) {
+
+        res.status(500).json({
+
+            erro: erro.message,
+
+            resposta: erro.resposta || null
+
+        });
+
+    }
+
+});
+
 app.get("/", (req, res) => {
 
     res.json({
