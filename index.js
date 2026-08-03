@@ -582,6 +582,15 @@ function agendarProximaExecucao() {
 // INICIALIZAÇÃO
 // ======================================================
 
+app.get("/", (req, res) => {
+
+    res.json({
+        servico: "Banco Inter",
+        status: "ONLINE"
+    });
+
+});
+
 app.listen(PORT, async () => {
 
     log(`Servidor iniciado na porta ${PORT}`);
