@@ -584,44 +584,86 @@ function agendarProximaExecucao() {
 
 app.post("/gerar-boleto", async (req, res) => {
 
+const {
+
+    id_mensalidade,
+
+    guid_aluno,
+
+    guid_responsavel,
+
+    cpfCnpj,
+
+    nome,
+
+    endereco,
+
+    cidade,
+
+    uf,
+
+    cep,
+
+    valorNominal,
+
+    valorDesconto,
+
+    dataVencimento
+
+} = req.body;
+
+const documento = String(cpfCnpj).replace(/\D/g, "");
+
     try {
 
         const corpo = JSON.stringify({
 
-            seuNumero: req.body.id_mensalidade,
+seuNumero: `MENS-${id_mensalidade}`,
 
-            valorNominal: Number(req.body.valor_original),
+valorNominal: Number(valorNominal),
 
-            dataVencimento: req.body.vencimento,
+dataVencimento: dataVencimento,
 
             numDiasAgenda: 30,
 
-            multa: {
-                codigo: "PERCENTUAL",
-                taxa: 2
-            },
+multa: {
+    codigo: "PERCENTUAL",
+    taxa: 2
+},
 
-            mora: {
-                codigo: "TAXAMENSAL",
-                taxa: 1
-            },
+mora: {
+    codigo: "TAXAMENSAL",
+    taxa: 1
+},
 
-            pagador: {
+descontos: [
 
-                cpfCnpj: req.body.cpf,
-                tipoPessoa: "FISICA",
+    {
+        codigo: "VALORFIXO",
+        taxa: 0,
+        valor: Number(valorDesconto || 0),
+        data: dataVencimento
+    }
 
-                nome: req.body.nome,
+],
 
-                endereco: req.body.endereco,
+pagador: {
 
-                cidade: req.body.cidade,
+    cpfCnpj: documento,
 
-                uf: req.body.uf,
+    tipoPessoa: documento.length === 14 ? "JURIDICA" : "FISICA",
 
-                cep: req.body.cep
+    nome,
 
-            }
+    endereco,
+
+    cidade,
+
+    uf,
+
+    cep
+
+}
 
         });
 
@@ -635,6 +677,12 @@ const emissao = await requisicaoInter({
 
 });
 
+        if (!emissao.json.codigoSolicitacao) {
+
+    throw new Error("Banco Inter não retornou o código da cobrança.");
+
+}
+
 const codigo = emissao.json.codigoSolicitacao;
 
 const detalhe = await consultarCobranca(
@@ -643,6 +691,20 @@ const detalhe = await consultarCobranca(
 );
 
 const dados = dadosTitulo(detalhe);
+
+await salvarTitulo({
+
+    ...dados,
+
+    origem: "ERP",
+
+    id_mensalidade,
+
+    guid_aluno,
+
+    guid_responsavel
+
+});
 
 res.json({
     sucesso: true,
