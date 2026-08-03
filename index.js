@@ -405,27 +405,6 @@ async function sincronizarBoletos() {
 
 }
 
-app.get("/sincronizar-boletos", async (req, res) => {
-
-    try {
-
-        res.json({
-            sucesso: true,
-            ...(await sincronizarBoletos())
-        });
-
-    } catch (erro) {
-
-        console.error(erro);
-
-        res.status(500).json({
-            sucesso: false,
-            erro: erro.message
-        });
-
-    }
-
-});
 
 function competenciaAtual() {
 
@@ -502,14 +481,14 @@ async function gerarMensalidades() {
 
         return criadas;
 
-} catch (erro) {
+    } catch (erro) {
 
-    console.error(erro);
-    throw erro;
+        console.error(erro);
+        throw erro;
+
+    }
 
 }
-
-});
 // ======================================================
 // SINCRONIZAÇÃO AUTOMÁTICA
 // ======================================================
@@ -521,7 +500,9 @@ async function sincronizacaoAutomatica() {
 
     try {
 
-        const resumo = await sincronizarBoletos();
+        await gerarMensalidades();
+
+const resumo = await sincronizarBoletos();
 
         log(`Total: ${resumo.total}`);
         log(`Novos: ${resumo.novos}`);
