@@ -444,7 +444,7 @@ function competenciaAtual() {
 
 }
 
-app.get("/gerar-mensalidades", async (req, res) => {
+async function gerarMensalidades() {
 
     try {
 
@@ -500,21 +500,14 @@ app.get("/gerar-mensalidades", async (req, res) => {
 
         }
 
-        res.json({
-            sucesso: true,
-            mensalidades_criadas: criadas
-        });
+        return criadas;
 
-    } catch (erro) {
+} catch (erro) {
 
-        console.error(erro);
+    console.error(erro);
+    throw erro;
 
-        res.status(500).json({
-            sucesso: false,
-            erro: erro.message
-        });
-
-    }
+}
 
 });
 // ======================================================
