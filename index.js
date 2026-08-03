@@ -526,8 +526,6 @@ function dentroHorarioComercial() {
 
 async function executarEspelhamentoAutomatico() {
 
-    if (!dentroHorarioComercial()) return;
-
     await sincronizacaoAutomatica();
 
 }
