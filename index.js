@@ -245,9 +245,19 @@ function dadosTitulo(detalhe) {
     const boleto = detalhe.boleto || {};
     const pix = detalhe.pix || {};
 
-return {
+    const descontos = Array.isArray(cobranca.descontos)
+        ? cobranca.descontos
+        : [];
 
-    origem: "INTER",
+    const valorOriginal = numero(cobranca.valorNominal);
+
+    const valorDesconto = descontos.reduce((total, desconto) => {
+        return total + (numero(desconto.valor) || 0);
+    }, 0);
+
+    return {
+
+        origem: "INTER",
 
         id_inter: cobranca.codigoSolicitacao,
         seu_numero: cobranca.seuNumero,
@@ -259,7 +269,12 @@ return {
         vencimento: cobranca.dataVencimento,
         data_pagamento: cobranca.dataSituacao,
 
-        valor_original: numero(cobranca.valorNominal),
+        valor_original: valorOriginal,
+        valor_desconto: valorDesconto,
+        valor_final: valorOriginal === null
+            ? null
+            : valorOriginal - valorDesconto,
+
         valor_recebido: numero(cobranca.valorTotalRecebido),
 
         linha_digitavel: boleto.linhaDigitavel,
@@ -270,9 +285,7 @@ return {
         qr_code_pix: pix.imagemQrcode,
 
         url_pdf_boleto: detalhe.pdf
-
     };
-
 }
 
 async function listarCobrancasInter() {
