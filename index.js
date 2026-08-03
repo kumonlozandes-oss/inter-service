@@ -584,10 +584,60 @@ function agendarProximaExecucao() {
 
 app.post("/gerar-boleto", async (req, res) => {
 
-    res.json({
-        sucesso: true,
-        mensagem: "Rota criada."
-    });
+    try {
+
+        const corpo = JSON.stringify({
+
+            seuNumero: req.body.id_mensalidade,
+
+            valorNominal: Number(req.body.valor_original),
+
+            dataVencimento: req.body.vencimento,
+
+            numDiasAgenda: 30,
+
+            multa: {
+                codigo: "PERCENTUAL",
+                taxa: 2
+            },
+
+            mora: {
+                codigo: "TAXAMENSAL",
+                taxa: 1
+            },
+
+            pagador: {
+
+                cpfCnpj: req.body.cpf,
+                tipoPessoa: "FISICA",
+
+                nome: req.body.nome,
+
+                endereco: req.body.endereco,
+
+                cidade: req.body.cidade,
+
+                uf: req.body.uf,
+
+                cep: req.body.cep
+
+            }
+
+        });
+
+        res.json({
+            sucesso: true,
+            corpo: JSON.parse(corpo)
+        });
+
+    } catch (erro) {
+
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+
+    }
 
 });
 
