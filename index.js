@@ -582,6 +582,15 @@ function agendarProximaExecucao() {
 // INICIALIZAÇÃO
 // ======================================================
 
+app.post("/gerar-boleto", async (req, res) => {
+
+    res.json({
+        sucesso: true,
+        mensagem: "Rota criada."
+    });
+
+});
+
 app.get("/", (req, res) => {
 
     res.json({
