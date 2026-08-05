@@ -267,35 +267,40 @@ function dadosTitulo(detalhe) {
 
     return {
 
-        origem: "INTER",
+    origem: "INTER",
 
-        id_inter: cobranca.codigoSolicitacao,
-        seu_numero: cobranca.seuNumero,
-        nosso_numero: boleto.nossoNumero,
+    guid_aluno: detalhe.guid_aluno,
+    guid_responsavel: detalhe.guid_responsavel,
+    competencia: detalhe.competencia,
 
-        status_inter: cobranca.situacao,
-        status: statusInterno(cobranca.situacao),
+    id_inter: cobranca.codigoSolicitacao,
+    seu_numero: cobranca.seuNumero,
+    nosso_numero: boleto.nossoNumero,
 
-        vencimento: cobranca.dataVencimento,
-        data_pagamento: cobranca.dataSituacao,
+    status_inter: cobranca.situacao,
+    status: statusInterno(cobranca.situacao),
 
-        valor_original: valorOriginal,
-        valor_desconto: valorDesconto,
-        valor_final: valorOriginal === null
-            ? null
-            : valorOriginal - valorDesconto,
+    vencimento: cobranca.dataVencimento,
+    data_pagamento: cobranca.dataSituacao,
 
-        valor_recebido: numero(cobranca.valorTotalRecebido),
+    valor_original: valorOriginal,
+    valor_desconto: valorDesconto,
+    valor_final: valorOriginal === null
+        ? null
+        : valorOriginal - valorDesconto,
 
-        linha_digitavel: boleto.linhaDigitavel,
-        codigo_barras: boleto.codigoBarras,
+    valor_recebido: numero(cobranca.valorTotalRecebido),
 
-        codigo_pix: pix.txid,
-        pix_copia_cola: pix.pixCopiaECola,
-        qr_code_pix: pix.imagemQrcode,
+    linha_digitavel: boleto.linhaDigitavel,
+    codigo_barras: boleto.codigoBarras,
 
-        url_pdf_boleto: detalhe.pdf
-    };
+    codigo_pix: pix.txid,
+    pix_copia_cola: pix.pixCopiaECola,
+    qr_code_pix: pix.imagemQrcode,
+
+    url_pdf_boleto: detalhe.pdf
+
+};
 }
 
 async function listarCobrancasInter() {
