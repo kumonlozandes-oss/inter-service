@@ -988,7 +988,7 @@ app.get("/", (req, res) => {
 
 });
 
-app.post("/api/reconstruir-financeiro", async (req, res) => {
+app.get("/api/reconstruir-financeiro", async (req, res) => {
 
     try {
 
