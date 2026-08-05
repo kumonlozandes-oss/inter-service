@@ -308,7 +308,6 @@ function dadosTitulo(detalhe) {
     status: statusInterno(cobranca.situacao),
 
     tipo_cobranca: cobranca.tipoCobranca,
-    origem_recebimento: cobranca.origemRecebimento,
 
     vencimento: cobranca.dataVencimento,
     data_emissao: cobranca.dataEmissao,
