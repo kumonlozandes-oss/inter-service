@@ -442,11 +442,11 @@ async function salvarTitulo(dados) {
     if (dados.id_mensalidade) {
 
     await supabase
-        .from("financeiro_titulos")
-        .update({
-            id_mensalidade: dados.id_mensalidade
-        })
-        .eq("id_inter", dados.id_inter);
+    .from("financeiro_titulos")
+    .update({
+        id_mensalidade: dados.id_mensalidade
+    })
+    .eq("id", existente?.id || registro.id);
 
     await supabase
         .from("mensalidades")
