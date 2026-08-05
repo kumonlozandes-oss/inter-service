@@ -373,6 +373,12 @@ const registro = {
 
     ...dados,
 
+    guid_aluno: dados.guid_aluno,
+
+    guid_responsavel: dados.guid_responsavel,
+
+    id_mensalidade: dados.id_mensalidade,
+
     ultima_sincronizacao: new Date().toISOString()
 
 };
