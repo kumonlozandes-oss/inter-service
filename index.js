@@ -377,21 +377,24 @@ async function salvarTitulo(dados) {
 
     if (error) throw error;
 
-const registro = {
+    const registro = {
 
-    ...(existente || {}),
+        ...(existente || {}),
 
-    ...dados,
+        ...dados,
 
-    guid_aluno: dados.guid_aluno,
+        guid_aluno: dados.guid_aluno || null,
+        guid_responsavel: dados.guid_responsavel || null,
 
-    guid_responsavel: dados.guid_responsavel,
+        competencia: dados.competencia || null,
+        competencia_mes: dados.competencia_mes || null,
+        competencia_ano: dados.competencia_ano || null,
 
-    id_mensalidade: dados.id_mensalidade,
+        id_mensalidade: dados.id_mensalidade || null,
 
-    ultima_sincronizacao: new Date().toISOString()
+        ultima_sincronizacao: new Date().toISOString()
 
-};
+    };
 
     if (existente) {
 
@@ -402,34 +405,44 @@ const registro = {
 
         if (erroUpdate) throw erroUpdate;
 
-        return "atualizado";
+    } else {
+
+        const { error: erroInsert } = await supabase
+            .from("financeiro_titulos")
+            .insert(registro);
+
+        if (erroInsert) throw erroInsert;
+
     }
 
-    const { error: erroInsert } = await supabase
-        .from("financeiro_titulos")
-        .insert(registro);
+    if (
+        dados.guid_aluno &&
+        dados.competencia_mes &&
+        dados.competencia_ano
+    ) {
 
-    if (erroInsert) throw erroInsert;
+        const { data: mensalidade } = await supabase
+            .from("mensalidades")
+            .select("id_mensalidade")
+            .eq("guid_aluno", dados.guid_aluno)
+            .eq("competencia_mes", dados.competencia_mes)
+            .eq("competencia_ano", dados.competencia_ano)
+            .maybeSingle();
 
-    const { data: mensalidade } = await supabase
-    .from("mensalidades")
-    .select("id_mensalidade")
-    .eq("guid_aluno", dados.guid_aluno)
-    .eq("competencia", dados.competencia)
-    .maybeSingle();
+        if (mensalidade) {
 
-if (mensalidade) {
+            await supabase
+                .from("financeiro_titulos")
+                .update({
+                    id_mensalidade: mensalidade.id_mensalidade
+                })
+                .eq("id_inter", dados.id_inter);
 
-    await supabase
-        .from("financeiro_titulos")
-        .update({
-            id_mensalidade: mensalidade.id_mensalidade
-        })
-        .eq("id_inter", dados.id_inter);
+        }
 
-}
+    }
 
-    return "novo";
+    return existente ? "atualizado" : "novo";
 
 }
 
@@ -504,116 +517,139 @@ function competenciaAtual() {
 
 async function gerarMensalidades() {
 
-    const { competencia, mes, ano } = competenciaAtual();
-
-    const { data: alunos, error } = await supabase
-        .from("alunos_master")
-        .select("guid,guid_responsavel,id_aluno,nome,responsavel")
-        .eq("status", "ATIVO");
+    const { data: titulos, error } = await supabase
+        .from("financeiro_titulos")
+        .select("*")
+        .not("guid_aluno", "is", null)
+        .not("competencia_mes", "is", null)
+        .not("competencia_ano", "is", null);
 
     if (error) throw error;
 
     let criadas = 0;
+    let atualizadas = 0;
 
-    for (const aluno of alunos) {
+    for (const titulo of titulos) {
 
-        const { data: existe, error: erroBusca } = await supabase
-            .from("mensalidades")
-            .select("id_mensalidade")
-            .eq("guid_aluno", aluno.guid)
-            .eq("competencia_mes", mes)
-            .eq("competencia_ano", ano)
+        const { data: aluno } = await supabase
+            .from("alunos_master")
+            .select("id_aluno,nome,responsavel")
+            .eq("guid", titulo.guid_aluno)
             .maybeSingle();
 
-        if (erroBusca) throw erroBusca;
+        if (!aluno) continue;
 
-        if (existe) {
-
-    const { data: titulos } = await supabase
-    .from("financeiro_titulos")
-    .select("*")
-    .eq("guid_aluno", aluno.guid);
-
-    if (titulo) {
-
-        await supabase
+        const { data: mensalidade } = await supabase
             .from("mensalidades")
-            .update({
+            .select("id_mensalidade")
+            .eq("guid_aluno", titulo.guid_aluno)
+            .eq("competencia_mes", titulo.competencia_mes)
+            .eq("competencia_ano", titulo.competencia_ano)
+            .maybeSingle();
 
-                id_inter: titulo.id_inter,
-                status: titulo.status,
-                status_inter: titulo.status_inter,
+        const registro = {
 
-                valor_original: titulo.valor_original,
-                valor_desconto: titulo.valor_desconto,
-                valor_final: titulo.valor_final,
-                valor_recebido: titulo.valor_recebido,
+            guid_aluno: titulo.guid_aluno,
+            guid_responsavel: titulo.guid_responsavel,
 
-                vencimento: titulo.vencimento,
-                data_pagamento: titulo.data_pagamento,
+            id_aluno: aluno.id_aluno,
 
-                forma_pagamento: titulo.forma_pagamento,
+            aluno: aluno.nome,
+            responsavel: aluno.responsavel,
 
-                nosso_numero: titulo.nosso_numero,
-                seu_numero: titulo.seu_numero,
+            competencia: titulo.competencia,
+            competencia_mes: titulo.competencia_mes,
+            competencia_ano: titulo.competencia_ano,
 
-                linha_digitavel: titulo.linha_digitavel,
-                codigo_barras: titulo.codigo_barras,
+            id_inter: titulo.id_inter,
+            id_titulo: titulo.id,
 
-                codigo_pix: titulo.codigo_pix,
-                pix_copia_cola: titulo.pix_copia_cola,
-                qr_code_pix: titulo.qr_code_pix,
+            status: titulo.status,
+            status_inter: titulo.status_inter,
 
-                url_pdf_boleto: titulo.url_pdf_boleto
+            valor_original: titulo.valor_original,
+            valor_desconto: titulo.valor_desconto,
+            valor_final: titulo.valor_final,
+            valor_recebido: titulo.valor_recebido,
 
-            })
-            .eq("id_mensalidade", existe.id_mensalidade);
+            vencimento: titulo.vencimento,
+            forma_pagamento: titulo.forma_pagamento,
+            data_pagamento: titulo.data_pagamento,
+
+            nosso_numero: titulo.nosso_numero,
+            seu_numero: titulo.seu_numero,
+
+            linha_digitavel: titulo.linha_digitavel,
+            codigo_barras: titulo.codigo_barras,
+
+            codigo_pix: titulo.codigo_pix,
+            pix_copia_cola: titulo.pix_copia_cola,
+            qr_code_pix: titulo.qr_code_pix,
+
+            url_pdf_boleto: titulo.url_pdf_boleto,
+
+            data_atualizacao: new Date().toISOString()
+
+        };
+
+        if (mensalidade) {
+
+            const { error } = await supabase
+                .from("mensalidades")
+                .update(registro)
+                .eq("id_mensalidade", mensalidade.id_mensalidade);
+
+            if (error) throw error;
+
+            await supabase
+                .from("financeiro_titulos")
+                .update({
+                    id_mensalidade: mensalidade.id_mensalidade
+                })
+                .eq("id", titulo.id);
+
+            atualizadas++;
+
+        } else {
+
+            const idMensalidade = randomUUID();
+
+            const { error } = await supabase
+                .from("mensalidades")
+                .insert({
+
+                    id_mensalidade: idMensalidade,
+
+                    ...registro,
+
+                    criado_em: new Date().toISOString()
+
+                });
+
+            if (error) throw error;
+
+            await supabase
+                .from("financeiro_titulos")
+                .update({
+                    id_mensalidade: idMensalidade
+                })
+                .eq("id", titulo.id);
+
+            criadas++;
+
+        }
 
     }
 
-    continue;
+    log(`Mensalidades criadas: ${criadas}`);
+    log(`Mensalidades atualizadas: ${atualizadas}`);
 
-}
+    return {
 
-        const idMensalidade = randomUUID();
+        criadas,
+        atualizadas
 
-        const { error: erroInsert } = await supabase
-            .from("mensalidades")
-            .insert({
-
-                id_mensalidade: idMensalidade,
-
-                guid_aluno: aluno.guid,
-                guid_responsavel: aluno.guid_responsavel,
-                id_aluno: aluno.id_aluno,
-
-                aluno: aluno.nome,
-                responsavel: aluno.responsavel,
-
-                competencia,
-                competencia_mes: mes,
-                competencia_ano: ano,
-
-                status: "ABERTO",
-
-                criado_em: new Date().toISOString()
-
-            });
-
-        if (erroInsert) throw erroInsert;
-
-        await supabase
-    .from("financeiro_titulos")
-    .update({
-        id_mensalidade: idMensalidade
-    })
-    .eq("guid_aluno", aluno.guid);
-        
-        criadas++;
-
-    }
-
-    return criadas;
+    };
 
 }
 // ======================================================
@@ -624,35 +660,37 @@ async function sincronizarMensalidades() {
 
     log("Sincronizando mensalidades...");
 
-    const { competencia, mes, ano } = competenciaAtual();
-
-    const { data: mensalidades, error: erroMensalidades } = await supabase
-        .from("mensalidades")
+    const { data: titulos, error } = await supabase
+        .from("financeiro_titulos")
         .select("*")
-        .eq("competencia_mes", mes)
-        .eq("competencia_ano", ano);
+        .not("guid_aluno", "is", null)
+        .not("competencia_mes", "is", null)
+        .not("competencia_ano", "is", null);
 
-    if (erroMensalidades) throw erroMensalidades;
+    if (error) throw error;
 
     let atualizadas = 0;
 
-    for (const mensalidade of mensalidades) {
+    for (const titulo of titulos) {
 
-        const { data: titulo, error: erroTitulo } = await supabase
-            .from("financeiro_titulos")
-            .select("*")
-            .eq("id_mensalidade", mensalidade.id_mensalidade)
+        const { data: mensalidade } = await supabase
+            .from("mensalidades")
+            .select("id_mensalidade")
+            .eq("guid_aluno", titulo.guid_aluno)
+            .eq("competencia_mes", titulo.competencia_mes)
+            .eq("competencia_ano", titulo.competencia_ano)
             .maybeSingle();
 
-        if (erroTitulo) throw erroTitulo;
-
-        if (!titulo) continue;
+        if (!mensalidade) continue;
 
         const { error: erroUpdate } = await supabase
             .from("mensalidades")
             .update({
 
+                id_titulo: titulo.id,
+
                 id_inter: titulo.id_inter,
+
                 status: titulo.status,
                 status_inter: titulo.status_inter,
 
@@ -662,9 +700,8 @@ async function sincronizarMensalidades() {
                 valor_recebido: titulo.valor_recebido,
 
                 vencimento: titulo.vencimento,
-                data_pagamento: titulo.data_pagamento,
-
                 forma_pagamento: titulo.forma_pagamento,
+                data_pagamento: titulo.data_pagamento,
 
                 nosso_numero: titulo.nosso_numero,
                 seu_numero: titulo.seu_numero,
@@ -678,18 +715,29 @@ async function sincronizarMensalidades() {
 
                 url_pdf_boleto: titulo.url_pdf_boleto,
 
-                ultima_sincronizacao: new Date().toISOString()
+                origem: titulo.origem,
+
+                data_atualizacao: new Date().toISOString()
 
             })
             .eq("id_mensalidade", mensalidade.id_mensalidade);
 
         if (erroUpdate) throw erroUpdate;
 
+        await supabase
+            .from("financeiro_titulos")
+            .update({
+                id_mensalidade: mensalidade.id_mensalidade
+            })
+            .eq("id", titulo.id);
+
         atualizadas++;
 
     }
 
     log(`Mensalidades sincronizadas: ${atualizadas}`);
+
+    return atualizadas;
 
 }
 
