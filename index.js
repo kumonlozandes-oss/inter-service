@@ -859,6 +859,28 @@ app.get("/teste-primeiro-boleto", async (req, res) => {
 
 });
 
+app.get("/alunos", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("alunos_master")
+      .select("*")
+      .order("nome");
+
+    if (error) throw error;
+
+    res.json(data);
+
+  } catch (erro) {
+
+    console.error(erro);
+
+    res.status(500).json({
+      sucesso: false,
+      erro: erro.message
+    });
+  }
+});
+
 app.get("/", (req, res) => {
 
     res.json({
