@@ -270,42 +270,66 @@ function dadosTitulo(detalhe) {
         return total + (numero(desconto.valor) || 0);
     }, 0);
 
+    let competencia = null;
+    let competencia_mes = null;
+    let competencia_ano = null;
+
+    if (cobranca.seuNumero) {
+
+        const m = cobranca.seuNumero.match(/(\d{2})\/(\d{4})/);
+
+        if (m) {
+
+            competencia = `${m[1]}/${m[2]}`;
+            competencia_mes = Number(m[1]);
+            competencia_ano = Number(m[2]);
+
+        }
+
+    }
+
     return {
 
-    origem: "INTER",
+        origem: "INTER",
 
-    guid_aluno: detalhe.guid_aluno,
-    guid_responsavel: detalhe.guid_responsavel,
-    competencia: detalhe.competencia,
+        guid_aluno: detalhe.guid_aluno || null,
+        guid_responsavel: detalhe.guid_responsavel || null,
 
-    id_inter: cobranca.codigoSolicitacao,
-    seu_numero: cobranca.seuNumero,
-    nosso_numero: boleto.nossoNumero,
+        competencia,
+        competencia_mes,
+        competencia_ano,
 
-    status_inter: cobranca.situacao,
-    status: statusInterno(cobranca.situacao),
+        id_inter: cobranca.codigoSolicitacao,
 
-    vencimento: cobranca.dataVencimento,
-    data_pagamento: cobranca.dataSituacao,
+        seu_numero: cobranca.seuNumero,
+        nosso_numero: boleto.nossoNumero,
 
-    valor_original: valorOriginal,
-    valor_desconto: valorDesconto,
-    valor_final: valorOriginal === null
-        ? null
-        : valorOriginal - valorDesconto,
+        status_inter: cobranca.situacao,
+        status: statusInterno(cobranca.situacao),
 
-    valor_recebido: numero(cobranca.valorTotalRecebido),
+        vencimento: cobranca.dataVencimento,
+        data_pagamento: cobranca.dataSituacao,
 
-    linha_digitavel: boleto.linhaDigitavel,
-    codigo_barras: boleto.codigoBarras,
+        valor_original: valorOriginal,
+        valor_desconto: valorDesconto,
 
-    codigo_pix: pix.txid,
-    pix_copia_cola: pix.pixCopiaECola,
-    qr_code_pix: pix.imagemQrcode,
+        valor_final: valorOriginal === null
+            ? null
+            : valorOriginal - valorDesconto,
 
-    url_pdf_boleto: detalhe.pdf
+        valor_recebido: numero(cobranca.valorTotalRecebido),
 
-};
+        linha_digitavel: boleto.linhaDigitavel,
+        codigo_barras: boleto.codigoBarras,
+
+        codigo_pix: pix.txid,
+        pix_copia_cola: pix.pixCopiaECola,
+        qr_code_pix: pix.imagemQrcode,
+
+        url_pdf_boleto: detalhe.pdf
+
+    };
+
 }
 
 async function listarCobrancasInter() {
