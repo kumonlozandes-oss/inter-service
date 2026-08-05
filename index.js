@@ -439,32 +439,51 @@ async function salvarTitulo(dados) {
 
     }
 
-    if (
-        dados.guid_aluno &&
-        dados.competencia_mes &&
-        dados.competencia_ano
-    ) {
+    if (dados.id_mensalidade) {
 
-        const { data: mensalidade } = await supabase
-            .from("mensalidades")
-            .select("id_mensalidade")
-            .eq("guid_aluno", dados.guid_aluno)
-            .eq("competencia_mes", dados.competencia_mes)
-            .eq("competencia_ano", dados.competencia_ano)
-            .maybeSingle();
+    await supabase
+        .from("financeiro_titulos")
+        .update({
+            id_mensalidade: dados.id_mensalidade
+        })
+        .eq("id_inter", dados.id_inter);
 
-        if (mensalidade) {
+    await supabase
+        .from("mensalidades")
+        .update({
 
-            await supabase
-                .from("financeiro_titulos")
-                .update({
-                    id_mensalidade: mensalidade.id_mensalidade
-                })
-                .eq("id_inter", dados.id_inter);
+            id_inter: dados.id_inter,
 
-        }
+            status: dados.status,
+            status_inter: dados.status_inter,
 
-    }
+            valor_original: dados.valor_original,
+            valor_desconto: dados.valor_desconto,
+            valor_final: dados.valor_final,
+            valor_recebido: dados.valor_recebido,
+
+            vencimento: dados.vencimento,
+            data_pagamento: dados.data_pagamento,
+            forma_pagamento: dados.forma_pagamento,
+
+            nosso_numero: dados.nosso_numero,
+            seu_numero: dados.seu_numero,
+
+            linha_digitavel: dados.linha_digitavel,
+            codigo_barras: dados.codigo_barras,
+
+            codigo_pix: dados.codigo_pix,
+            pix_copia_cola: dados.pix_copia_cola,
+            qr_code_pix: dados.qr_code_pix,
+
+            url_pdf_boleto: dados.url_pdf_boleto,
+
+            data_atualizacao: new Date().toISOString()
+
+        })
+        .eq("id_mensalidade", dados.id_mensalidade);
+
+}
 
     return existente ? "atualizado" : "novo";
 
@@ -486,6 +505,31 @@ async function sincronizarBoletos() {
         const detalhe = await consultarCobranca(codigo, token);
 
         const dados = dadosTitulo(detalhe);
+
+        const { data: mensalidade } = await supabase
+    .from("mensalidades")
+    .select(`
+        id_mensalidade,
+        guid_aluno,
+        guid_responsavel,
+        competencia,
+        competencia_mes,
+        competencia_ano
+    `)
+    .eq("seu_numero", dados.seu_numero)
+    .maybeSingle();
+
+if (mensalidade) {
+
+    dados.id_mensalidade = mensalidade.id_mensalidade;
+    dados.guid_aluno = mensalidade.guid_aluno;
+    dados.guid_responsavel = mensalidade.guid_responsavel;
+
+    dados.competencia = mensalidade.competencia;
+    dados.competencia_mes = mensalidade.competencia_mes;
+    dados.competencia_ano = mensalidade.competencia_ano;
+
+}
 
         const { data: tituloExistente } = await supabase
     .from("financeiro_titulos")
