@@ -480,6 +480,8 @@ async function gerarMensalidades() {
 
         if (existe) continue;
 
+        const idMensalidade = randomUUID();
+
         const { error: erroInsert } = await supabase
             .from("mensalidades")
             .insert({
