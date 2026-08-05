@@ -307,8 +307,6 @@ function dadosTitulo(detalhe) {
     status_inter: cobranca.situacao,
     status: statusInterno(cobranca.situacao),
 
-    tipo_cobranca: cobranca.tipoCobranca,
-
     vencimento: cobranca.dataVencimento,
     data_emissao: cobranca.dataEmissao,
     data_pagamento: cobranca.dataSituacao,
