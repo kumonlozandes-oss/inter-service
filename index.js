@@ -556,29 +556,7 @@ if (tituloExistente) {
     dados.competencia_ano = tituloExistente.competencia_ano;
 
 }
-            .select(`
-                id_mensalidade,
-                guid_aluno,
-                guid_responsavel,
-                competencia,
-                competencia_mes,
-                competencia_ano
-            `)
-            .eq("id_inter", dados.id_inter)
-            .maybeSingle();
-
-        if (mensalidade) {
-
-            dados.id_mensalidade = mensalidade.id_mensalidade;
-            dados.guid_aluno = mensalidade.guid_aluno;
-            dados.guid_responsavel = mensalidade.guid_responsavel;
-
-            dados.competencia = mensalidade.competencia;
-            dados.competencia_mes = mensalidade.competencia_mes;
-            dados.competencia_ano = mensalidade.competencia_ano;
-
-        }
-
+        
         const resultado = await salvarTitulo(dados);
 
         if (resultado === "novo")
