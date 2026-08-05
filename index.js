@@ -529,11 +529,10 @@ async function gerarMensalidades() {
 
         if (existe) {
 
-    const { data: titulo } = await supabase
-        .from("financeiro_titulos")
-        .select("*")
-        .eq("guid_aluno", aluno.guid)
-        .maybeSingle();
+    const { data: titulos } = await supabase
+    .from("financeiro_titulos")
+    .select("*")
+    .eq("guid_aluno", aluno.guid);
 
     if (titulo) {
 
@@ -910,7 +909,13 @@ await salvarTitulo({
 
     guid_aluno,
 
-    guid_responsavel
+    guid_responsavel,
+
+    competencia,
+
+    competencia_mes: Number(competencia.split("/")[0]),
+
+    competencia_ano: Number(competencia.split("/")[1])
 
 });
 
