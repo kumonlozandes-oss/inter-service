@@ -523,9 +523,11 @@ async function sincronizacaoAutomatica() {
 
     try {
 
-const resumo = await sincronizarBoletos();
+        const resumo = await sincronizarBoletos();
 
-await gerarMensalidades();
+        await gerarMensalidades();
+
+        await sincronizarMensalidades();
 
         log(`Total: ${resumo.total}`);
         log(`Novos: ${resumo.novos}`);
