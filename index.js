@@ -193,7 +193,12 @@ async function consultarCobranca(idInter, token) {
 
     });
 
-    return json;
+    console.log(
+    "DETALHE INTER:",
+    JSON.stringify(json, null, 2)
+);
+
+return json;
 
 }
 
