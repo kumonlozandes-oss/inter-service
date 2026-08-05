@@ -899,6 +899,8 @@ const detalhe = await consultarCobranca(
 
 const dados = dadosTitulo(detalhe);
 
+const [competenciaMes, competenciaAno] = competencia.split("/");
+
 await salvarTitulo({
 
     ...dados,
@@ -913,9 +915,9 @@ await salvarTitulo({
 
     competencia,
 
-    competencia_mes: Number(competencia.split("/")[0]),
+    competencia_mes: Number(competenciaMes),
 
-    competencia_ano: Number(competencia.split("/")[1])
+    competencia_ano: Number(competenciaAno)
 
 });
 
