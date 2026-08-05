@@ -6,8 +6,10 @@ const { randomUUID } = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
+const erpRoutes = require("./routes/erp");
 
 app.use(express.json());
+app.use("/api", erpRoutes);
 
 const PORT = process.env.PORT || 3000;
 
