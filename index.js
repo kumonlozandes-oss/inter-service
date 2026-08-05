@@ -443,9 +443,24 @@ async function sincronizarBoletos() {
 
         const detalhe = await consultarCobranca(codigo, token);
 
-        const resultado = await salvarTitulo(
-            dadosTitulo(detalhe)
-        );
+        const dados = dadosTitulo(detalhe);
+
+const { data: mensalidade } = await supabase
+    .from("mensalidades")
+    .select("id_mensalidade,guid_aluno,guid_responsavel,competencia")
+    .eq("id_inter", dados.id_inter)
+    .maybeSingle();
+
+if (mensalidade) {
+
+    dados.id_mensalidade = mensalidade.id_mensalidade;
+    dados.guid_aluno = mensalidade.guid_aluno;
+    dados.guid_responsavel = mensalidade.guid_responsavel;
+    dados.competencia = mensalidade.competencia;
+
+}
+
+const resultado = await salvarTitulo(dados);
 
         if (resultado === "novo")
             novos++;
