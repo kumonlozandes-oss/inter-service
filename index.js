@@ -988,6 +988,61 @@ app.get("/", (req, res) => {
 
 });
 
+app.post("/api/reconstruir-financeiro", async (req, res) => {
+
+    try {
+
+        const { data: mensalidades, error } = await supabase
+            .from("mensalidades")
+            .select("*");
+
+        if (error) throw error;
+
+        let atualizados = 0;
+
+        for (const mensalidade of mensalidades) {
+
+            const { error: erroUpdate } = await supabase
+                .from("financeiro_titulos")
+                .update({
+
+                    id_mensalidade: mensalidade.id_mensalidade,
+                    guid_aluno: mensalidade.guid_aluno,
+                    guid_responsavel: mensalidade.guid_responsavel
+
+                })
+                .eq("guid_aluno", mensalidade.guid_aluno);
+
+            if (erroUpdate) throw erroUpdate;
+
+            atualizados++;
+
+        }
+
+        res.json({
+
+            sucesso: true,
+
+            atualizados
+
+        });
+
+    } catch (e) {
+
+        console.error(e);
+
+        res.status(500).json({
+
+            sucesso: false,
+
+            erro: e.message
+
+        });
+
+    }
+
+});
+
 app.listen(PORT, async () => {
 
     log(`Servidor iniciado na porta ${PORT}`);
