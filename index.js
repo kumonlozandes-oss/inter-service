@@ -484,7 +484,7 @@ async function gerarMensalidades() {
             .from("mensalidades")
             .insert({
 
-                id_mensalidade: randomUUID(),
+                id_mensalidade: idMensalidade,
 
                 guid_aluno: aluno.guid,
                 guid_responsavel: aluno.guid_responsavel,
@@ -505,6 +505,13 @@ async function gerarMensalidades() {
 
         if (erroInsert) throw erroInsert;
 
+        await supabase
+    .from("financeiro_titulos")
+    .update({
+        id_mensalidade: idMensalidade
+    })
+    .eq("guid_aluno", aluno.guid);
+        
         criadas++;
 
     }
