@@ -516,6 +516,79 @@ async function gerarMensalidades() {
 // SINCRONIZAÇÃO AUTOMÁTICA
 // ======================================================
 
+async function sincronizarMensalidades() {
+
+    log("Sincronizando mensalidades...");
+
+    const { competencia, mes, ano } = competenciaAtual();
+
+    const { data: mensalidades, error: erroMensalidades } = await supabase
+        .from("mensalidades")
+        .select("*")
+        .eq("competencia_mes", mes)
+        .eq("competencia_ano", ano);
+
+    if (erroMensalidades) throw erroMensalidades;
+
+    let atualizadas = 0;
+
+    for (const mensalidade of mensalidades) {
+
+        const { data: titulo, error: erroTitulo } = await supabase
+            .from("financeiro_titulos")
+            .select("*")
+            .eq("id_mensalidade", mensalidade.id_mensalidade)
+            .maybeSingle();
+
+        if (erroTitulo) throw erroTitulo;
+
+        if (!titulo) continue;
+
+        const { error: erroUpdate } = await supabase
+            .from("mensalidades")
+            .update({
+
+                id_inter: titulo.id_inter,
+                status: titulo.status,
+                status_inter: titulo.status_inter,
+
+                valor_original: titulo.valor_original,
+                valor_desconto: titulo.valor_desconto,
+                valor_final: titulo.valor_final,
+                valor_recebido: titulo.valor_recebido,
+
+                vencimento: titulo.vencimento,
+                data_pagamento: titulo.data_pagamento,
+
+                forma_pagamento: titulo.forma_pagamento,
+
+                nosso_numero: titulo.nosso_numero,
+                seu_numero: titulo.seu_numero,
+
+                linha_digitavel: titulo.linha_digitavel,
+                codigo_barras: titulo.codigo_barras,
+
+                codigo_pix: titulo.codigo_pix,
+                pix_copia_cola: titulo.pix_copia_cola,
+                qr_code_pix: titulo.qr_code_pix,
+
+                url_pdf_boleto: titulo.url_pdf_boleto,
+
+                ultima_sincronizacao: new Date().toISOString()
+
+            })
+            .eq("id_mensalidade", mensalidade.id_mensalidade);
+
+        if (erroUpdate) throw erroUpdate;
+
+        atualizadas++;
+
+    }
+
+    log(`Mensalidades sincronizadas: ${atualizadas}`);
+
+}
+
 async function sincronizacaoAutomatica() {
 
     log("=======================================");
