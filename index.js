@@ -527,7 +527,54 @@ async function gerarMensalidades() {
 
         if (erroBusca) throw erroBusca;
 
-        if (existe) continue;
+        if (existe) {
+
+    const { data: titulo } = await supabase
+        .from("financeiro_titulos")
+        .select("*")
+        .eq("guid_aluno", aluno.guid)
+        .maybeSingle();
+
+    if (titulo) {
+
+        await supabase
+            .from("mensalidades")
+            .update({
+
+                id_inter: titulo.id_inter,
+                status: titulo.status,
+                status_inter: titulo.status_inter,
+
+                valor_original: titulo.valor_original,
+                valor_desconto: titulo.valor_desconto,
+                valor_final: titulo.valor_final,
+                valor_recebido: titulo.valor_recebido,
+
+                vencimento: titulo.vencimento,
+                data_pagamento: titulo.data_pagamento,
+
+                forma_pagamento: titulo.forma_pagamento,
+
+                nosso_numero: titulo.nosso_numero,
+                seu_numero: titulo.seu_numero,
+
+                linha_digitavel: titulo.linha_digitavel,
+                codigo_barras: titulo.codigo_barras,
+
+                codigo_pix: titulo.codigo_pix,
+                pix_copia_cola: titulo.pix_copia_cola,
+                qr_code_pix: titulo.qr_code_pix,
+
+                url_pdf_boleto: titulo.url_pdf_boleto
+
+            })
+            .eq("id_mensalidade", existe.id_mensalidade);
+
+    }
+
+    continue;
+
+}
 
         const idMensalidade = randomUUID();
 
