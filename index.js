@@ -487,22 +487,32 @@ async function sincronizarBoletos() {
 
         const dados = dadosTitulo(detalhe);
 
-const { data: mensalidade } = await supabase
-    .from("mensalidades")
-    .select("id_mensalidade,guid_aluno,guid_responsavel,competencia")
-    .eq("id_inter", dados.id_inter)
-    .maybeSingle();
+        const { data: mensalidade } = await supabase
+            .from("mensalidades")
+            .select(`
+                id_mensalidade,
+                guid_aluno,
+                guid_responsavel,
+                competencia,
+                competencia_mes,
+                competencia_ano
+            `)
+            .eq("id_inter", dados.id_inter)
+            .maybeSingle();
 
-if (mensalidade) {
+        if (mensalidade) {
 
-    dados.id_mensalidade = mensalidade.id_mensalidade;
-    dados.guid_aluno = mensalidade.guid_aluno;
-    dados.guid_responsavel = mensalidade.guid_responsavel;
-    dados.competencia = mensalidade.competencia;
+            dados.id_mensalidade = mensalidade.id_mensalidade;
+            dados.guid_aluno = mensalidade.guid_aluno;
+            dados.guid_responsavel = mensalidade.guid_responsavel;
 
-}
+            dados.competencia = mensalidade.competencia;
+            dados.competencia_mes = mensalidade.competencia_mes;
+            dados.competencia_ano = mensalidade.competencia_ano;
 
-const resultado = await salvarTitulo(dados);
+        }
+
+        const resultado = await salvarTitulo(dados);
 
         if (resultado === "novo")
             novos++;
