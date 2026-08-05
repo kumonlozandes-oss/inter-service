@@ -401,6 +401,24 @@ const registro = {
 
     if (erroInsert) throw erroInsert;
 
+    const { data: mensalidade } = await supabase
+    .from("mensalidades")
+    .select("id_mensalidade")
+    .eq("guid_aluno", dados.guid_aluno)
+    .eq("competencia", dados.competencia)
+    .maybeSingle();
+
+if (mensalidade) {
+
+    await supabase
+        .from("financeiro_titulos")
+        .update({
+            id_mensalidade: mensalidade.id_mensalidade
+        })
+        .eq("id_inter", dados.id_inter);
+
+}
+
     return "novo";
 
 }
