@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const https = require("https");
 const fs = require("fs");
 const querystring = require("querystring");
@@ -6,6 +7,9 @@ const { randomUUID } = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
+app.use(cors());
+
+app.use(express.json());
 const erpRoutes = require("./routes/erp");
 
 app.use(express.json());
