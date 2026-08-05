@@ -290,45 +290,53 @@ function dadosTitulo(detalhe) {
 
     return {
 
-        origem: "INTER",
+    origem: "INTER",
 
-        guid_aluno: detalhe.guid_aluno || null,
-        guid_responsavel: detalhe.guid_responsavel || null,
+    guid_aluno: detalhe.guid_aluno || null,
+    guid_responsavel: detalhe.guid_responsavel || null,
 
-        competencia,
-        competencia_mes,
-        competencia_ano,
+    competencia,
+    competencia_mes,
+    competencia_ano,
 
-        id_inter: cobranca.codigoSolicitacao,
+    id_inter: cobranca.codigoSolicitacao,
 
-        seu_numero: cobranca.seuNumero,
-        nosso_numero: boleto.nossoNumero,
+    seu_numero: cobranca.seuNumero,
+    nosso_numero: boleto.nossoNumero,
 
-        status_inter: cobranca.situacao,
-        status: statusInterno(cobranca.situacao),
+    status_inter: cobranca.situacao,
+    status: statusInterno(cobranca.situacao),
 
-        vencimento: cobranca.dataVencimento,
-        data_pagamento: cobranca.dataSituacao,
+    tipo_cobranca: cobranca.tipoCobranca,
+    origem_recebimento: cobranca.origemRecebimento,
 
-        valor_original: valorOriginal,
-        valor_desconto: valorDesconto,
+    vencimento: cobranca.dataVencimento,
+    data_emissao: cobranca.dataEmissao,
+    data_pagamento: cobranca.dataSituacao,
 
-        valor_final: valorOriginal === null
-            ? null
-            : valorOriginal - valorDesconto,
+    valor_original: valorOriginal,
+    valor_desconto: valorDesconto,
+    valor_final: valorOriginal === null
+        ? null
+        : valorOriginal - valorDesconto,
 
-        valor_recebido: numero(cobranca.valorTotalRecebido),
+    valor_recebido: numero(cobranca.valorTotalRecebido),
 
-        linha_digitavel: boleto.linhaDigitavel,
-        codigo_barras: boleto.codigoBarras,
+    valor_multa: numero(cobranca.multa?.taxa),
+    valor_juros: numero(cobranca.mora?.taxa),
 
-        codigo_pix: pix.txid,
-        pix_copia_cola: pix.pixCopiaECola,
-        qr_code_pix: pix.imagemQrcode,
+    linha_digitavel: boleto.linhaDigitavel,
+    codigo_barras: boleto.codigoBarras,
 
-        url_pdf_boleto: detalhe.pdf
+    codigo_pix: pix.txid,
+    pix_copia_cola: pix.pixCopiaECola,
+    qr_code_pix: pix.imagemQrcode,
 
-    };
+    url_pdf_boleto: detalhe.pdf,
+
+    json_inter: detalhe
+
+};
 
 }
 
@@ -441,47 +449,51 @@ async function salvarTitulo(dados) {
 
     if (dados.id_mensalidade) {
 
-    await supabase
+    const { error: erroTitulo } = await supabase
     .from("financeiro_titulos")
     .update({
         id_mensalidade: dados.id_mensalidade
     })
-    .eq("id", existente?.id || registro.id);
+    .eq("id_inter", dados.id_inter);
 
-    await supabase
-        .from("mensalidades")
-        .update({
+if (erroTitulo) throw erroTitulo;
 
-            id_inter: dados.id_inter,
+    const { error: erroMensalidade } = await supabase
+    .from("mensalidades")
+    .update({
 
-            status: dados.status,
-            status_inter: dados.status_inter,
+        id_inter: dados.id_inter,
 
-            valor_original: dados.valor_original,
-            valor_desconto: dados.valor_desconto,
-            valor_final: dados.valor_final,
-            valor_recebido: dados.valor_recebido,
+        status: dados.status,
+        status_inter: dados.status_inter,
 
-            vencimento: dados.vencimento,
-            data_pagamento: dados.data_pagamento,
-            forma_pagamento: dados.forma_pagamento,
+        valor_original: dados.valor_original,
+        valor_desconto: dados.valor_desconto,
+        valor_final: dados.valor_final,
+        valor_recebido: dados.valor_recebido,
 
-            nosso_numero: dados.nosso_numero,
-            seu_numero: dados.seu_numero,
+        vencimento: dados.vencimento,
+        data_pagamento: dados.data_pagamento,
+        forma_pagamento: dados.forma_pagamento,
 
-            linha_digitavel: dados.linha_digitavel,
-            codigo_barras: dados.codigo_barras,
+        nosso_numero: dados.nosso_numero,
+        seu_numero: dados.seu_numero,
 
-            codigo_pix: dados.codigo_pix,
-            pix_copia_cola: dados.pix_copia_cola,
-            qr_code_pix: dados.qr_code_pix,
+        linha_digitavel: dados.linha_digitavel,
+        codigo_barras: dados.codigo_barras,
 
-            url_pdf_boleto: dados.url_pdf_boleto,
+        codigo_pix: dados.codigo_pix,
+        pix_copia_cola: dados.pix_copia_cola,
+        qr_code_pix: dados.qr_code_pix,
 
-            data_atualizacao: new Date().toISOString()
+        url_pdf_boleto: dados.url_pdf_boleto,
 
-        })
-        .eq("id_mensalidade", dados.id_mensalidade);
+        data_atualizacao: new Date().toISOString()
+
+    })
+    .eq("id_mensalidade", dados.id_mensalidade);
+
+if (erroMensalidade) throw erroMensalidade;
 
 }
 
