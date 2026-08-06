@@ -748,6 +748,19 @@ async function vincularTitulosPorCpf() {
     log("Vinculando títulos por CPF...");
     log("Buscando títulos...");
 
+    const { data: alunos, error: erroAlunos } = await supabase
+    .from("alunos_master")
+    .select(`
+        guid,
+        guid_responsavel,
+        cpf,
+        responsavel_cpf,
+        responsavel2_cpf,
+        cpf_aluno
+    `);
+
+if (erroAlunos) throw erroAlunos;
+
     const { data: titulos, error } = await supabase
         .from("financeiro_titulos")
         .select("id,cpf_responsavel")
@@ -767,16 +780,6 @@ async function vincularTitulosPorCpf() {
 
         const cpf = String(titulo.cpf_responsavel).replace(/\D/g, "");
 
-        const { data: alunos } = await supabase
-    .from("alunos_master")
-    .select(`
-    guid,
-    guid_responsavel,
-    cpf,
-    cpf_aluno,
-    responsavel_cpf,
-    responsavel2_cpf
-`)
 
 let aluno = null;
 
@@ -791,7 +794,7 @@ for (const item of (alunos || [])) {
 
 ].map(c => String(c || "").replace(/\D/g, ""));
 
-if (cpfs.includes(cpf)) {
+if (cpfs.some(c => c === cpf)) {
 
     aluno = item;
     break;
