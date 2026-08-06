@@ -748,17 +748,17 @@ async function gerarMensalidades() {
 async function vincularTitulosPorCpf() {
 
     log("Vinculando títulos por CPF...");
-
     log("Buscando títulos...");
 
     const { data: titulos, error } = await supabase
-        log(`Títulos encontrados: ${titulos?.length || 0}`);
         .from("financeiro_titulos")
         .select("id,cpf_responsavel")
         .is("guid_aluno", null)
         .not("cpf_responsavel", "is", null);
 
     if (error) throw error;
+
+    log(`Títulos encontrados: ${titulos?.length || 0}`);
 
     let vinculados = 0;
 
