@@ -295,6 +295,9 @@ function dadosTitulo(detalhe) {
     guid_aluno: detalhe.guid_aluno || null,
     guid_responsavel: detalhe.guid_responsavel || null,
 
+    cpf_responsavel: cobranca.pagador?.cpfCnpj || null,
+nome_pagador: cobranca.pagador?.nome || null,
+
     competencia,
     competencia_mes,
     competencia_ano,
