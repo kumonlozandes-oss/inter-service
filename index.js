@@ -763,7 +763,12 @@ if (erroAlunos) throw erroAlunos;
 
     const { data: titulos, error } = await supabase
         .from("financeiro_titulos")
-        .select("id,cpf_responsavel")
+        .select(`
+    id,
+    cpf_responsavel,
+    seu_numero,
+    competencia
+`)
         .is("guid_aluno", null)
         .not("cpf_responsavel", "is", null);
 
@@ -803,17 +808,36 @@ if (cpfs.some(c => c === cpf)) {
 
 }
 
-        if (!aluno)
-            continue;
+        if (!aluno) {
+
+    const { error: erroAlerta } = await supabase
+    .from("financeiro_titulos")
+    .update({
+        alerta_vinculo: true,
+        motivo_alerta: "Não foi possível localizar o aluno automaticamente."
+    })
+    .eq("id", titulo.id);
+
+if (erroAlerta) throw erroAlerta;
+
+continue;
+
+    continue;
+
+}
 
         const { error: erroUpdate } = await supabase
             .from("financeiro_titulos")
+
             .update({
 
-                guid_aluno: aluno.guid,
-                guid_responsavel: aluno.guid_responsavel
+    guid_aluno: aluno.guid,
+    guid_responsavel: aluno.guid_responsavel,
 
-            })
+    alerta_vinculo: false,
+    motivo_alerta: null
+
+})
             .eq("id", titulo.id);
 
         if (erroUpdate)
@@ -1366,6 +1390,38 @@ app.get("/api/reconstruir-financeiro", async (req, res) => {
     }
 
 });
+
+// ===============================
+// PENDÊNCIAS DE VÍNCULO
+// ===============================
+
+app.get("/api/pendencias-vinculo", async (req, res) => {
+
+    try {
+
+        const { data, error } = await supabase
+            .from("financeiro_titulos")
+            .select("*")
+            .eq("alerta_vinculo", true)
+            .order("vencimento");
+
+        if (error) throw error;
+
+        res.json(data);
+
+    } catch (e) {
+
+        res.status(500).json({
+            sucesso: false,
+            erro: e.message
+        });
+
+    }
+
+});
+
+
+
 
 app.listen(PORT, async () => {
 
