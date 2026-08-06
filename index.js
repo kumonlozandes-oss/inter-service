@@ -276,17 +276,17 @@ function dadosTitulo(detalhe) {
 
     if (cobranca.seuNumero) {
 
-        const m = cobranca.seuNumero.match(/(\d{2})\/(\d{4})/);
+    const m = cobranca.seuNumero.match(/^MENS-(\d{2})\/(\d{4})-/);
 
-        if (m) {
+    if (m) {
 
-            competencia = `${m[1]}/${m[2]}`;
-            competencia_mes = Number(m[1]);
-            competencia_ano = Number(m[2]);
-
-        }
+        competencia = `${m[1]}/${m[2]}`;
+        competencia_mes = Number(m[1]);
+        competencia_ano = Number(m[2]);
 
     }
+
+}
 
     return {
 
@@ -1071,9 +1071,11 @@ const documento = String(cpfCnpj).replace(/\D/g, "");
 
     try {
 
+        const competencia = competenciaAtual().competencia;
+
         const corpo = JSON.stringify({
 
-seuNumero: `MENS-${id_mensalidade}`,
+seuNumero: `MENS-${competencia}-${id_mensalidade}`,
 
 valorNominal: Number(valorNominal),
 
@@ -1146,8 +1148,6 @@ const detalhe = await consultarCobranca(
 );
 
 const dados = dadosTitulo(detalhe);
-
-const competencia = competenciaAtual().competencia;
 
 const [competenciaMes, competenciaAno] =
     competencia.split("/");
