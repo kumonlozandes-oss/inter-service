@@ -997,35 +997,21 @@ app.get("/alunos", async (req, res) => {
 
 app.get("/mensalidades", async (req, res) => {
 
-    try {
+    console.log("=== CHAMOU /api/mensalidades ===");
 
-        const { count, error: erroCount } = await supabase
-            .from("vw_mensalidades")
-            .select("*", { count: "exact", head: true });
+    const { data, count, error } = await supabase
+        .from("vw_mensalidades")
+        .select("*", { count: "exact" });
 
-        console.log("TOTAL VIEW =", count);
+    console.log("Erro:", error);
+    console.log("Count:", count);
+    console.log("Primeiro:", data?.[0]);
 
-        const { data, error } = await supabase
-            .from("vw_mensalidades")
-            .select("*")
-            .limit(5);
-
-        console.log("PRIMEIROS =", data);
-
-        if (error) throw error;
-
-        res.json(data);
-
-    } catch (e) {
-
-        console.error(e);
-
-        res.status(500).json({
-            sucesso: false,
-            erro: e.message
-        });
-
+    if (error) {
+        return res.status(500).json(error);
     }
+
+    res.json(data);
 
 });
 
