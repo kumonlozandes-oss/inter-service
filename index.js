@@ -457,41 +457,9 @@ async function salvarTitulo(dados) {
 
 if (erroTitulo) throw erroTitulo;
 
-    const { error: erroMensalidade } = await supabase
-    .from("mensalidades")
-    .update({
-
-        id_inter: dados.id_inter,
-
-        status: dados.status,
-        status_inter: dados.status_inter,
-
-        valor_original: dados.valor_original,
-        valor_desconto: dados.valor_desconto,
-        valor_final: dados.valor_final,
-
-        vencimento: dados.vencimento,
-        data_pagamento: dados.data_pagamento,
-        forma_pagamento: dados.forma_pagamento,
-
-        nosso_numero: dados.nosso_numero,
-        seu_numero: dados.seu_numero,
-
-        linha_digitavel: dados.linha_digitavel,
-        codigo_barras: dados.codigo_barras,
-
-        codigo_pix: dados.codigo_pix,
-        pix_copia_cola: dados.pix_copia_cola,
-        qr_code_pix: dados.qr_code_pix,
-
-        url_pdf_boleto: dados.url_pdf_boleto,
-
-        data_atualizacao: new Date().toISOString()
-
-    })
-    .eq("id_mensalidade", dados.id_mensalidade);
-
-if (erroMensalidade) throw erroMensalidade;
+// Atualização da tabela mensalidades removida.
+// A partir desta etapa, financeiro_titulos passa a ser a fonte
+// oficial das informações do boleto.
 
 }
 
@@ -1171,47 +1139,6 @@ await salvarTitulo({
     competencia_ano: Number(competenciaAno)
 
 });
-
-const { error: erroMensalidade } = await supabase
-    .from("mensalidades")
-    .update({
-
-        id_inter: dados.id_inter,
-
-        status_inter: dados.status_inter,
-
-        status: dados.status,
-
-        valor_original: dados.valor_original,
-
-        valor_desconto: Number(valorDesconto || 0),
-        
-        valor_final: Number(valorNominal) - Number(valorDesconto || 0),
-        
-        vencimento: dados.vencimento,
-
-        nosso_numero: dados.nosso_numero,
-
-        seu_numero: dados.seu_numero,
-
-        linha_digitavel: dados.linha_digitavel,
-
-        codigo_barras: dados.codigo_barras,
-
-        codigo_pix: dados.codigo_pix,
-
-        pix_copia_cola: dados.pix_copia_cola,
-
-        qr_code_pix: dados.qr_code_pix,
-
-        url_pdf_boleto: dados.url_pdf_boleto
-
-    })
-    .eq("id_mensalidade", id_mensalidade);
-
-    if (erroMensalidade) {
-    throw erroMensalidade;
-}
 
 res.json({
 
