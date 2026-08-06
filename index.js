@@ -999,22 +999,20 @@ app.get("/mensalidades", async (req, res) => {
 
     try {
 
-        console.log("SUPABASE URL:", process.env.SUPABASE_URL);
-
-        const { count } = await supabase
+        const { count, error: erroCount } = await supabase
             .from("vw_mensalidades")
             .select("*", { count: "exact", head: true });
 
-        console.log("TOTAL VIEW:", count);
+        console.log("TOTAL VIEW =", count);
 
         const { data, error } = await supabase
             .from("vw_mensalidades")
             .select("*")
             .limit(5);
 
-        if (error) throw error;
+        console.log("PRIMEIROS =", data);
 
-        console.log("PRIMEIROS REGISTROS:", data);
+        if (error) throw error;
 
         res.json(data);
 
