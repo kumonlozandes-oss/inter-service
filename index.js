@@ -749,7 +749,10 @@ async function vincularTitulosPorCpf() {
 
     log("Vinculando títulos por CPF...");
 
+    log("Buscando títulos...");
+
     const { data: titulos, error } = await supabase
+        log(`Títulos encontrados: ${titulos?.length || 0}`);
         .from("financeiro_titulos")
         .select("id,cpf_responsavel")
         .is("guid_aluno", null)
@@ -759,7 +762,10 @@ async function vincularTitulosPorCpf() {
 
     let vinculados = 0;
 
+    log("Iniciando processamento...");
+
     for (const titulo of titulos) {
+        log(`CPF: ${titulo.cpf_responsavel}`);
 
         const cpf = String(titulo.cpf_responsavel).replace(/\D/g, "");
 
