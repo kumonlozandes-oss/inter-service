@@ -483,6 +483,25 @@ async function sincronizarBoletos() {
         const detalhe = await consultarCobranca(codigo, token);
 
         const dados = dadosTitulo(detalhe);
+        if (dados.seu_numero?.startsWith("ERP|")) {
+
+    const [
+        ,
+        idMensalidade,
+        guidAluno,
+        competencia
+    ] = dados.seu_numero.split("|");
+
+    dados.id_mensalidade = idMensalidade;
+    dados.guid_aluno = guidAluno;
+    dados.competencia = competencia;
+
+    const [mes, ano] = competencia.split("/");
+
+    dados.competencia_mes = Number(mes);
+    dados.competencia_ano = Number(ano);
+
+}
 
         const { data: mensalidade } = await supabase
     .from("mensalidades")
@@ -1043,11 +1062,20 @@ const documento = String(cpfCnpj).replace(/\D/g, "");
 
         const corpo = JSON.stringify({
 
-seuNumero: `MENS-${competencia}-${id_mensalidade}`,
+seuNumero: `ERP|${id_mensalidade}|${guid_aluno}|${competencia}`,
 
 valorNominal: Number(valorNominal),
 
 dataVencimento: dataVencimento,
+
+            seuNumero: `MENS-${competencia}-${id_mensalidade}`,
+
+codigoSolicitacaoCliente: id_mensalidade,
+
+mensagem: {
+    linha1: competencia,
+    linha2: guid_aluno
+},
 
             numDiasAgenda: 30,
 
