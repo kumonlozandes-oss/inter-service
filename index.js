@@ -769,21 +769,34 @@ async function vincularTitulosPorCpf() {
 
         const { data: alunos } = await supabase
     .from("alunos_master")
-    .select("guid,guid_responsavel,cpf");
+    .select(`
+    guid,
+    guid_responsavel,
+    cpf,
+    cpf_aluno,
+    responsavel_cpf,
+    responsavel2_cpf
+`)
 
 let aluno = null;
 
 for (const item of (alunos || [])) {
 
-    const cpfAluno = String(item.cpf || "")
-        .replace(/\D/g, "");
+    const cpfs = [
 
-    if (cpfAluno === cpf) {
+    item.cpf,
+    item.cpf_aluno,
+    item.responsavel_cpf,
+    item.responsavel2_cpf
 
-        aluno = item;
-        break;
+].map(c => String(c || "").replace(/\D/g, ""));
 
-    }
+if (cpfs.includes(cpf)) {
+
+    aluno = item;
+    break;
+
+}
 
 }
 
