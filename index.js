@@ -469,7 +469,6 @@ if (erroTitulo) throw erroTitulo;
         valor_original: dados.valor_original,
         valor_desconto: dados.valor_desconto,
         valor_final: dados.valor_final,
-        valor_recebido: dados.valor_recebido,
 
         vencimento: dados.vencimento,
         data_pagamento: dados.data_pagamento,
@@ -662,7 +661,6 @@ async function gerarMensalidades() {
             valor_original: titulo.valor_original,
             valor_desconto: titulo.valor_desconto,
             valor_final: titulo.valor_final,
-            valor_recebido: titulo.valor_recebido,
 
             vencimento: titulo.vencimento,
             forma_pagamento: titulo.forma_pagamento,
@@ -860,7 +858,6 @@ async function sincronizarMensalidades() {
                 valor_original: titulo.valor_original,
                 valor_desconto: titulo.valor_desconto,
                 valor_final: titulo.valor_final,
-                valor_recebido: titulo.valor_recebido,
 
                 vencimento: titulo.vencimento,
                 forma_pagamento: titulo.forma_pagamento,
