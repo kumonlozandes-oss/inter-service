@@ -106,10 +106,7 @@ router.get("/mensalidades", async (req, res) => {
     const { data, error } = await supabase
   .from("vw_mensalidades")
   .select("*")
-  .order("competencia_ano", {
-    ascending: false
-  })
-  .order("competencia_mes", {
+  .order("competencia", {
     ascending: false
   })
   .order("aluno");
