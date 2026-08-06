@@ -579,6 +579,8 @@ if (tituloExistente) {
 
     log(`Sincronização concluída. Novos: ${novos} | Atualizados: ${atualizados}`);
 
+    await vincularTitulosPorCpf();
+    
     return {
         total: cobrancas.length,
         novos,
@@ -742,6 +744,71 @@ async function gerarMensalidades() {
     };
 
 }
+
+async function vincularTitulosPorCpf() {
+
+    log("Vinculando títulos por CPF...");
+
+    const { data: titulos, error } = await supabase
+        .from("financeiro_titulos")
+        .select("id,cpf_responsavel")
+        .is("guid_aluno", null)
+        .not("cpf_responsavel", "is", null);
+
+    if (error) throw error;
+
+    let vinculados = 0;
+
+    for (const titulo of titulos) {
+
+        const cpf = String(titulo.cpf_responsavel).replace(/\D/g, "");
+
+        const { data: alunos } = await supabase
+    .from("alunos_master")
+    .select("guid,guid_responsavel,responsavel_cpf");
+
+let aluno = null;
+
+for (const item of (alunos || [])) {
+
+    const cpfAluno = String(item.responsavel_cpf || "")
+        .replace(/\D/g, "");
+
+    if (cpfAluno === cpf) {
+
+        aluno = item;
+        break;
+
+    }
+
+}
+
+        if (!aluno)
+            continue;
+
+        const { error: erroUpdate } = await supabase
+            .from("financeiro_titulos")
+            .update({
+
+                guid_aluno: aluno.guid,
+                guid_responsavel: aluno.guid_responsavel
+
+            })
+            .eq("id", titulo.id);
+
+        if (erroUpdate)
+            throw erroUpdate;
+
+        vinculados++;
+
+    }
+
+    log(`Títulos vinculados: ${vinculados}`);
+
+    return vinculados;
+
+}
+
 // ======================================================
 // SINCRONIZAÇÃO AUTOMÁTICA
 // ======================================================
@@ -1037,7 +1104,10 @@ const detalhe = await consultarCobranca(
 
 const dados = dadosTitulo(detalhe);
 
-const [competenciaMes, competenciaAno] = competencia.split("/");
+const competencia = competenciaAtual().competencia;
+
+const [competenciaMes, competenciaAno] =
+    competencia.split("/");
 
 await salvarTitulo({
 
