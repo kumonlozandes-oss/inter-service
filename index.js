@@ -996,18 +996,31 @@ app.get("/alunos", async (req, res) => {
 });
 
 app.get("/mensalidades", async (req, res) => {
+
     try {
+
+        console.log("SUPABASE URL:", process.env.SUPABASE_URL);
+
+        const { count } = await supabase
+            .from("vw_mensalidades")
+            .select("*", { count: "exact", head: true });
+
+        console.log("TOTAL VIEW:", count);
 
         const { data, error } = await supabase
             .from("vw_mensalidades")
             .select("*")
-            .order("competencia", { ascending: false });
+            .limit(5);
 
         if (error) throw error;
+
+        console.log("PRIMEIROS REGISTROS:", data);
 
         res.json(data);
 
     } catch (e) {
+
+        console.error(e);
 
         res.status(500).json({
             sucesso: false,
@@ -1015,6 +1028,7 @@ app.get("/mensalidades", async (req, res) => {
         });
 
     }
+
 });
 
 app.get("/", (req, res) => {
