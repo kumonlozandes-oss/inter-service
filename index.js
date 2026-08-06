@@ -769,13 +769,13 @@ async function vincularTitulosPorCpf() {
 
         const { data: alunos } = await supabase
     .from("alunos_master")
-    .select("guid,guid_responsavel,responsavel_cpf");
+    .select("guid,guid_responsavel,cpf");
 
 let aluno = null;
 
 for (const item of (alunos || [])) {
 
-    const cpfAluno = String(item.responsavel_cpf || "")
+    const cpfAluno = String(item.cpf || "")
         .replace(/\D/g, "");
 
     if (cpfAluno === cpf) {
