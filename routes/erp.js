@@ -104,11 +104,11 @@ router.get("/mensalidades", async (req, res) => {
   try {
 
     const { data, error } = await supabase
-      .from("mensalidades")
-      .select("*")
-      .order("competencia_ano", {
-        ascending: false
-      });
+  .from("vw_mensalidades")
+  .select("*")
+  .order("competencia", {
+    ascending: false
+  });
 
     if (error) throw error;
 
