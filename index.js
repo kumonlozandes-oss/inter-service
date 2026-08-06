@@ -274,68 +274,84 @@ function dadosTitulo(detalhe) {
     let competencia_mes = null;
     let competencia_ano = null;
 
-    if (cobranca.seuNumero) {
+    let guid_aluno = null;
+    let id_mensalidade = null;
 
-    const m = cobranca.seuNumero.match(/^MENS-(\d{2})\/(\d{4})-/);
+    if (cobranca.seuNumero?.startsWith("ERP|")) {
 
-    if (m) {
+        const [
+            ,
+            idMensalidade,
+            guidAluno,
+            comp
+        ] = cobranca.seuNumero.split("|");
 
-        competencia = `${m[1]}/${m[2]}`;
-        competencia_mes = Number(m[1]);
-        competencia_ano = Number(m[2]);
+        id_mensalidade = idMensalidade;
+        guid_aluno = guidAluno;
+        competencia = comp;
+
+        if (comp) {
+
+            const [mes, ano] = comp.split("/");
+
+            competencia_mes = Number(mes);
+            competencia_ano = Number(ano);
+
+        }
 
     }
 
-}
-
     return {
 
-    origem: "INTER",
+        origem: "INTER",
 
-    guid_aluno: detalhe.guid_aluno || null,
-    guid_responsavel: detalhe.guid_responsavel || null,
+        id_mensalidade,
 
-    cpf_responsavel: cobranca.pagador?.cpfCnpj || null,
+        guid_aluno,
 
-    competencia,
-    competencia_mes,
-    competencia_ano,
+        guid_responsavel: detalhe.guid_responsavel || null,
 
-    id_inter: cobranca.codigoSolicitacao,
+        cpf_responsavel: cobranca.pagador?.cpfCnpj || null,
 
-    seu_numero: cobranca.seuNumero,
-    nosso_numero: boleto.nossoNumero,
+        competencia,
+        competencia_mes,
+        competencia_ano,
 
-    status_inter: cobranca.situacao,
-    status: statusInterno(cobranca.situacao),
+        id_inter: cobranca.codigoSolicitacao,
 
-    vencimento: cobranca.dataVencimento,
-    data_emissao: cobranca.dataEmissao,
-    data_pagamento: cobranca.dataSituacao,
+        seu_numero: cobranca.seuNumero,
+        nosso_numero: boleto.nossoNumero,
 
-    valor_original: valorOriginal,
-    valor_desconto: valorDesconto,
-    valor_final: valorOriginal === null
-        ? null
-        : valorOriginal - valorDesconto,
+        status_inter: cobranca.situacao,
+        status: statusInterno(cobranca.situacao),
 
-    valor_recebido: numero(cobranca.valorTotalRecebido),
+        vencimento: cobranca.dataVencimento,
+        data_emissao: cobranca.dataEmissao,
+        data_pagamento: cobranca.dataSituacao,
 
-    valor_multa: numero(cobranca.multa?.taxa),
-    valor_juros: numero(cobranca.mora?.taxa),
+        valor_original: valorOriginal,
+        valor_desconto: valorDesconto,
+        valor_final: valorOriginal === null
+            ? null
+            : valorOriginal - valorDesconto,
 
-    linha_digitavel: boleto.linhaDigitavel,
-    codigo_barras: boleto.codigoBarras,
+        valor_recebido: numero(cobranca.valorTotalRecebido),
 
-    codigo_pix: pix.txid,
-    pix_copia_cola: pix.pixCopiaECola,
-    qr_code_pix: pix.imagemQrcode,
+        valor_multa: numero(cobranca.multa?.taxa),
+        valor_juros: numero(cobranca.mora?.taxa),
 
-    url_pdf_boleto: detalhe.pdf,
+        linha_digitavel: boleto.linhaDigitavel,
+        codigo_barras: boleto.codigoBarras,
 
-    json_inter: detalhe
+        codigo_pix: pix.txid,
+        pix_copia_cola: pix.pixCopiaECola,
+        qr_code_pix: pix.imagemQrcode,
 
-};
+        url_pdf_boleto: detalhe.pdf,
+
+        json_inter: detalhe
+
+    };
 
 }
 
@@ -483,90 +499,21 @@ async function sincronizarBoletos() {
         const detalhe = await consultarCobranca(codigo, token);
 
         const dados = dadosTitulo(detalhe);
-        if (dados.seu_numero?.startsWith("ERP|")) {
 
-    const [
-        ,
-        idMensalidade,
-        guidAluno,
-        competencia
-    ] = dados.seu_numero.split("|");
-
-    dados.id_mensalidade = idMensalidade;
-    dados.guid_aluno = guidAluno;
-    dados.competencia = competencia;
-
-    const [mes, ano] = competencia.split("/");
-
-    dados.competencia_mes = Number(mes);
-    dados.competencia_ano = Number(ano);
-
-}
-
-        const { data: mensalidade } = await supabase
-    .from("mensalidades")
-    .select(`
-        id_mensalidade,
-        guid_aluno,
-        guid_responsavel,
-        competencia,
-        competencia_mes,
-        competencia_ano
-    `)
-    .eq("seu_numero", dados.seu_numero)
-    .maybeSingle();
-
-if (mensalidade) {
-
-    dados.id_mensalidade = mensalidade.id_mensalidade;
-    dados.guid_aluno = mensalidade.guid_aluno;
-    dados.guid_responsavel = mensalidade.guid_responsavel;
-
-    dados.competencia = mensalidade.competencia;
-    dados.competencia_mes = mensalidade.competencia_mes;
-    dados.competencia_ano = mensalidade.competencia_ano;
-
-}
-
-        const { data: tituloExistente } = await supabase
-    .from("financeiro_titulos")
-    .select(`
-        id,
-        id_mensalidade,
-        guid_aluno,
-        guid_responsavel,
-        competencia,
-        competencia_mes,
-        competencia_ano
-    `)
-    .eq("id_inter", dados.id_inter)
-    .maybeSingle();
-
-if (tituloExistente) {
-
-    dados.id_mensalidade = tituloExistente.id_mensalidade;
-    dados.guid_aluno = tituloExistente.guid_aluno;
-    dados.guid_responsavel = tituloExistente.guid_responsavel;
-
-    dados.competencia = tituloExistente.competencia;
-    dados.competencia_mes = tituloExistente.competencia_mes;
-    dados.competencia_ano = tituloExistente.competencia_ano;
-
-}
-        
         const resultado = await salvarTitulo(dados);
 
-        if (resultado === "novo")
+        if (resultado === "novo") {
             novos++;
-        else
+        } else {
             atualizados++;
+        }
 
     }
 
     log(`Sincronização concluída. Novos: ${novos} | Atualizados: ${atualizados}`);
 
     await vincularTitulosPorCpf();
-    
+
     return {
         total: cobrancas.length,
         novos,
@@ -593,142 +540,6 @@ function competenciaAtual() {
 
 }
 
-async function gerarMensalidades() {
-
-    const { data: titulos, error } = await supabase
-        .from("financeiro_titulos")
-        .select("*")
-        .not("guid_aluno", "is", null)
-        .not("competencia_mes", "is", null)
-        .not("competencia_ano", "is", null);
-
-    if (error) throw error;
-
-    let criadas = 0;
-    let atualizadas = 0;
-
-    for (const titulo of titulos) {
-
-        const { data: aluno } = await supabase
-            .from("alunos_master")
-            .select("id_aluno,nome,responsavel")
-            .eq("guid", titulo.guid_aluno)
-            .maybeSingle();
-
-        if (!aluno) continue;
-
-        const { data: mensalidade } = await supabase
-            .from("mensalidades")
-            .select("id_mensalidade")
-            .eq("guid_aluno", titulo.guid_aluno)
-            .eq("competencia_mes", titulo.competencia_mes)
-            .eq("competencia_ano", titulo.competencia_ano)
-            .maybeSingle();
-
-        const registro = {
-
-            guid_aluno: titulo.guid_aluno,
-            guid_responsavel: titulo.guid_responsavel,
-
-            id_aluno: aluno.id_aluno,
-
-            aluno: aluno.nome,
-            responsavel: aluno.responsavel,
-
-            competencia: titulo.competencia,
-            competencia_mes: titulo.competencia_mes,
-            competencia_ano: titulo.competencia_ano,
-
-            id_inter: titulo.id_inter,
-            id_titulo: titulo.id,
-
-            status: titulo.status,
-            status_inter: titulo.status_inter,
-
-            valor_original: titulo.valor_original,
-            valor_desconto: titulo.valor_desconto,
-            valor_final: titulo.valor_final,
-
-            vencimento: titulo.vencimento,
-            forma_pagamento: titulo.forma_pagamento,
-            data_pagamento: titulo.data_pagamento,
-
-            nosso_numero: titulo.nosso_numero,
-            seu_numero: titulo.seu_numero,
-
-            linha_digitavel: titulo.linha_digitavel,
-            codigo_barras: titulo.codigo_barras,
-
-            codigo_pix: titulo.codigo_pix,
-            pix_copia_cola: titulo.pix_copia_cola,
-            qr_code_pix: titulo.qr_code_pix,
-
-            url_pdf_boleto: titulo.url_pdf_boleto,
-
-            data_atualizacao: new Date().toISOString()
-
-        };
-
-        if (mensalidade) {
-
-            const { error } = await supabase
-                .from("mensalidades")
-                .update(registro)
-                .eq("id_mensalidade", mensalidade.id_mensalidade);
-
-            if (error) throw error;
-
-            await supabase
-                .from("financeiro_titulos")
-                .update({
-                    id_mensalidade: mensalidade.id_mensalidade
-                })
-                .eq("id", titulo.id);
-
-            atualizadas++;
-
-        } else {
-
-            const idMensalidade = randomUUID();
-
-            const { error } = await supabase
-                .from("mensalidades")
-                .insert({
-
-                    id_mensalidade: idMensalidade,
-
-                    ...registro,
-
-                    criado_em: new Date().toISOString()
-
-                });
-
-            if (error) throw error;
-
-            await supabase
-                .from("financeiro_titulos")
-                .update({
-                    id_mensalidade: idMensalidade
-                })
-                .eq("id", titulo.id);
-
-            criadas++;
-
-        }
-
-    }
-
-    log(`Mensalidades criadas: ${criadas}`);
-    log(`Mensalidades atualizadas: ${atualizadas}`);
-
-    return {
-
-        criadas,
-        atualizadas
-
-    };
-
-}
 
 async function vincularTitulosPorCpf() {
 
@@ -809,8 +620,6 @@ if (erroAlerta) throw erroAlerta;
 
 continue;
 
-    continue;
-
 }
 
         const { error: erroUpdate } = await supabase
@@ -844,90 +653,6 @@ continue;
 // SINCRONIZAÇÃO AUTOMÁTICA
 // ======================================================
 
-async function sincronizarMensalidades() {
-
-    log("Sincronizando mensalidades...");
-
-    const { data: titulos, error } = await supabase
-        .from("financeiro_titulos")
-        .select("*")
-        .not("guid_aluno", "is", null)
-        .not("competencia_mes", "is", null)
-        .not("competencia_ano", "is", null);
-
-    if (error) throw error;
-
-    let atualizadas = 0;
-
-    for (const titulo of titulos) {
-
-        const { data: mensalidade } = await supabase
-            .from("mensalidades")
-            .select("id_mensalidade")
-            .eq("guid_aluno", titulo.guid_aluno)
-            .eq("competencia_mes", titulo.competencia_mes)
-            .eq("competencia_ano", titulo.competencia_ano)
-            .maybeSingle();
-
-        if (!mensalidade) continue;
-
-        const { error: erroUpdate } = await supabase
-            .from("mensalidades")
-            .update({
-
-                id_titulo: titulo.id,
-
-                id_inter: titulo.id_inter,
-
-                status: titulo.status,
-                status_inter: titulo.status_inter,
-
-                valor_original: titulo.valor_original,
-                valor_desconto: titulo.valor_desconto,
-                valor_final: titulo.valor_final,
-
-                vencimento: titulo.vencimento,
-                forma_pagamento: titulo.forma_pagamento,
-                data_pagamento: titulo.data_pagamento,
-
-                nosso_numero: titulo.nosso_numero,
-                seu_numero: titulo.seu_numero,
-
-                linha_digitavel: titulo.linha_digitavel,
-                codigo_barras: titulo.codigo_barras,
-
-                codigo_pix: titulo.codigo_pix,
-                pix_copia_cola: titulo.pix_copia_cola,
-                qr_code_pix: titulo.qr_code_pix,
-
-                url_pdf_boleto: titulo.url_pdf_boleto,
-
-                origem: titulo.origem,
-
-                data_atualizacao: new Date().toISOString()
-
-            })
-            .eq("id_mensalidade", mensalidade.id_mensalidade);
-
-        if (erroUpdate) throw erroUpdate;
-
-        await supabase
-            .from("financeiro_titulos")
-            .update({
-                id_mensalidade: mensalidade.id_mensalidade
-            })
-            .eq("id", titulo.id);
-
-        atualizadas++;
-
-    }
-
-    log(`Mensalidades sincronizadas: ${atualizadas}`);
-
-    return atualizadas;
-
-}
-
 async function sincronizacaoAutomatica() {
 
     log("=======================================");
@@ -936,10 +661,6 @@ async function sincronizacaoAutomatica() {
     try {
 
         const resumo = await sincronizarBoletos();
-
-        await gerarMensalidades();
-
-        await sincronizarMensalidades();
 
         log(`Total: ${resumo.total}`);
         log(`Novos: ${resumo.novos}`);
@@ -1068,14 +789,6 @@ valorNominal: Number(valorNominal),
 
 dataVencimento: dataVencimento,
 
-            seuNumero: `MENS-${competencia}-${id_mensalidade}`,
-
-codigoSolicitacaoCliente: id_mensalidade,
-
-mensagem: {
-    linha1: competencia,
-    linha2: guid_aluno
-},
 
             numDiasAgenda: 30,
 
