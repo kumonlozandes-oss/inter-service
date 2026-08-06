@@ -1023,6 +1023,23 @@ app.get("/", (req, res) => {
     });
 
 });
+app.get("/api/sincronizar", async (req, res) => {
+
+    try {
+
+        const resultado = await sincronizarBoletos();
+
+        res.json(resultado);
+
+    } catch (e) {
+
+        res.status(500).json({
+            erro: e.message
+        });
+
+    }
+
+});
 
 app.get("/api/reconstruir-financeiro", async (req, res) => {
 
