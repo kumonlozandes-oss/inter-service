@@ -1327,6 +1327,28 @@ app.get("/alunos", async (req, res) => {
   }
 });
 
+app.get("/mensalidades", async (req, res) => {
+    try {
+
+        const { data, error } = await supabase
+            .from("vw_mensalidades")
+            .select("*")
+            .order("competencia", { ascending: false });
+
+        if (error) throw error;
+
+        res.json(data);
+
+    } catch (e) {
+
+        res.status(500).json({
+            sucesso: false,
+            erro: e.message
+        });
+
+    }
+});
+
 app.get("/", (req, res) => {
 
     res.json({
