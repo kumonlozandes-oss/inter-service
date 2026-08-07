@@ -277,29 +277,34 @@ function dadosTitulo(detalhe) {
     let guid_aluno = null;
     let id_mensalidade = null;
 
-    if (cobranca.seuNumero?.startsWith("ERP|")) {
+    const seuNumero = (cobranca.seuNumero || "").trim().toUpperCase();
 
-        const [
-            ,
-            idMensalidade,
-            guidAluno,
-            comp
-        ] = cobranca.seuNumero.split("|");
+if (seuNumero.startsWith("ERP|")) {
 
-        id_mensalidade = idMensalidade;
-        guid_aluno = guidAluno;
-        competencia = comp;
+    const [, idMensalidade, guidAluno, comp] = seuNumero.split("|");
 
-        if (comp) {
+    id_mensalidade = idMensalidade;
+    guid_aluno = guidAluno;
+    competencia = comp;
 
-            const [mes, ano] = comp.split("/");
+} else if (seuNumero === "JULHO/26") {
 
-            competencia_mes = Number(mes);
-            competencia_ano = Number(ano);
+    competencia = "07/2026";
 
-        }
+} else if (seuNumero === "AGOSTO/26") {
 
-    }
+    competencia = "08/2026";
+
+}
+
+if (competencia) {
+
+    const [mes, ano] = competencia.split("/");
+
+    competencia_mes = Number(mes);
+    competencia_ano = Number(ano);
+
+}
 
     return {
 
