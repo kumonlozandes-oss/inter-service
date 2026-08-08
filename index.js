@@ -1020,6 +1020,210 @@ app.get("/mensalidades", async (req, res) => {
 
 });
 
+// ===========================================
+// ANÁLISE DAS COBRANÇAS
+// ===========================================
+
+app.get("/api/cobrancas/analisar", async (req, res) => {
+
+    try {
+
+        const competencia = req.query.competencia;
+
+        let mensalidadesQuery = supabase
+            .from("vw_mensalidades")
+            .select("*");
+
+        if (competencia) {
+            mensalidadesQuery =
+                mensalidadesQuery.eq("competencia", competencia);
+        }
+
+        const { data: mensalidades, error: erroMensalidades } =
+            await mensalidadesQuery;
+
+        if (erroMensalidades)
+            throw erroMensalidades;
+
+        const { data: titulos, error: erroTitulos } =
+            await supabase
+                .from("financeiro_titulos")
+                .select("*");
+
+        if (erroTitulos)
+            throw erroTitulos;
+
+        let existentes = 0;
+        let pendentes = 0;
+        let inconsistencias = 0;
+
+        let valorTotal = 0;
+        let valorGerar = 0;
+        
+        const aptosGeracao = [];
+        const bloqueados = [];
+        
+        const lista = [];
+        const erros = [];    
+
+        for (const mensalidade of mensalidades) {
+            // Validações obrigatórias
+if (!mensalidade.guid_responsavel)
+    erros.push("Responsável não vinculado.");
+
+if (!mensalidade.responsavel_nome)
+    erros.push("Responsável sem nome.");
+
+if (!mensalidade.responsavel_cpf)
+    erros.push("Responsável sem CPF.");
+
+if (!mensalidade.responsavel_cep)
+    erros.push("CEP não informado.");
+
+if (!mensalidade.responsavel_endereco)
+    erros.push("Endereço não informado.");
+
+if (!mensalidade.responsavel_numero)
+    erros.push("Número do endereço não informado.");
+
+if (!mensalidade.responsavel_bairro)
+    erros.push("Bairro não informado.");
+
+if (!mensalidade.responsavel_cidade)
+    erros.push("Cidade não informada.");
+
+if (!mensalidade.responsavel_uf)
+    erros.push("UF não informada.");
+
+            valorTotal +=
+                Number(mensalidade.valor || 0);
+
+            const titulo = titulos.find(t =>
+
+                t.id_mensalidade === mensalidade.id_mensalidade
+
+            );
+
+            if (titulo) {
+
+                existentes++;
+
+            } else {
+
+                pendentes++;
+
+                valorGerar +=
+                    Number(mensalidade.valor || 0);
+
+            }
+
+            const registro = {
+
+    id_mensalidade: mensalidade.id_mensalidade,
+
+    guid_aluno: mensalidade.guid_aluno,
+
+    guid_responsavel: mensalidade.guid_responsavel,
+
+    aluno: mensalidade.nome,
+
+    responsavel: mensalidade.responsavel_nome,
+
+    cpf: mensalidade.responsavel_cpf,
+
+    valor: mensalidade.valor,
+
+    possuiTitulo: !!titulo,
+
+    erros: [...erros]
+
+};
+
+lista.push(registro);
+
+if (titulo) {
+
+    bloqueados.push({
+
+        ...registro,
+
+        motivo: "Já possui cobrança."
+
+    });
+
+}
+else if (erros.length) {
+
+    bloqueados.push({
+
+        ...registro,
+
+        motivo: "Cadastro incompleto."
+
+    });
+
+}
+else {
+
+    aptosGeracao.push(registro);
+
+}
+
+        }
+
+        res.json({
+
+            sucesso: true,
+
+            competencia,
+
+            mensalidades:
+                mensalidades.length,
+
+            existentes,
+
+            pendentes,
+
+            aptos: aptosGeracao.length,
+
+bloqueados: bloqueados.length,
+
+aptosGeracao,
+
+bloqueados,
+
+            inconsistencias,
+
+            valorTotal,
+
+            valorGerar,
+
+            erros: erros.length,
+
+            lista
+
+            
+
+        });
+
+    }
+
+    catch (erro) {
+
+        console.error(erro);
+
+        res.status(500).json({
+
+            sucesso: false,
+
+            erro: erro.message
+
+        });
+
+    }
+
+});
+
 app.get("/", (req, res) => {
 
     res.json({
