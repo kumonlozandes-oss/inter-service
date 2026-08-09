@@ -1111,8 +1111,8 @@ app.get("/mensalidades", async (req, res) => {
 async function analisarCobrancas(competencia) {
 
     let query = supabase
-        .from("vw_mensalidades")
-        .select("*");
+    .from("mensalidades")
+    .select("*");
 
     if (competencia) {
         query = query.eq("competencia", competencia);
