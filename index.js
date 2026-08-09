@@ -746,159 +746,243 @@ function agendarProximaExecucao() {
 
 }
 
+async function gerarBoletoInterno(dados) {
+
+    const {
+        id_mensalidade,
+        guid_aluno,
+        guid_responsavel,
+        cpfCnpj,
+        nome,
+        endereco,
+        cidade,
+        uf,
+        cep,
+        valorNominal,
+        valorDesconto,
+        dataVencimento
+    } = dados;
+
+    const documento = String(cpfCnpj).replace(/\D/g, "");
+
+    const competencia = competenciaAtual().competencia;
+
+    const corpo = JSON.stringify({
+
+        seuNumero: `ERP|${id_mensalidade}|${guid_aluno}|${competencia}`,
+
+        valorNominal: Number(valorNominal),
+
+        dataVencimento,
+
+        numDiasAgenda: 30,
+
+        multa: {
+            codigo: "PERCENTUAL",
+            taxa: 2
+        },
+
+        mora: {
+            codigo: "TAXAMENSAL",
+            taxa: 1
+        },
+
+        descontos: [
+            {
+                codigo: "VALORFIXO",
+                taxa: 0,
+                valor: Number(valorDesconto || 0),
+                data: dataVencimento
+            }
+        ],
+
+        pagador: {
+
+            cpfCnpj: documento,
+
+            tipoPessoa:
+                documento.length === 14
+                    ? "JURIDICA"
+                    : "FISICA",
+
+            nome,
+
+            endereco,
+
+            cidade,
+
+            uf,
+
+            cep
+
+        }
+
+    });
+
+    const emissao = await requisicaoInter({
+
+        path: "/cobranca/v3/cobrancas",
+
+        method: "POST",
+
+        body: corpo
+
+    });
+
+    if (!emissao.json.codigoSolicitacao) {
+
+        throw new Error(
+            "Banco Inter não retornou o código da cobrança."
+        );
+
+    }
+
+    const codigo = emissao.json.codigoSolicitacao;
+
+    const detalhe = await consultarCobranca(
+        codigo,
+        emissao.token
+    );
+
+    const dadosTituloGerado = dadosTitulo(detalhe);
+
+    const [mes, ano] = competencia.split("/");
+
+    await salvarTitulo({
+
+        ...dadosTituloGerado,
+
+        origem: "ERP",
+
+        id_mensalidade,
+
+        guid_aluno,
+
+        guid_responsavel,
+
+        competencia,
+
+        competencia_mes: Number(mes),
+
+        competencia_ano: Number(ano)
+
+    });
+
+    return dadosTituloGerado;
+
+}
+
 // ======================================================
 // INICIALIZAÇÃO
 // ======================================================
 
 app.post("/gerar-boleto", async (req, res) => {
 
-const {
-
-    id_mensalidade,
-
-    guid_aluno,
-
-    guid_responsavel,
-
-    cpfCnpj,
-
-    nome,
-
-    endereco,
-
-    cidade,
-
-    uf,
-
-    cep,
-
-    valorNominal,
-
-    valorDesconto,
-
-    dataVencimento
-
-} = req.body;
-
-const documento = String(cpfCnpj).replace(/\D/g, "");
-
     try {
 
-        const competencia = competenciaAtual().competencia;
+        const dados = await gerarBoletoInterno(req.body);
 
-        const corpo = JSON.stringify({
+        res.json({
 
-seuNumero: `ERP|${id_mensalidade}|${guid_aluno}|${competencia}`,
+            sucesso: true,
 
-valorNominal: Number(valorNominal),
-
-dataVencimento: dataVencimento,
-
-
-            numDiasAgenda: 30,
-
-multa: {
-    codigo: "PERCENTUAL",
-    taxa: 2
-},
-
-mora: {
-    codigo: "TAXAMENSAL",
-    taxa: 1
-},
-
-descontos: [
-
-    {
-        codigo: "VALORFIXO",
-        taxa: 0,
-        valor: Number(valorDesconto || 0),
-        data: dataVencimento
-    }
-
-],
-
-pagador: {
-
-    cpfCnpj: documento,
-
-    tipoPessoa: documento.length === 14 ? "JURIDICA" : "FISICA",
-
-    nome,
-
-    endereco,
-
-    cidade,
-
-    uf,
-
-    cep
-
-}
+            dados
 
         });
 
-const emissao = await requisicaoInter({
+    } catch (erro) {
 
-    path: "/cobranca/v3/cobrancas",
+        console.error(erro);
 
-    method: "POST",
+        res.status(500).json({
 
-    body: corpo
+            sucesso: false,
 
-});
+            erro: erro.message
 
-        if (!emissao.json.codigoSolicitacao) {
+        });
 
-    throw new Error("Banco Inter não retornou o código da cobrança.");
-
-}
-
-const codigo = emissao.json.codigoSolicitacao;
-
-const detalhe = await consultarCobranca(
-    codigo,
-    emissao.token
-);
-
-const dados = dadosTitulo(detalhe);
-
-const [competenciaMes, competenciaAno] =
-    competencia.split("/");
-
-await salvarTitulo({
-
-    ...dados,
-
-    origem: "ERP",
-
-    id_mensalidade,
-
-    guid_aluno,
-
-    guid_responsavel,
-
-    competencia,
-
-    competencia_mes: Number(competenciaMes),
-
-    competencia_ano: Number(competenciaAno)
+    }
 
 });
 
-res.json({
+// ======================================================
+// GERAÇÃO EM LOTE DAS COBRANÇAS
+// ======================================================
 
-    sucesso: true,
+app.post("/api/cobrancas/gerar", async (req, res) => {
 
-    dados
+    try {
 
-});
+        const competencia = req.body.competencia;
+
+        const analise = await analisarCobrancas(competencia);
+
+        let geradas = 0;
+        let erros = 0;
+
+        const resultado = [];
+
+        for (const item of analise.aptosGeracao) {
+
+            try {
+
+                const resposta = await gerarBoletoInterno(item);
+
+                resultado.push({
+
+                    aluno: item.aluno,
+
+                    sucesso: true,
+
+                    dados: resposta
+
+                });
+
+                geradas++;
+
+            } catch (erro) {
+
+                resultado.push({
+
+                    aluno: item.aluno,
+
+                    sucesso: false,
+
+                    erro: erro.message
+
+                });
+
+                erros++;
+
+            }
+
+        }
+
+        res.json({
+
+            sucesso: true,
+
+            competencia,
+
+            total: analise.aptosGeracao.length,
+
+            geradas,
+
+            erros,
+
+            resultado
+
+        });
 
     } catch (erro) {
 
         res.status(500).json({
+
             sucesso: false,
+
             erro: erro.message
+
         });
 
     }
@@ -1024,135 +1108,125 @@ app.get("/mensalidades", async (req, res) => {
 // ANÁLISE DAS COBRANÇAS
 // ===========================================
 
-app.get("/api/cobrancas/analisar", async (req, res) => {
+async function analisarCobrancas(competencia) {
 
-    try {
+    let query = supabase
+        .from("vw_mensalidades")
+        .select("*");
 
-        const competencia = req.query.competencia;
+    if (competencia) {
+        query = query.eq("competencia", competencia);
+    }
 
-        let mensalidadesQuery = supabase
-            .from("vw_mensalidades")
-            .select("*");
+    const {
+        data: mensalidades,
+        error
+    } = await query;
 
-        if (competencia) {
-            mensalidadesQuery =
-                mensalidadesQuery.eq("competencia", competencia);
+    if (error)
+        throw error;
+
+    let existentes = 0;
+    let pendentes = 0;
+    let inconsistencias = 0;
+
+    let valorTotal = 0;
+    let valorGerar = 0;
+
+    const lista = [];
+    const aptosGeracao = [];
+    const bloqueados = [];
+
+    for (const m of mensalidades) {
+
+        console.log(m);
+        const erros = [];
+
+        if (!m.guid_aluno)
+            erros.push("Aluno não vinculado.");
+
+        if (!m.guid_responsavel)
+            erros.push("Responsável não vinculado.");
+
+        if (!m.responsavel)
+            erros.push("Responsável não informado.");
+
+        if (!m.valor_final)
+            erros.push("Valor da cobrança inválido.");
+
+        if (!m.vencimento)
+            erros.push("Vencimento não informado.");
+
+        valorTotal += Number(m.valor_final || 0);
+
+        const possuiTitulo =
+    m.status !== "SEM_TITULO";
+
+        if (possuiTitulo) {
+
+            existentes++;
+
+        } else {
+
+            pendentes++;
+
+            valorGerar +=
+                Number(m.valor_final || 0);
+
         }
 
-        const { data: mensalidades, error: erroMensalidades } =
-            await mensalidadesQuery;
+        const registro = {
 
-        if (erroMensalidades)
-            throw erroMensalidades;
+            idMensalidade: m.id_mensalidade,
 
-        const { data: titulos, error: erroTitulos } =
-            await supabase
-                .from("financeiro_titulos")
-                .select("*");
+            idTitulo: m.id_titulo,
 
-        if (erroTitulos)
-            throw erroTitulos;
+            guidAluno: m.guid_aluno,
 
-        let existentes = 0;
-        let pendentes = 0;
-        let inconsistencias = 0;
+            guidResponsavel: m.guid_responsavel,
 
-        let valorTotal = 0;
-        let valorGerar = 0;
-        
-        const aptosGeracao = [];
-        const bloqueados = [];
-        
-        const lista = [];
-        const erros = [];    
+            aluno: m.aluno,
 
-        for (const mensalidade of mensalidades) {
-            // Validações obrigatórias
-if (!mensalidade.guid_responsavel)
-    erros.push("Responsável não vinculado.");
+            responsavel: m.responsavel,
 
-if (!mensalidade.responsavel_nome)
-    erros.push("Responsável sem nome.");
+            whatsapp: m.whatsapp,
 
-if (!mensalidade.responsavel_cpf)
-    erros.push("Responsável sem CPF.");
+            competencia: m.competencia,
 
-if (!mensalidade.responsavel_cep)
-    erros.push("CEP não informado.");
+            disciplinas: m.disciplinas,
 
-if (!mensalidade.responsavel_endereco)
-    erros.push("Endereço não informado.");
+            valorOriginal: Number(m.valor_original || 0),
 
-if (!mensalidade.responsavel_numero)
-    erros.push("Número do endereço não informado.");
+            valorDesconto: Number(m.valor_desconto || 0),
 
-if (!mensalidade.responsavel_bairro)
-    erros.push("Bairro não informado.");
+            valorFinal: Number(m.valor_final || 0),
 
-if (!mensalidade.responsavel_cidade)
-    erros.push("Cidade não informada.");
+            vencimento: m.vencimento,
 
-if (!mensalidade.responsavel_uf)
-    erros.push("UF não informada.");
+            status: m.status,
 
-            valorTotal +=
-                Number(mensalidade.valor || 0);
+            possuiTitulo,
 
-            const titulo = titulos.find(t =>
+            erros
 
-                t.id_mensalidade === mensalidade.id_mensalidade
+        };
 
-            );
+        lista.push(registro);
 
-            if (titulo) {
-
-                existentes++;
-
-            } else {
-
-                pendentes++;
-
-                valorGerar +=
-                    Number(mensalidade.valor || 0);
-
-            }
-
-            const registro = {
-
-    id_mensalidade: mensalidade.id_mensalidade,
-
-    guid_aluno: mensalidade.guid_aluno,
-
-    guid_responsavel: mensalidade.guid_responsavel,
-
-    aluno: mensalidade.nome,
-
-    responsavel: mensalidade.responsavel_nome,
-
-    cpf: mensalidade.responsavel_cpf,
-
-    valor: mensalidade.valor,
-
-    possuiTitulo: !!titulo,
-
-    erros: [...erros]
-
-};
-
-lista.push(registro);
-
-if (titulo) {
+        if (!podeGerar) {
 
     bloqueados.push({
 
         ...registro,
 
-        motivo: "Já possui cobrança."
+        motivo: `Status: ${m.status}`
 
     });
 
 }
-else if (erros.length) {
+else if (erros.length > 0) {
+
+    inconsistencias++;
 
     bloqueados.push({
 
@@ -1169,42 +1243,53 @@ else {
 
 }
 
-        }
+    }
+
+    return {
+
+        competencia,
+
+        mensalidades: mensalidades.length,
+
+        existentes,
+
+        pendentes,
+
+        inconsistencias,
+
+        aptos: aptosGeracao.length,
+
+        bloqueados: bloqueados.length,
+
+        valorTotal,
+
+        valorGerar,
+
+        aptosGeracao,
+
+        bloqueados,
+
+        lista
+
+    };
+
+}
+
+app.get("/api/cobrancas/analisar", async (req, res) => {
+
+    try {
+
+        const competencia = req.query.competencia;
+
+const resultado = await analisarCobrancas(competencia);
 
         res.json({
 
-            sucesso: true,
+    sucesso: true,
 
-            competencia,
+    ...resultado
 
-            mensalidades:
-                mensalidades.length,
-
-            existentes,
-
-            pendentes,
-
-            aptos: aptosGeracao.length,
-
-bloqueados: bloqueados.length,
-
-aptosGeracao,
-
-bloqueados,
-
-            inconsistencias,
-
-            valorTotal,
-
-            valorGerar,
-
-            erros: erros.length,
-
-            lista
-
-            
-
-        });
+});
 
     }
 
