@@ -1175,8 +1175,6 @@ async function analisarCobrancas(competencia) {
 
         }
 
-        const possuiTitulo = !!m.id_titulo;
-
 const podeGerar =
     m.status === "ABERTO";
 
