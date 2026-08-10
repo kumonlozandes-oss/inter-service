@@ -772,11 +772,27 @@ const cpfCnpj = responsavel_cpf;
 const nome = responsavel;
 const endereco = responsavel_endereco;
 const cidade = responsavel_cidade;
-const uf = responsavel_uf;
+const uf = String(responsavel_uf || "").replace("BR-", "");
 const cep = responsavel_cep;
 
 const valorNominal = Number(valorFinal);
-const dataVencimento = `${competencia.split("/")[1]}-${competencia.split("/")[0]}-${String(vencimento).padStart(2,"0")}`;
+let dataVencimento = `${competencia.split("/")[1]}-${competencia.split("/")[0]}-${String(vencimento).padStart(2,"0")}`;
+
+const hoje = new Date();
+hoje.setHours(0,0,0,0);
+
+const vencimentoData = new Date(dataVencimento);
+
+if (vencimentoData < hoje) {
+
+    vencimentoData.setMonth(vencimentoData.getMonth() + 1);
+
+    dataVencimento =
+        `${vencimentoData.getFullYear()}-` +
+        `${String(vencimentoData.getMonth() + 1).padStart(2,"0")}-` +
+        `${String(vencimentoData.getDate()).padStart(2,"0")}`;
+
+}
 
 const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
