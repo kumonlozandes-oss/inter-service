@@ -946,8 +946,11 @@ console.log("IDS:", ids);
     ids.length === 0
         ? analise.aptosGeracao
         : analise.aptosGeracao.filter(item =>
-              ids.includes(item.guidAluno)
+              ids.includes(item.guidAluno) ||
+              ids.includes(item.idMensalidade)
           );
+
+console.log("LISTA GERAÇÃO:", listaGeracao.length);
 
 for (const item of listaGeracao) {
 
