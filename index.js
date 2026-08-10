@@ -1111,7 +1111,7 @@ app.get("/mensalidades", async (req, res) => {
 async function analisarCobrancas(competencia) {
 
     let query = supabase
-    .from("mensalidades")
+    .from("vw_mensalidades")
     .select("*");
 
     if (competencia) {
@@ -1123,7 +1123,7 @@ async function analisarCobrancas(competencia) {
         error
     } = await query;
 
-    console.log("===== MENSALIDADES =====");
+console.log("TOTAL ENCONTRADO:", mensalidades?.length);
 console.log(mensalidades);
 console.log("===== ERRO =====");
 console.log(error);
