@@ -1142,8 +1142,10 @@ console.log(error);
     const aptosGeracao = [];
     const bloqueados = [];
 
+    console.log("Quantidade:", mensalidades?.length);
     for (const m of mensalidades) {
-
+    console.log("Registro:", m);
+break;
         console.log(m);
         const erros = [];
 
