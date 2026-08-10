@@ -917,6 +917,10 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
         const competencia = req.body.competencia;
         const ids = req.body.idsMensalidades || [];
 
+        console.log("BODY:", req.body);
+console.log("IDS:", ids);
+console.log("APTOS:", analise.aptosGeracao.length);
+
         const analise = await analisarCobrancas(competencia);
 
         let geradas = 0;
