@@ -1144,9 +1144,7 @@ console.log(error);
 
     console.log("Quantidade:", mensalidades?.length);
     for (const m of mensalidades) {
-    console.log("Registro:", m);
-break;
-        console.log(m);
+
         const erros = [];
 
         if (!m.guid_aluno)
