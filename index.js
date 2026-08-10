@@ -782,7 +782,7 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
     const corpo = JSON.stringify({
 
-        seuNumero: `ERP|${id_mensalidade}|${guid_aluno}|${competencia}`,
+        seuNumero: `${guid_aluno.substring(0,15)}`,
 
         valorNominal: Number(valorNominal),
 
@@ -824,7 +824,7 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
             cidade,
 
-            uf,
+            uf: String(uf || "").replace("-",""),
 
             cep
 
