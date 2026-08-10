@@ -746,6 +746,8 @@ function agendarProximaExecucao() {
 
 }
 
+async function gerarBoletoInterno(dados) {
+
 const {
     idMensalidade,
     guidAluno,
