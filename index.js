@@ -1197,9 +1197,6 @@ async function analisarCobrancas(competencia) {
 
         }
 
-        if (!aluno.guid_responsavel)
-            erros.push("Responsável não vinculado.");
-
         if (!aluno.responsavel)
             erros.push("Responsável não informado.");
 
