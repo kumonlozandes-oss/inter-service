@@ -915,6 +915,7 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
     try {
 
         const competencia = req.body.competencia;
+        const ids = req.body.idsMensalidades || [];
 
         const analise = await analisarCobrancas(competencia);
 
@@ -923,7 +924,14 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
         const resultado = [];
 
-        for (const item of analise.aptosGeracao) {
+        const listaGeracao =
+    ids.length === 0
+        ? analise.aptosGeracao
+        : analise.aptosGeracao.filter(item =>
+              ids.includes(item.guidAluno)
+          );
+
+for (const item of listaGeracao) {
 
             try {
 
@@ -965,7 +973,7 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
             competencia,
 
-            total: analise.aptosGeracao.length,
+            total: listaGeracao.length,
 
             geradas,
 
