@@ -1123,6 +1123,11 @@ async function analisarCobrancas(competencia) {
         error
     } = await query;
 
+    console.log("===== MENSALIDADES =====");
+console.log(mensalidades);
+console.log("===== ERRO =====");
+console.log(error);
+
     if (error)
         throw error;
 
