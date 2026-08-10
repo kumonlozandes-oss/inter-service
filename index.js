@@ -957,6 +957,7 @@ for (const item of listaGeracao) {
             try {
 
                 const resposta = await gerarBoletoInterno(item);
+                console.log("BOLETO GERADO");
 
                 resultado.push({
 
@@ -971,6 +972,7 @@ for (const item of listaGeracao) {
                 geradas++;
 
             } catch (erro) {
+                console.error("ERRO BOLETO:", erro);
 
                 resultado.push({
 
