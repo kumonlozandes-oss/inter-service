@@ -1298,17 +1298,16 @@ const resultado = await analisarCobrancas(competencia);
 
     catch (erro) {
 
-        console.error(erro);
+    console.error("ERRO ANALISAR COBRANÇAS:");
+    console.error(erro);
 
-        res.status(500).json({
+    res.status(500).json({
+        sucesso: false,
+        erro: erro.message,
+        stack: erro.stack
+    });
 
-            sucesso: false,
-
-            erro: erro.message
-
-        });
-
-    }
+}
 
 });
 
