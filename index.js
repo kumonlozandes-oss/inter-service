@@ -1317,7 +1317,7 @@ async function analisarCobrancas(competencia) {
 
         bloqueados,
 
-        lista
+        lista: aptosGeracao
 
     };
 
