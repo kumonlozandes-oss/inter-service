@@ -776,7 +776,7 @@ const uf = responsavel_uf;
 const cep = responsavel_cep;
 
 const valorNominal = Number(valorFinal);
-const dataVencimento = vencimento;
+const dataVencimento = `${competencia.split("/")[1]}-${competencia.split("/")[0]}-${String(vencimento).padStart(2,"0")}`;
 
 const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
