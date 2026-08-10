@@ -972,7 +972,8 @@ for (const item of listaGeracao) {
                 geradas++;
 
             } catch (erro) {
-                console.error("ERRO BOLETO:", erro);
+                console.error("ERRO BOLETO:");
+console.error(JSON.stringify(erro, null, 2));
 
                 resultado.push({
 
