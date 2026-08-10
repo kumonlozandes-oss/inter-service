@@ -746,26 +746,37 @@ function agendarProximaExecucao() {
 
 }
 
-async function gerarBoletoInterno(dados) {
+const {
+    idMensalidade,
+    guidAluno,
+    guidResponsavel,
+    responsavel,
+    responsavel_cpf,
+    responsavel_endereco,
+    responsavel_cidade,
+    responsavel_uf,
+    responsavel_cep,
+    valorFinal,
+    valorDesconto,
+    vencimento,
+    competencia
+} = dados;
 
-    const {
-        id_mensalidade,
-        guid_aluno,
-        guid_responsavel,
-        cpfCnpj,
-        nome,
-        endereco,
-        cidade,
-        uf,
-        cep,
-        valorNominal,
-        valorDesconto,
-        dataVencimento
-    } = dados;
+const id_mensalidade = idMensalidade;
+const guid_aluno = guidAluno;
+const guid_responsavel = guidResponsavel;
 
-    const documento = String(cpfCnpj).replace(/\D/g, "");
+const cpfCnpj = responsavel_cpf;
+const nome = responsavel;
+const endereco = responsavel_endereco;
+const cidade = responsavel_cidade;
+const uf = responsavel_uf;
+const cep = responsavel_cep;
 
-    const competencia = competenciaAtual().competencia;
+const valorNominal = Number(valorFinal);
+const dataVencimento = vencimento;
+
+const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
     const corpo = JSON.stringify({
 
@@ -1236,39 +1247,49 @@ async function analisarCobrancas(competencia) {
 
         const registro = {
 
-            idMensalidade: null,
+    idMensalidade: null,
 
-            idTitulo: titulo?.id || null,
+    idTitulo: titulo?.id || null,
 
-            guidAluno: aluno.guid,
+    guidAluno: aluno.guid,
 
-            guidResponsavel: aluno.guid_responsavel,
+    guidResponsavel: aluno.guid_responsavel,
 
-            aluno: aluno.nome,
+    aluno: aluno.nome,
 
-            responsavel: aluno.responsavel,
+    responsavel: aluno.responsavel,
 
-            whatsapp: aluno.responsavel_telefone,
+    responsavel_cpf: aluno.responsavel_cpf,
 
-            competencia,
+    responsavel_endereco: aluno.responsavel_endereco,
 
-            disciplinas: aluno.cursos,
+    responsavel_cidade: aluno.responsavel_cidade,
 
-            valorOriginal: Number(aluno.valor_curso || 0),
+    responsavel_uf: aluno.responsavel_uf,
 
-            valorDesconto: Number(aluno.valor_desconto || 0),
+    responsavel_cep: aluno.responsavel_cep,
 
-            valorFinal: Number(aluno.valor_final || 0),
+    whatsapp: aluno.responsavel_telefone,
 
-            vencimento: aluno.dia_vencimento,
+    competencia,
 
-            status: titulo ? titulo.status : "SEM_TITULO",
+    disciplinas: aluno.cursos,
 
-            possuiTitulo,
+    valorOriginal: Number(aluno.valor_curso || 0),
 
-            erros
+    valorDesconto: Number(aluno.valor_desconto || 0),
 
-        };
+    valorFinal: Number(aluno.valor_final || 0),
+
+    vencimento: aluno.dia_vencimento,
+
+    status: titulo ? titulo.status : "SEM_TITULO",
+
+    possuiTitulo,
+
+    erros
+
+};
 
         lista.push(registro);
 
