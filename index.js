@@ -1106,30 +1106,52 @@ app.get("/mensalidades", async (req, res) => {
 
 // ===========================================
 // ANÁLISE DAS COBRANÇAS
-// ===========================================
+// ======================
 
 async function analisarCobrancas(competencia) {
 
-    let query = supabase
-    .from("vw_mensalidades")
-    .select("*");
+    const { data: alunos, error: erroAlunos } =
+        await supabase
+            .from("alunos_master")
+            .select(`
+                guid,
+                nome,
+                cursos,
+                valor_curso,
+                valor_desconto,
+                valor_final,
+                dia_vencimento,
+                responsavel,
+                responsavel_cpf,
+                responsavel_telefone,
+                responsavel_email,
+                responsavel_cep,
+                responsavel_endereco,
+                responsavel_numero,
+                responsavel_bairro,
+                responsavel_cidade,
+                responsavel_uf,
+                guid_responsavel,
+                status
+            `)
+            .eq("status", "ATIVO");
 
-    if (competencia) {
-        query = query.eq("competencia", competencia);
-    }
+    if (erroAlunos)
+        throw erroAlunos;
 
-    const {
-        data: mensalidades,
-        error
-    } = await query;
+    const { data: titulos, error: erroTitulos } =
+        await supabase
+            .from("financeiro_titulos")
+            .select(`
+                id,
+                guid_aluno,
+                competencia,
+                status,
+                valor_final
+            `);
 
-console.log("TOTAL ENCONTRADO:", mensalidades?.length);
-console.log(mensalidades);
-console.log("===== ERRO =====");
-console.log(error);
-
-    if (error)
-        throw error;
+    if (erroTitulos)
+        throw erroTitulos;
 
     let existentes = 0;
     let pendentes = 0;
@@ -1142,30 +1164,26 @@ console.log(error);
     const aptosGeracao = [];
     const bloqueados = [];
 
-    console.log("Quantidade:", mensalidades?.length);
-    for (const m of mensalidades) {
+    const mapaTitulos = new Map();
 
-        const erros = [];
+    for (const titulo of titulos) {
 
-        if (!m.guid_aluno)
-            erros.push("Aluno não vinculado.");
+        mapaTitulos.set(
+            `${titulo.guid_aluno}_${titulo.competencia}`,
+            titulo
+        );
 
-        if (!m.guid_responsavel)
-            erros.push("Responsável não vinculado.");
+    }
 
-        if (!m.responsavel)
-            erros.push("Responsável não informado.");
+    for (const aluno of alunos) {
 
-        if (!m.valor_final)
-            erros.push("Valor da cobrança inválido.");
+         const erros = [];
 
-        if (!m.vencimento)
-            erros.push("Vencimento não informado.");
+        const chave = `${aluno.guid}_${competencia}`;
 
-        valorTotal += Number(m.valor_final || 0);
+        const titulo = mapaTitulos.get(chave);
 
-        const possuiTitulo =
-    m.status !== "SEM_TITULO";
+        const possuiTitulo = !!titulo;
 
         if (possuiTitulo) {
 
@@ -1175,43 +1193,66 @@ console.log(error);
 
             pendentes++;
 
-            valorGerar +=
-                Number(m.valor_final || 0);
+            valorGerar += Number(aluno.valor_final || 0);
 
         }
 
-const podeGerar =
-    m.status === "ABERTO";
+        if (!aluno.guid_responsavel)
+            erros.push("Responsável não vinculado.");
+
+        if (!aluno.responsavel)
+            erros.push("Responsável não informado.");
+
+        if (!aluno.responsavel_cpf)
+            erros.push("CPF do responsável não informado.");
+
+        if (!aluno.responsavel_cep)
+            erros.push("CEP não informado.");
+
+        if (!aluno.responsavel_endereco)
+            erros.push("Endereço não informado.");
+
+        if (!aluno.responsavel_numero)
+            erros.push("Número não informado.");
+
+        if (!aluno.responsavel_bairro)
+            erros.push("Bairro não informado.");
+
+        if (!aluno.responsavel_cidade)
+            erros.push("Cidade não informada.");
+
+        if (!aluno.responsavel_uf)
+            erros.push("UF não informada.");
 
         const registro = {
 
-            idMensalidade: m.id_mensalidade,
+            idMensalidade: null,
 
-            idTitulo: m.id_titulo,
+            idTitulo: titulo?.id || null,
 
-            guidAluno: m.guid_aluno,
+            guidAluno: aluno.guid,
 
-            guidResponsavel: m.guid_responsavel,
+            guidResponsavel: aluno.guid_responsavel,
 
-            aluno: m.aluno,
+            aluno: aluno.nome,
 
-            responsavel: m.responsavel,
+            responsavel: aluno.responsavel,
 
-            whatsapp: m.whatsapp,
+            whatsapp: aluno.responsavel_telefone,
 
-            competencia: m.competencia,
+            competencia,
 
-            disciplinas: m.disciplinas,
+            disciplinas: aluno.cursos,
 
-            valorOriginal: Number(m.valor_original || 0),
+            valorOriginal: Number(aluno.valor_curso || 0),
 
-            valorDesconto: Number(m.valor_desconto || 0),
+            valorDesconto: Number(aluno.valor_desconto || 0),
 
-            valorFinal: Number(m.valor_final || 0),
+            valorFinal: Number(aluno.valor_final || 0),
 
-            vencimento: m.vencimento,
+            vencimento: aluno.dia_vencimento,
 
-            status: m.status,
+            status: titulo ? titulo.status : "SEM_TITULO",
 
             possuiTitulo,
 
@@ -1221,35 +1262,37 @@ const podeGerar =
 
         lista.push(registro);
 
-        if (!podeGerar) {
+        if (possuiTitulo) {
 
-    bloqueados.push({
+            bloqueados.push({
 
-        ...registro,
+                ...registro,
 
-        motivo: `Status: ${m.status}`
+                motivo: `Já possui cobrança (${titulo.status}).`
 
-    });
+            });
 
-}
-else if (erros.length > 0) {
+        }
+        else if (erros.length > 0) {
 
-    inconsistencias++;
+            inconsistencias++;
 
-    bloqueados.push({
+            bloqueados.push({
 
-        ...registro,
+                ...registro,
 
-        motivo: "Cadastro incompleto."
+                motivo: "Cadastro incompleto."
 
-    });
+            });
 
-}
-else {
+        }
+        else {
 
-    aptosGeracao.push(registro);
+            aptosGeracao.push(registro);
 
-}
+        }
+
+        valorTotal += Number(aluno.valor_final || 0);
 
     }
 
@@ -1257,7 +1300,7 @@ else {
 
         competencia,
 
-        mensalidades: mensalidades.length,
+        mensalidades: alunos.length,
 
         existentes,
 
