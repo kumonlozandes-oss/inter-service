@@ -924,7 +924,17 @@ const emissao = await requisicaoInter({
 
     });
 
-    return dadosTituloGerado;
+    const { data: tituloSalvo, error: erroTitulo } =
+await supabase
+    .from("financeiro_titulos")
+    .select("*")
+    .eq("codigo_solicitacao", dadosTituloGerado.codigo_solicitacao)
+    .single();
+
+if (erroTitulo)
+    throw erroTitulo;
+
+return tituloSalvo;
 
 }
 
