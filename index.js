@@ -421,6 +421,13 @@ async function listarCobrancasInter() {
 }
 async function salvarTitulo(dados) {
 
+    console.log("SALVAR TITULO RECEBEU:");
+console.log({
+    id_mensalidade: dados.id_mensalidade,
+    guid_aluno: dados.guid_aluno,
+    guid_responsavel: dados.guid_responsavel
+});
+
     const { data: existente, error } = await supabase
         .from("financeiro_titulos")
         .select("*")
@@ -935,6 +942,13 @@ const emissao = await requisicaoInter({
 
     const [mes, ano] = competencia.split("/");
 
+    console.log("ANTES DE SALVAR:");
+console.log({
+    id_mensalidade,
+    guid_aluno,
+    guid_responsavel
+});
+    
     const titulo = await salvarTitulo({
 
     ...dadosTituloGerado,
