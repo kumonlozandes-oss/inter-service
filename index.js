@@ -1239,7 +1239,6 @@ app.get("/mensalidades", async (req, res) => {
 async function gerarMensalidades(competencia) {
 
     const [mes, ano] = competencia.split("/");
-    console.log("GERANDO MENSALIDADES:", competencia);
 
     const { data: alunos, error } =
         await supabase
@@ -1249,10 +1248,8 @@ async function gerarMensalidades(competencia) {
 
     if (error)
         throw error;
-    console.log("ALUNOS ATIVOS:", alunos.length);
 
     for (const aluno of alunos) {
-        console.log("ALUNO:", aluno.nome);
 
         const { data: existente } =
             await supabase
@@ -1265,45 +1262,36 @@ async function gerarMensalidades(competencia) {
         if (existente)
     continue;
 
-console.log("CRIANDO MENSALIDADE:", aluno.nome);
-
-await supabase
+const { error: erroInsert } = await supabase
     .from("mensalidades")
     .insert({
-
         id_mensalidade: crypto.randomUUID(),
 
         guid_aluno: aluno.guid,
-
         guid_responsavel: aluno.guid_responsavel,
-
         id_aluno: aluno.id_aluno,
 
         aluno: aluno.nome,
-
         responsavel: aluno.responsavel,
 
         curso: aluno.cursos,
 
         competencia,
-
         competencia_mes: Number(mes),
-
         competencia_ano: Number(ano),
 
         valor_original: aluno.valor_curso,
-
         valor_desconto: aluno.valor_desconto,
-
         valor_final: aluno.valor_final,
 
         vencimento: `${ano}-${mes}-${String(aluno.dia_vencimento).padStart(2,"0")}`,
 
         status: "PENDENTE",
-
         origem: "ERP"
-
     });
+
+if (erroInsert)
+    throw erroInsert;
 
     }
 
@@ -1434,8 +1422,28 @@ valorGerar += Number(mensalidade.valor_final || 0);
 
     idMensalidade: mensalidade.id_mensalidade,
 
-    idTitulo: titulo?.id || mensalidade.id_titulo || null,
-
+    idTitulo: titulo?.id ?? null,
+    
+    idInter: titulo?.id_inter ?? null,
+    
+    status: titulo?.status ?? mensalidade.status,
+    
+    statusInter: titulo?.status_inter ?? null,
+    
+    nossoNumero: titulo?.nosso_numero ?? null,
+    
+    seuNumero: titulo?.seu_numero ?? null,
+    
+    linhaDigitavel: titulo?.linha_digitavel ?? null,
+    
+    codigoBarras: titulo?.codigo_barras ?? null,
+    
+    codigoPix: titulo?.codigo_pix ?? null,
+    
+    pixCopiaCola: titulo?.pix_copia_cola ?? null,
+    
+    urlPdfBoleto: titulo?.url_pdf_boleto ?? null,
+            
     guidAluno: mensalidade.guid_aluno,
 
     guidResponsavel: mensalidade.guid_responsavel,
@@ -1464,17 +1472,21 @@ valorGerar += Number(mensalidade.valor_final || 0);
 
     disciplinas: mensalidade.curso,
 
-    valorOriginal: Number(mensalidade.valor_original || 0),
+valorOriginal: Number(
+    titulo?.valor_original ?? mensalidade.valor_original ?? 0
+),
 
-    valorDesconto: Number(mensalidade.valor_desconto || 0),
+valorDesconto: Number(
+    titulo?.valor_desconto ?? mensalidade.valor_desconto ?? 0
+),
 
-    valorFinal: Number(mensalidade.valor_final || 0),
+valorFinal: Number(
+    titulo?.valor_final ?? mensalidade.valor_final ?? 0
+),
 
     vencimento: mensalidade.vencimento,
 
     formaPagamento: mensalidade.forma_pagamento,
-
-    status: titulo ? titulo.status : mensalidade.status,
 
     possuiTitulo,
 
