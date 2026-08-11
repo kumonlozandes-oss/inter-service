@@ -1009,23 +1009,29 @@ for (const item of listaGeracao) {
 
                 geradas++;
 
-            } catch (erro) {
-                console.error("ERRO BOLETO:");
-console.error(JSON.stringify(erro, null, 2));
+} catch (erro) {
 
-                resultado.push({
+    console.error("===== ERRO BOLETO =====");
+    console.error(erro);
 
-                    aluno: item.aluno,
+    if (erro instanceof Error) {
+        console.error("MESSAGE:", erro.message);
+        console.error("STACK:", erro.stack);
+    }
 
-                    sucesso: false,
+    if (erro.response) {
+        console.error("RESPONSE:");
+        console.error(erro.response.data);
+    }
 
-                    erro: erro.message
+    resultado.push({
+        aluno: item.aluno,
+        sucesso: false,
+        erro: erro instanceof Error ? erro.message : String(erro)
+    });
 
-                });
-
-                erros++;
-
-            }
+    erros++;
+}
 
         }
 
