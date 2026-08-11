@@ -869,6 +869,9 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
     });
 
+    console.log("JSON ENVIADO AO INTER:");
+    console.log(corpo);
+
     const emissao = await requisicaoInter({
 
         path: "/cobranca/v3/cobrancas",
