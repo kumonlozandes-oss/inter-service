@@ -777,7 +777,6 @@ const {
 
 const id_mensalidade = idMensalidade;
 const guid_aluno = guidAluno;
-const id_mensalidade = idMensalidade;
 const guid_aluno = guidAluno;
 const guid_responsavel = guidResponsavel;
 
