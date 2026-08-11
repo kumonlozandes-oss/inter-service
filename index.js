@@ -834,17 +834,14 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
             taxa: 1
         },
 
-        descontos:
+        desconto:
     valorDescontoNumerico > 0
-        ? [
-            {
-                codigo: "VALORFIXO",
-                taxa: 0,
-                valor: valorDescontoNumerico,
-                data: dataVencimento
-            }
-        ]
-        : [],
+        ? {
+            codigo: "VALORFIXODATAINFORMADA",
+            quantidadeDias: 0,
+            valor: valorDescontoNumerico
+        }
+        : undefined,
 
         pagador: {
 
@@ -877,6 +874,12 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
         path: "/cobranca/v3/cobrancas",
 
         method: "POST",
+
+        console.log({
+    valorOriginalNumerico,
+    valorDescontoNumerico,
+    dataVencimento
+});
 
         body: corpo
 
