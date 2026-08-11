@@ -438,22 +438,25 @@ console.log({
 
     const registro = {
 
-        ...(existente || {}),
+    ...dados,
 
-        ...dados,
+    ...(existente || {}),
 
-        guid_aluno: dados.guid_aluno || null,
-        guid_responsavel: dados.guid_responsavel || null,
+    guid_aluno: dados.guid_aluno ?? existente?.guid_aluno ?? null,
 
-        competencia: dados.competencia || null,
-        competencia_mes: dados.competencia_mes || null,
-        competencia_ano: dados.competencia_ano || null,
+    guid_responsavel: dados.guid_responsavel ?? existente?.guid_responsavel ?? null,
 
-        id_mensalidade: dados.id_mensalidade || null,
+    id_mensalidade: dados.id_mensalidade ?? existente?.id_mensalidade ?? null,
 
-        ultima_sincronizacao: new Date().toISOString()
+    competencia: dados.competencia ?? existente?.competencia ?? null,
 
-    };
+    competencia_mes: dados.competencia_mes ?? existente?.competencia_mes ?? null,
+
+    competencia_ano: dados.competencia_ano ?? existente?.competencia_ano ?? null,
+
+    ultima_sincronizacao: new Date().toISOString()
+
+};
     let tituloSalvo;
 
     if (existente) {
