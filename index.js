@@ -996,6 +996,17 @@ console.log("IDS:", ids);
 
         const resultado = [];
 
+console.log("IDS RECEBIDOS:");
+console.log(ids);
+
+console.log("APTOS:");
+console.log(
+    analise.aptosGeracao.map(x => ({
+        idMensalidade: x.idMensalidade,
+        guidAluno: x.guidAluno
+    }))
+);
+        
         const listaGeracao =
     ids.length === 0
         ? analise.aptosGeracao
@@ -1004,7 +1015,8 @@ console.log("IDS:", ids);
               ids.includes(item.idMensalidade)
           );
 
-console.log("LISTA GERAÇÃO:", listaGeracao.length);
+console.log("LISTA GERAÇÃO:");
+console.log(listaGeracao);
 
 for (const item of listaGeracao) {
 
