@@ -474,47 +474,50 @@ if (erroInsert) throw erroInsert;
 
     }
 
-if (registro.id_mensalidade) {
+    return tituloSalvo;
 
-    const { error: erroMensalidade } = await supabase
+}
+
+async function sincronizarMensalidadeComTitulo(titulo) {
+
+    if (!titulo?.id_mensalidade)
+        return;
+
+    const { error } = await supabase
         .from("mensalidades")
         .update({
 
-            id_titulo: tituloSalvo.id,
+            id_titulo: titulo.id,
 
-            id_inter: tituloSalvo.id_inter,
+            id_inter: titulo.id_inter,
 
-            status: tituloSalvo.status,
+            status: titulo.status,
 
-            status_inter: tituloSalvo.status_inter,
+            status_inter: titulo.status_inter,
 
-            nosso_numero: tituloSalvo.nosso_numero,
+            nosso_numero: titulo.nosso_numero,
 
-            seu_numero: tituloSalvo.seu_numero,
+            seu_numero: titulo.seu_numero,
 
-            linha_digitavel: tituloSalvo.linha_digitavel,
+            linha_digitavel: titulo.linha_digitavel,
 
-            codigo_barras: tituloSalvo.codigo_barras,
+            codigo_barras: titulo.codigo_barras,
 
-            codigo_pix: tituloSalvo.codigo_pix,
+            codigo_pix: titulo.codigo_pix,
 
-            pix_copia_cola: tituloSalvo.pix_copia_cola,
+            pix_copia_cola: titulo.pix_copia_cola,
 
-            url_pdf_boleto: tituloSalvo.url_pdf_boleto,
+            url_pdf_boleto: titulo.url_pdf_boleto,
 
-            forma_pagamento: tituloSalvo.forma_pagamento,
+            forma_pagamento: titulo.forma_pagamento,
 
             data_atualizacao: new Date().toISOString()
 
         })
-        .eq("id_mensalidade", registro.id_mensalidade);
+        .eq("id_mensalidade", titulo.id_mensalidade);
 
-    if (erroMensalidade)
-        throw erroMensalidade;
-
-}
-
-    return tituloSalvo;
+    if (error)
+        throw error;
 
 }
 
@@ -932,27 +935,29 @@ const emissao = await requisicaoInter({
 
     const [mes, ano] = competencia.split("/");
 
-    await salvarTitulo({
+    const titulo = await salvarTitulo({
 
-        ...dadosTituloGerado,
+    ...dadosTituloGerado,
 
-        origem: "ERP",
+    origem: "ERP",
 
-        id_mensalidade,
+    id_mensalidade,
 
-        guid_aluno,
+    guid_aluno,
 
-        guid_responsavel,
+    guid_responsavel,
 
-        competencia,
+    competencia,
 
-        competencia_mes: Number(mes),
+    competencia_mes: Number(mes),
 
-        competencia_ano: Number(ano)
+    competencia_ano: Number(ano)
 
-    });
+});
 
-    return dadosTituloGerado;
+await sincronizarMensalidadeComTitulo(titulo);
+
+return titulo;
 
 }
 
