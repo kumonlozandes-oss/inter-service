@@ -1181,6 +1181,7 @@ app.get("/mensalidades", async (req, res) => {
 async function gerarMensalidades(competencia) {
 
     const [mes, ano] = competencia.split("/");
+    console.log("GERANDO MENSALIDADES:", competencia);
 
     const { data: alunos, error } =
         await supabase
@@ -1190,8 +1191,10 @@ async function gerarMensalidades(competencia) {
 
     if (error)
         throw error;
+    console.log("ALUNOS ATIVOS:", alunos.length);
 
     for (const aluno of alunos) {
+        console.log("ALUNO:", aluno.nome);
 
         const { data: existente } =
             await supabase
@@ -1206,6 +1209,8 @@ async function gerarMensalidades(competencia) {
 
         await supabase
             .from("mensalidades")
+
+            console.log("CRIANDO MENSALIDADE:", aluno.nome);
             .insert({
 
                 id_mensalidade: crypto.randomUUID(),
