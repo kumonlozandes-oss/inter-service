@@ -1337,13 +1337,25 @@ if (erroMensalidades)
     const { data: titulos, error: erroTitulos } =
         await supabase
             .from("financeiro_titulos")
-            .select(`
-                id,
-                guid_aluno,
-                competencia,
-                status,
-                valor_final
-            `);
+.select(`
+    id,
+    id_inter,
+    guid_aluno,
+    guid_responsavel,
+    competencia,
+    status,
+    status_inter,
+    nosso_numero,
+    seu_numero,
+    linha_digitavel,
+    codigo_barras,
+    codigo_pix,
+    pix_copia_cola,
+    url_pdf_boleto,
+    valor_original,
+    valor_desconto,
+    valor_final
+`);
 
     if (erroTitulos)
         throw erroTitulos;
@@ -1376,9 +1388,11 @@ if (erroMensalidades)
 
         const chave = `${mensalidade.guid_aluno}_${competencia}`;
 
-        const titulo = mapaTitulos.get(chave);
+const titulo = mapaTitulos.get(chave);
 
-        const possuiTitulo = !!titulo;
+const possuiTitulo =
+    !!titulo &&
+    !["CANCELADO", "CANCELADA"].includes(titulo.status);
 
         if (possuiTitulo) {
 
