@@ -866,23 +866,21 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
     });
 
-    console.log("JSON ENVIADO AO INTER:");
-    console.log(corpo);
-
-    const emissao = await requisicaoInter({
-
-        path: "/cobranca/v3/cobrancas",
-
-        method: "POST",
-
+console.log({
     valorOriginalNumerico,
     valorDescontoNumerico,
     dataVencimento
 });
 
-        body: corpo
+const emissao = await requisicaoInter({
 
-    });
+    path: "/cobranca/v3/cobrancas",
+
+    method: "POST",
+
+    body: corpo
+
+});
 
     if (!emissao.json.codigoSolicitacao) {
 
