@@ -752,18 +752,31 @@ const {
     idMensalidade,
     guidAluno,
     guidResponsavel,
+
     responsavel,
     responsavel_cpf,
     responsavel_endereco,
+    responsavel_numero,
+    responsavel_bairro,
     responsavel_cidade,
     responsavel_uf,
     responsavel_cep,
-    valorFinal,
+
+    whatsapp,
+
+    valorOriginal,
     valorDesconto,
+    valorFinal,
+
     vencimento,
-    competencia
+    competencia,
+
+    formaPagamento
+
 } = dados;
 
+const id_mensalidade = idMensalidade;
+const guid_aluno = guidAluno;
 const id_mensalidade = idMensalidade;
 const guid_aluno = guidAluno;
 const guid_responsavel = guidResponsavel;
@@ -771,12 +784,19 @@ const guid_responsavel = guidResponsavel;
 const cpfCnpj = responsavel_cpf;
 const nome = responsavel;
 const endereco = responsavel_endereco;
+const numero = responsavel_numero;
+const bairro = responsavel_bairro;
 const cidade = responsavel_cidade;
 const uf = String(responsavel_uf || "").replace("BR-", "");
 const cep = responsavel_cep;
 
-const valorNominal = Number(valorFinal);
-let dataVencimento = `${competencia.split("/")[1]}-${competencia.split("/")[0]}-${String(vencimento).padStart(2,"0")}`;
+const valorOriginalNumerico = Number(valorOriginal || 0);
+const valorDescontoNumerico = Number(valorDesconto || 0);
+const valorFinalNumerico = Number(valorFinal || 0);
+
+const valorNominal = valorOriginalNumerico;
+
+const dataVencimento = vencimento;
 
 const hoje = new Date();
 hoje.setHours(0,0,0,0);
@@ -800,7 +820,7 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
         seuNumero: `${guid_aluno.substring(0,15)}`,
 
-        valorNominal: Number(valorNominal),
+        valorNominal: valorOriginalNumerico,
 
         dataVencimento,
 
@@ -816,14 +836,17 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
             taxa: 1
         },
 
-        descontos: [
+        descontos:
+    valorDescontoNumerico > 0
+        ? [
             {
                 codigo: "VALORFIXO",
                 taxa: 0,
-                valor: Number(valorDesconto || 0),
+                valor: valorDescontoNumerico,
                 data: dataVencimento
             }
-        ],
+        ]
+        : [],
 
         pagador: {
 
@@ -1158,34 +1181,28 @@ app.get("/mensalidades", async (req, res) => {
 
 async function analisarCobrancas(competencia) {
 
-    const { data: alunos, error: erroAlunos } =
-        await supabase
-            .from("alunos_master")
-            .select(`
-                guid,
-                nome,
-                cursos,
-                valor_curso,
-                valor_desconto,
-                valor_final,
-                dia_vencimento,
+    const { data: mensalidades, error: erroMensalidades } =
+    await supabase
+        .from("mensalidades")
+        .select(`
+            *,
+            alunos_master (
                 responsavel,
                 responsavel_cpf,
                 responsavel_telefone,
-                responsavel_email,
                 responsavel_cep,
                 responsavel_endereco,
                 responsavel_numero,
                 responsavel_bairro,
                 responsavel_cidade,
-                responsavel_uf,
-                guid_responsavel,
-                status
-            `)
-            .eq("status", "ATIVO");
+                responsavel_uf
+            )
+        `)
+        .eq("competencia", competencia)
+        .eq("status", "PENDENTE");
 
-    if (erroAlunos)
-        throw erroAlunos;
+if (erroMensalidades)
+    throw erroMensalidades;
 
     const { data: titulos, error: erroTitulos } =
         await supabase
@@ -1223,11 +1240,11 @@ async function analisarCobrancas(competencia) {
 
     }
 
-    for (const aluno of alunos) {
+    for (const mensalidade of mensalidades) {
 
          const erros = [];
 
-        const chave = `${aluno.guid}_${competencia}`;
+        const chave = `${mensalidade.guid_aluno}_${competencia}`;
 
         const titulo = mapaTitulos.get(chave);
 
@@ -1241,73 +1258,79 @@ async function analisarCobrancas(competencia) {
 
             pendentes++;
 
-            valorGerar += Number(aluno.valor_final || 0);
+valorGerar += Number(mensalidade.valor_final || 0);
 
         }
 
-        if (!aluno.responsavel)
+        if (!mensalidade.alunos_master?.responsavel)
             erros.push("Responsável não informado.");
 
-        if (!aluno.responsavel_cpf)
+        if (!mensalidade.alunos_master?.responsavel_cpf)
             erros.push("CPF do responsável não informado.");
 
-        if (!aluno.responsavel_cep)
+        if (!mensalidade.alunos_master?.responsavel_cep)
             erros.push("CEP não informado.");
 
-        if (!aluno.responsavel_endereco)
+        if (!mensalidade.alunos_master?.responsavel_endereco)
             erros.push("Endereço não informado.");
 
-        if (!aluno.responsavel_numero)
+        if (!mensalidade.alunos_master?.responsavel_numero)
             erros.push("Número não informado.");
 
-        if (!aluno.responsavel_bairro)
+        if (!mensalidade.alunos_master?.responsavel_bairro)
             erros.push("Bairro não informado.");
 
-        if (!aluno.responsavel_cidade)
+        if (!mensalidade.alunos_master?.responsavel_cidade)
             erros.push("Cidade não informada.");
 
-        if (!aluno.responsavel_uf)
+        if (!mensalidade.alunos_master?.responsavel_uf)
             erros.push("UF não informada.");
 
         const registro = {
 
-    idMensalidade: null,
+    idMensalidade: mensalidade.id_mensalidade,
 
-    idTitulo: titulo?.id || null,
+    idTitulo: titulo?.id || mensalidade.id_titulo || null,
 
-    guidAluno: aluno.guid,
+    guidAluno: mensalidade.guid_aluno,
 
-    guidResponsavel: aluno.guid_responsavel,
+    guidResponsavel: mensalidade.guid_responsavel,
 
-    aluno: aluno.nome,
+    aluno: mensalidade.aluno,
 
-    responsavel: aluno.responsavel,
+    responsavel: mensalidade.alunos_master?.responsavel,
 
-    responsavel_cpf: aluno.responsavel_cpf,
+    responsavel_cpf: mensalidade.alunos_master?.responsavel_cpf,
 
-    responsavel_endereco: aluno.responsavel_endereco,
+    responsavel_endereco: mensalidade.alunos_master?.responsavel_endereco,
+    
+    responsavel_numero: mensalidade.alunos_master?.responsavel_numero,
+    
+    responsavel_bairro: mensalidade.alunos_master?.responsavel_bairro,
+    
+    responsavel_cidade: mensalidade.alunos_master?.responsavel_cidade,
+    
+    responsavel_uf: mensalidade.alunos_master?.responsavel_uf,
+    
+    responsavel_cep: mensalidade.alunos_master?.responsavel_cep,
 
-    responsavel_cidade: aluno.responsavel_cidade,
+    whatsapp: mensalidade.alunos_master?.responsavel_telefone,
 
-    responsavel_uf: aluno.responsavel_uf,
+    competencia: mensalidade.competencia,
 
-    responsavel_cep: aluno.responsavel_cep,
+    disciplinas: mensalidade.curso,
 
-    whatsapp: aluno.responsavel_telefone,
+    valorOriginal: Number(mensalidade.valor_original || 0),
 
-    competencia,
+    valorDesconto: Number(mensalidade.valor_desconto || 0),
 
-    disciplinas: aluno.cursos,
+    valorFinal: Number(mensalidade.valor_final || 0),
 
-    valorOriginal: Number(aluno.valor_curso || 0),
+    vencimento: mensalidade.vencimento,
 
-    valorDesconto: Number(aluno.valor_desconto || 0),
+    formaPagamento: mensalidade.forma_pagamento,
 
-    valorFinal: Number(aluno.valor_final || 0),
-
-    vencimento: aluno.dia_vencimento,
-
-    status: titulo ? titulo.status : "SEM_TITULO",
+    status: titulo ? titulo.status : mensalidade.status,
 
     possuiTitulo,
 
@@ -1347,7 +1370,7 @@ async function analisarCobrancas(competencia) {
 
         }
 
-        valorTotal += Number(aluno.valor_final || 0);
+        valorTotal += Number(mensalidade.valor_final || 0);
 
     }
 
@@ -1355,7 +1378,7 @@ async function analisarCobrancas(competencia) {
 
         competencia,
 
-        mensalidades: alunos.length,
+        mensalidades: mensalidades.length,
 
         existentes,
 
