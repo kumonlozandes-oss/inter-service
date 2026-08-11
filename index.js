@@ -794,7 +794,7 @@ const valorFinalNumerico = Number(valorFinal || 0);
 
 const valorNominal = valorOriginalNumerico;
 
-const dataVencimento = vencimento;
+let dataVencimento = vencimento;
 
 const hoje = new Date();
 hoje.setHours(0,0,0,0);
