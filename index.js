@@ -1177,6 +1177,74 @@ app.get("/mensalidades", async (req, res) => {
 // ANÁLISE DAS COBRANÇAS
 // ======================
 
+async function gerarMensalidades(competencia) {
+
+    const [mes, ano] = competencia.split("/");
+
+    const { data: alunos, error } =
+        await supabase
+            .from("alunos_master")
+            .select("*")
+            .eq("status", "ATIVO");
+
+    if (error)
+        throw error;
+
+    for (const aluno of alunos) {
+
+        const { data: existente } =
+            await supabase
+                .from("mensalidades")
+                .select("id_mensalidade")
+                .eq("guid_aluno", aluno.guid)
+                .eq("competencia", competencia)
+                .maybeSingle();
+
+        if (existente)
+            continue;
+
+        await supabase
+            .from("mensalidades")
+            .insert({
+
+                id_mensalidade: crypto.randomUUID(),
+
+                guid_aluno: aluno.guid,
+
+                guid_responsavel: aluno.guid_responsavel,
+
+                id_aluno: aluno.id_aluno,
+
+                aluno: aluno.nome,
+
+                responsavel: aluno.responsavel,
+
+                curso: aluno.cursos,
+
+                competencia,
+
+                competencia_mes: Number(mes),
+
+                competencia_ano: Number(ano),
+
+                valor_original: aluno.valor_curso,
+
+                valor_desconto: aluno.valor_desconto,
+
+                valor_final: aluno.valor_final,
+
+                vencimento: `${ano}-${mes}-${String(aluno.dia_vencimento).padStart(2,"0")}`,
+
+                status: "PENDENTE",
+
+                origem: "ERP"
+
+            });
+
+    }
+
+}
+
 async function analisarCobrancas(competencia) {
 
     const { data: mensalidades, error: erroMensalidades } =
