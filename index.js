@@ -875,7 +875,6 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
         method: "POST",
 
-        console.log({
     valorOriginalNumerico,
     valorDescontoNumerico,
     dataVencimento
