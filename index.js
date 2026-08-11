@@ -520,7 +520,11 @@ async function sincronizarMensalidadeComTitulo(titulo) {
             url_pdf_boleto: titulo.url_pdf_boleto,
 
             forma_pagamento: titulo.forma_pagamento,
-
+            
+            data_pagamento: titulo.data_pagamento,
+            
+            valor_recebido: titulo.valor_recebido,
+            
             data_atualizacao: new Date().toISOString()
 
         })
@@ -548,13 +552,11 @@ async function sincronizarBoletos() {
 
         const dados = dadosTitulo(detalhe);
 
-        const resultado = await salvarTitulo(dados);
+        const titulo = await salvarTitulo(dados);
 
-        if (resultado === "novo") {
-            novos++;
-        } else {
-            atualizados++;
-        }
+await sincronizarMensalidadeComTitulo(titulo);
+
+atualizados++;
 
     }
 
