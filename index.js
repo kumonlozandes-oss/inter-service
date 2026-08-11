@@ -467,22 +467,6 @@ async function salvarTitulo(dados) {
 
     }
 
-    if (dados.id_mensalidade) {
-
-    const { error: erroTitulo } = await supabase
-    .from("financeiro_titulos")
-    .update({
-        id_mensalidade: dados.id_mensalidade
-    })
-    .eq("id_inter", dados.id_inter);
-
-if (erroTitulo) throw erroTitulo;
-
-// Atualização da tabela mensalidades removida.
-// A partir desta etapa, financeiro_titulos passa a ser a fonte
-// oficial das informações do boleto.
-
-}
 
     return existente ? "atualizado" : "novo";
 
@@ -775,8 +759,6 @@ const {
 
 } = dados;
 
-console.log("DADOS RECEBIDOS:");
-console.log(JSON.stringify(dados, null, 2));
 
 const id_mensalidade = idMensalidade;
 const guid_aluno = guidAluno;
@@ -924,17 +906,7 @@ const emissao = await requisicaoInter({
 
     });
 
-    const { data: tituloSalvo, error: erroTitulo } =
-await supabase
-    .from("financeiro_titulos")
-    .select("*")
-    .eq("codigo_solicitacao", dadosTituloGerado.codigo_solicitacao)
-    .single();
-
-if (erroTitulo)
-    throw erroTitulo;
-
-return tituloSalvo;
+    return dadosTituloGerado;
 
 }
 
@@ -984,9 +956,6 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
         await gerarMensalidades(competencia);
         const ids = req.body.idsMensalidades || [];
 
-        console.log("BODY:", req.body);
-console.log("IDS:", ids);
-
         const analise = await analisarCobrancas(competencia);
         console.log("APTOS:", analise.aptosGeracao.length);
         console.log("PRIMEIRO APTO:", analise.aptosGeracao[0]);
@@ -996,16 +965,6 @@ console.log("IDS:", ids);
 
         const resultado = [];
 
-console.log("IDS RECEBIDOS:");
-console.log(ids);
-
-console.log("APTOS:");
-console.log(
-    analise.aptosGeracao.map(x => ({
-        idMensalidade: x.idMensalidade,
-        guidAluno: x.guidAluno
-    }))
-);
         
         const listaGeracao =
     ids.length === 0
@@ -1015,15 +974,12 @@ console.log(
               ids.includes(item.idMensalidade)
           );
 
-console.log("LISTA GERAÇÃO:");
-console.log(listaGeracao);
 
 for (const item of listaGeracao) {
 
             try {
 
                 const resposta = await gerarBoletoInterno(item);
-                console.log("BOLETO GERADO");
 
                 resultado.push({
 
