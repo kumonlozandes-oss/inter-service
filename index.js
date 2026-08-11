@@ -1205,47 +1205,47 @@ async function gerarMensalidades(competencia) {
                 .maybeSingle();
 
         if (existente)
-            continue;
+    continue;
 
-        await supabase
-            .from("mensalidades")
+console.log("CRIANDO MENSALIDADE:", aluno.nome);
 
-            console.log("CRIANDO MENSALIDADE:", aluno.nome);
-            .insert({
+await supabase
+    .from("mensalidades")
+    .insert({
 
-                id_mensalidade: crypto.randomUUID(),
+        id_mensalidade: crypto.randomUUID(),
 
-                guid_aluno: aluno.guid,
+        guid_aluno: aluno.guid,
 
-                guid_responsavel: aluno.guid_responsavel,
+        guid_responsavel: aluno.guid_responsavel,
 
-                id_aluno: aluno.id_aluno,
+        id_aluno: aluno.id_aluno,
 
-                aluno: aluno.nome,
+        aluno: aluno.nome,
 
-                responsavel: aluno.responsavel,
+        responsavel: aluno.responsavel,
 
-                curso: aluno.cursos,
+        curso: aluno.cursos,
 
-                competencia,
+        competencia,
 
-                competencia_mes: Number(mes),
+        competencia_mes: Number(mes),
 
-                competencia_ano: Number(ano),
+        competencia_ano: Number(ano),
 
-                valor_original: aluno.valor_curso,
+        valor_original: aluno.valor_curso,
 
-                valor_desconto: aluno.valor_desconto,
+        valor_desconto: aluno.valor_desconto,
 
-                valor_final: aluno.valor_final,
+        valor_final: aluno.valor_final,
 
-                vencimento: `${ano}-${mes}-${String(aluno.dia_vencimento).padStart(2,"0")}`,
+        vencimento: `${ano}-${mes}-${String(aluno.dia_vencimento).padStart(2,"0")}`,
 
-                status: "PENDENTE",
+        status: "PENDENTE",
 
-                origem: "ERP"
+        origem: "ERP"
 
-            });
+    });
 
     }
 
