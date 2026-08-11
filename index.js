@@ -447,28 +447,74 @@ async function salvarTitulo(dados) {
         ultima_sincronizacao: new Date().toISOString()
 
     };
+    let tituloSalvo;
 
     if (existente) {
 
-        const { error: erroUpdate } = await supabase
-            .from("financeiro_titulos")
-            .update(registro)
-            .eq("id", existente.id);
+const { data, error: erroUpdate } = await supabase
+    .from("financeiro_titulos")
+    .update(registro)
+    .eq("id", existente.id)
+    .select()
+    .single();
 
-        if (erroUpdate) throw erroUpdate;
+if (erroUpdate) throw erroUpdate;
+        tituloSalvo = data;
 
     } else {
 
-        const { error: erroInsert } = await supabase
-            .from("financeiro_titulos")
-            .insert(registro);
+const { data, error: erroInsert } = await supabase
+    .from("financeiro_titulos")
+    .insert(registro)
+    .select()
+    .single();
 
-        if (erroInsert) throw erroInsert;
+if (erroInsert) throw erroInsert;
+        tituloSalvo = data;
 
     }
 
+if (registro.id_mensalidade) {
 
-    return existente ? "atualizado" : "novo";
+    const { error: erroMensalidade } = await supabase
+        .from("mensalidades")
+        .update({
+
+            id_titulo: tituloSalvo.id,
+
+            id_inter: tituloSalvo.id_inter,
+
+            status: tituloSalvo.status,
+
+            status_inter: tituloSalvo.status_inter,
+
+            nosso_numero: tituloSalvo.nosso_numero,
+
+            seu_numero: tituloSalvo.seu_numero,
+
+            linha_digitavel: tituloSalvo.linha_digitavel,
+
+            codigo_barras: tituloSalvo.codigo_barras,
+
+            codigo_pix: tituloSalvo.codigo_pix,
+
+            pix_copia_cola: tituloSalvo.pix_copia_cola,
+
+            url_pdf_boleto: tituloSalvo.url_pdf_boleto,
+
+            forma_pagamento: tituloSalvo.forma_pagamento,
+
+            data_atualizacao: new Date().toISOString()
+
+        })
+        .eq("id_mensalidade", registro.id_mensalidade);
+
+    if (erroMensalidade)
+        throw erroMensalidade;
+
+}
+
+    return tituloSalvo;
 
 }
 
