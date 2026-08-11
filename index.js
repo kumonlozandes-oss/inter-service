@@ -965,6 +965,7 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
     try {
 
         const competencia = req.body.competencia;
+        await gerarMensalidades(competencia);
         const ids = req.body.idsMensalidades || [];
 
         console.log("BODY:", req.body);
