@@ -523,8 +523,7 @@ async function sincronizarMensalidadeComTitulo(titulo) {
             
             data_pagamento: titulo.data_pagamento,
             
-            valor_recebido: titulo.valor_recebido,
-            
+           
             data_atualizacao: new Date().toISOString()
 
         })
