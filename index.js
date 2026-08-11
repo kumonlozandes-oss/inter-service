@@ -1258,7 +1258,7 @@ async function analisarCobrancas(competencia) {
         .from("mensalidades")
         .select(`
             *,
-            alunos_master (
+                alunos_master!fk_mensalidades_aluno (
                 responsavel,
                 responsavel_cpf,
                 responsavel_telefone,
