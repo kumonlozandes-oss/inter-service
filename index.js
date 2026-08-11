@@ -1480,7 +1480,9 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
     try {
 
-        const competencia = req.query.competencia;
+const competencia = req.query.competencia;
+
+await gerarMensalidades(competencia);
 
 const resultado = await analisarCobrancas(competencia);
 
