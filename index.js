@@ -855,7 +855,8 @@ const { data: mensalidade, error: erroMensalidade } = await supabase
     .from("mensalidades")
     .select("*")
     .eq("guid_aluno", titulo.guid_aluno)
-    .eq("competencia", titulo.competencia)
+    .eq("competencia_ano", titulo.competencia_ano)
+    .eq("competencia_mes", titulo.competencia_mes)
     .single();
     console.log("GUID:", titulo.guid_aluno);
     console.log("COMPETENCIA:", titulo.competencia);
