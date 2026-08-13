@@ -314,6 +314,12 @@ if (competencia) {
 
 }
 
+    console.log(
+    "STATUS INTER:",
+    cobranca.codigoSolicitacao,
+    cobranca.situacao
+);
+
     return {
 
         origem: "INTER",
