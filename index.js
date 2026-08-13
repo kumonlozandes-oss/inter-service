@@ -197,6 +197,8 @@ async function consultarCobranca(idInter, token) {
     "DETALHE INTER:",
     JSON.stringify(json, null, 2)
 );
+    console.log("SITUACAO INTER:");
+console.log(JSON.stringify(detalhe.cobranca, null, 2));
 
 return json;
 
