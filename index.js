@@ -197,8 +197,6 @@ async function consultarCobranca(idInter, token) {
     "DETALHE INTER:",
     JSON.stringify(json, null, 2)
 );
-    console.log("SITUACAO INTER:");
-console.log(JSON.stringify(detalhe.cobranca, null, 2));
 
 return json;
 
@@ -549,27 +547,40 @@ async function sincronizarBoletos() {
     log("Iniciando sincronização...");
 
     const { token, cobrancas } = await listarCobrancasInter();
+
     console.log("TOTAL COBRANCAS:", cobrancas.length);
 
     let novos = 0;
     let atualizados = 0;
 
     for (const item of cobrancas) {
-        console.log(item.cobranca.codigoSolicitacao);
 
-        const codigo = item.cobranca.codigoSolicitacao;
+        try {
 
-        const detalhe = await consultarCobranca(codigo, token);
+            console.log("PROCESSANDO:", item.cobranca.codigoSolicitacao);
 
-        const dados = dadosTitulo(detalhe);
+            const codigo = item.cobranca.codigoSolicitacao;
 
-        const titulo = await salvarTitulo(dados);
+            const detalhe = await consultarCobranca(codigo, token);
 
-await sincronizarMensalidadeComTitulo(titulo);
+            const dados = dadosTitulo(detalhe);
 
-atualizados++;
+            const titulo = await salvarTitulo(dados);
+
+            await sincronizarMensalidadeComTitulo(titulo);
+
+            atualizados++;
+
+        } catch (erro) {
+
+            console.error("ERRO AO PROCESSAR:", item.cobranca.codigoSolicitacao);
+            console.error(erro);
+
+        }
 
     }
+
+    log(`Sincronização concluída. Atualizados: ${atualizados}`);
 
     return {
         total: cobrancas.length,
