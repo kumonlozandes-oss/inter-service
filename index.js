@@ -837,6 +837,83 @@ function agendarProximaExecucao() {
 
 }
 
+async function montarDadosBoleto(idTitulo) {
+
+    const { data: titulo, error: erroTitulo } = await supabase
+        .from("financeiro_titulos")
+        .select("*")
+        .eq("id", idTitulo)
+        .single();
+
+    if (erroTitulo || !titulo)
+        throw new Error("Título não encontrado.");
+
+    const { data: mensalidade, error: erroMensalidade } = await supabase
+        .from("mensalidades")
+        .select("*")
+        .eq("id_mensalidade", titulo.id_mensalidade)
+        .single();
+
+    if (erroMensalidade || !mensalidade)
+        throw new Error("Mensalidade não encontrada.");
+
+    const { data: aluno, error: erroAluno } = await supabase
+        .from("alunos_master")
+        .select("*")
+        .eq("guid", mensalidade.guid_aluno)
+        .single();
+
+    if (erroAluno || !aluno)
+        throw new Error("Aluno não encontrado.");
+
+    return {
+
+        idMensalidade: mensalidade.id_mensalidade,
+
+        guidAluno: mensalidade.guid_aluno,
+
+        guidResponsavel: mensalidade.guid_responsavel,
+
+        id_inter: titulo.id_inter,
+
+        observacoes: mensalidade.observacoes,
+
+        responsavel: aluno.responsavel,
+
+        responsavel_cpf: aluno.responsavel_cpf,
+
+        responsavel_endereco: aluno.responsavel_endereco,
+
+        responsavel_numero: aluno.responsavel_numero,
+
+        responsavel_bairro: aluno.responsavel_bairro,
+
+        responsavel_cidade: aluno.responsavel_cidade,
+
+        responsavel_uf: aluno.responsavel_uf,
+
+        responsavel_cep: aluno.responsavel_cep,
+
+        whatsapp:
+            aluno.responsavel_telefone ||
+            aluno.telefone,
+
+        valorOriginal: mensalidade.valor_original,
+
+        valorDesconto: mensalidade.valor_desconto,
+
+        valorFinal: mensalidade.valor_final,
+
+        vencimento: mensalidade.vencimento,
+
+        competencia: mensalidade.competencia,
+
+        formaPagamento: mensalidade.forma_pagamento
+
+    };
+
+}
+
 async function gerarBoletoInterno(dados) {
 
 const {
@@ -908,7 +985,7 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
     const corpo = JSON.stringify({
 
-        seuNumero: `${guid_aluno.substring(0,15)}`,
+        seuNumero: `ERP|${id_mensalidade}|${guid_aluno}|${competencia}`,
 
         valorNominal: valorOriginalNumerico,
 
@@ -1173,28 +1250,75 @@ app.post("/api/cobrancas/reemitir", async (req, res) => {
 
     try {
 
-        const {
+const {
 
-            idInter,
-            motivo
+    idTitulo,
 
-        } = req.body;
+    newDueDate,
 
-        const retorno = await cancelarCobrancaInter(
+    discount,
 
-            idInter,
+    reason
 
-            motivo || "Reemissão de cobrança"
+} = req.body;
 
-        );
+const dados = await montarDadosBoleto(idTitulo);
 
-        res.json({
+await cancelarCobrancaInter(
 
-            sucesso: true,
+    dados.id_inter,
 
-            retorno
+    reason || "Reemissão de cobrança"
 
-        });
+);
+
+await supabase
+    .from("financeiro_titulos")
+    .update({
+
+        status: "CANCELADO",
+
+        status_inter: "CANCELADO",
+
+        ultima_sincronizacao: new Date().toISOString()
+
+    })
+    .eq("id_inter", dados.id_inter);
+
+dados.vencimento = newDueDate;
+
+dados.valorDesconto = Number(discount || 0);
+
+dados.valorFinal =
+    Number(dados.valorOriginal) -
+    Number(dados.valorDesconto);
+
+const novoTitulo = await gerarBoletoInterno(dados);
+
+await supabase
+    .from("mensalidades")
+    .update({
+
+        vencimento: newDueDate,
+
+        valor_desconto: dados.valorDesconto,
+
+        valor_final: dados.valorFinal,
+
+        observacoes:
+            `${reason || "Reemissão de cobrança"}\n` +
+            (dados.observacoes || "")
+
+    })
+    .eq("id_mensalidade", dados.idMensalidade);
+
+res.json({
+
+    sucesso: true,
+
+    titulo: novoTitulo
+
+});
 
     } catch (erro) {
 
