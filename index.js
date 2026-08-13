@@ -866,6 +866,9 @@ async function montarDadosBoleto(idTitulo) {
     if (erroAluno || !aluno)
         throw new Error("Aluno não encontrado.");
 
+    const numeroReemissao =
+    (titulo.numero_reemissao || 1) + 1;
+
     return {
 
         idMensalidade: mensalidade.id_mensalidade,
@@ -877,6 +880,12 @@ async function montarDadosBoleto(idTitulo) {
         id_inter: titulo.id_inter,
 
         observacoes: mensalidade.observacoes,
+
+        numero_reemissao: numeroReemissao,
+
+        id_titulo_anterior: titulo.id,
+        
+        motivo_reemissao: null,
 
         responsavel: aluno.responsavel,
 
@@ -1093,7 +1102,13 @@ console.log({
 
     competencia_mes: Number(mes),
 
-    competencia_ano: Number(ano)
+    competencia_ano: Number(ano),
+
+    numero_reemissao: dados.numero_reemissao,
+
+    id_titulo_anterior: dados.id_titulo_anterior,
+
+    motivo_reemissao: dados.motivo_reemissao
 
 });
 
@@ -1264,6 +1279,8 @@ const {
 
 const dados = await montarDadosBoleto(idTitulo);
 
+dados.motivo_reemissao = reason;
+
 await cancelarCobrancaInter(
 
     dados.id_inter,
@@ -1273,17 +1290,21 @@ await cancelarCobrancaInter(
 );
 
 await supabase
-    .from("financeiro_titulos")
-    .update({
+.from("financeiro_titulos")
+.update({
 
-        status: "CANCELADO",
+    status: "CANCELADO",
 
-        status_inter: "CANCELADO",
+    status_inter: "CANCELADO",
 
-        ultima_sincronizacao: new Date().toISOString()
+    ativo: false,
 
-    })
-    .eq("id_inter", dados.id_inter);
+    data_cancelamento: new Date().toISOString(),
+
+    ultima_sincronizacao: new Date().toISOString()
+
+})
+.eq("id", dados.id_titulo_anterior);
 
 dados.vencimento = newDueDate;
 
@@ -1295,22 +1316,7 @@ dados.valorFinal =
 
 const novoTitulo = await gerarBoletoInterno(dados);
 
-await supabase
-    .from("mensalidades")
-    .update({
-
-        vencimento: newDueDate,
-
-        valor_desconto: dados.valorDesconto,
-
-        valor_final: dados.valorFinal,
-
-        observacoes:
-            `${reason || "Reemissão de cobrança"}\n` +
-            (dados.observacoes || "")
-
-    })
-    .eq("id_mensalidade", dados.idMensalidade);
+await sincronizarMensalidadeComTitulo(novoTitulo);
 
 res.json({
 
