@@ -839,6 +839,8 @@ function agendarProximaExecucao() {
 
 async function montarDadosBoleto(idTitulo) {
 
+    console.log(">>>>>>>> NOVA VERSÃO montarDadosBoleto <<<<<<<<");
+
     const { data: titulo, error: erroTitulo } = await supabase
         .from("financeiro_titulos")
         .select("*")
