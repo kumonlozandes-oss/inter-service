@@ -202,6 +202,28 @@ return json;
 
 }
 
+
+
+async function cancelarCobrancaInter(idInter, motivo = "Reemissão de cobrança") {
+
+    const { json } = await requisicaoInter({
+
+        path: `/cobranca/v3/cobrancas/${encodeURIComponent(idInter)}/cancelar`,
+
+        method: "POST",
+
+        body: JSON.stringify({
+
+            motivoCancelamento: motivo
+
+        })
+
+    });
+
+    return json;
+
+}
+
 function data50Dias() {
 
     const data = new Date();
@@ -1130,6 +1152,53 @@ for (const item of listaGeracao) {
         });
 
     } catch (erro) {
+
+        res.status(500).json({
+
+            sucesso: false,
+
+            erro: erro.message
+
+        });
+
+    }
+
+});
+
+// ======================================================
+// REEMISSÃO DE COBRANÇA
+// ======================================================
+
+app.post("/api/cobrancas/reemitir", async (req, res) => {
+
+    try {
+
+        const {
+
+            idInter,
+            motivo
+
+        } = req.body;
+
+        const retorno = await cancelarCobrancaInter(
+
+            idInter,
+
+            motivo || "Reemissão de cobrança"
+
+        );
+
+        res.json({
+
+            sucesso: true,
+
+            retorno
+
+        });
+
+    } catch (erro) {
+
+        console.error(erro);
 
         res.status(500).json({
 
