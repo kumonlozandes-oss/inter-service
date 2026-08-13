@@ -848,11 +848,12 @@ async function montarDadosBoleto(idTitulo) {
     if (erroTitulo || !titulo)
         throw new Error("Título não encontrado.");
 
-    const { data: mensalidade, error: erroMensalidade } = await supabase
-        .from("mensalidades")
-        .select("*")
-        .eq("id_mensalidade", titulo.id_mensalidade)
-        .single();
+const { data: mensalidade, error: erroMensalidade } = await supabase
+    .from("mensalidades")
+    .select("*")
+    .eq("guid_aluno", titulo.guid_aluno)
+    .eq("competencia", titulo.competencia)
+    .single();
 
     if (erroMensalidade || !mensalidade)
         throw new Error("Mensalidade não encontrada.");
