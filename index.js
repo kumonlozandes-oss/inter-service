@@ -549,11 +549,13 @@ async function sincronizarBoletos() {
     log("Iniciando sincronização...");
 
     const { token, cobrancas } = await listarCobrancasInter();
+    console.log("TOTAL COBRANCAS:", cobrancas.length);
 
     let novos = 0;
     let atualizados = 0;
 
     for (const item of cobrancas) {
+        console.log(item.cobranca.codigoSolicitacao);
 
         const codigo = item.cobranca.codigoSolicitacao;
 
@@ -568,10 +570,6 @@ await sincronizarMensalidadeComTitulo(titulo);
 atualizados++;
 
     }
-
-    log(`Sincronização concluída. Novos: ${novos} | Atualizados: ${atualizados}`);
-
-    await vincularTitulosPorCpf();
 
     return {
         total: cobrancas.length,
