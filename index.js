@@ -230,11 +230,19 @@ function statusInterno(status) {
         case "RECEBIDO":
             return "PAGO";
 
-        case "VENCIDO":
-            return "VENCIDO";
-
         case "CANCELADO":
             return "CANCELADO";
+
+        case "VENCIDO":
+        case "EXPIRADO":
+            return "VENCIDO";
+
+        case "ATRASADO":
+            return "ATRASADO";
+
+        case "A_RECEBER":
+        case "EM_PROCESSAMENTO":
+            return "ABERTO";
 
         default:
             return "ABERTO";
