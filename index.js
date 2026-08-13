@@ -870,6 +870,11 @@ const { data: mensalidade, error: erroMensalidade } = await supabase
     const numeroReemissao =
     (titulo.numero_reemissao || 1) + 1;
 
+    console.log("===== MONTAR DADOS =====");
+console.log("TITULO:", titulo);
+console.log("MENSALIDADE:", mensalidade);
+console.log("ALUNO:", aluno);
+
     return {
 
         idMensalidade: mensalidade.id_mensalidade,
