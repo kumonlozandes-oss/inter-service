@@ -452,9 +452,9 @@ console.log({
 
     const registro = {
 
-    ...dados,
-
     ...(existente || {}),
+
+    ...dados,
 
     guid_aluno: dados.guid_aluno ?? existente?.guid_aluno ?? null,
 
