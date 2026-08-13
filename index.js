@@ -857,6 +857,10 @@ const { data: mensalidade, error: erroMensalidade } = await supabase
     .eq("guid_aluno", titulo.guid_aluno)
     .eq("competencia", titulo.competencia)
     .single();
+    console.log("GUID:", titulo.guid_aluno);
+    console.log("COMPETENCIA:", titulo.competencia);
+    console.log("MENSALIDADE ENCONTRADA:", mensalidade);
+    console.log("ERRO MENSALIDADE:", erroMensalidade);
 
     if (erroMensalidade || !mensalidade)
         throw new Error("Mensalidade não encontrada.");
