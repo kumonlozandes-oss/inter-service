@@ -312,11 +312,11 @@ function dadosTitulo(detalhe) {
 
 if (seuNumero.startsWith("ERP|")) {
 
-    const [, idMensalidade, guidAluno, comp] = seuNumero.split("|");
+const partes = seuNumero.split("|");
 
-    id_mensalidade = idMensalidade;
-    guid_aluno = guidAluno;
-    competencia = comp;
+id_mensalidade = partes[1] || null;
+guid_aluno = partes[2] || null;
+competencia = partes[3] || null;
 
 } else if (seuNumero === "JULHO/26") {
 
