@@ -1345,7 +1345,7 @@ app.get("/alunos", async (req, res) => {
 
     res.json(data);
 
-catch (erro) {
+}catch (erro) {
 
     console.error("========== REEMISSÃO ==========");
     console.error(erro);
