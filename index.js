@@ -840,8 +840,6 @@ function agendarProximaExecucao() {
 
 async function montarDadosBoleto(idTitulo) {
 
-    console.log(">>>>>>>> NOVA VERSÃO montarDadosBoleto <<<<<<<<");
-
     const { data: titulo, error: erroTitulo } = await supabase
         .from("financeiro_titulos")
         .select("*")
@@ -851,54 +849,31 @@ async function montarDadosBoleto(idTitulo) {
     if (erroTitulo || !titulo)
         throw new Error("Título não encontrado.");
 
-const { data: mensalidade, error: erroMensalidade } = await supabase
-    .from("mensalidades")
-    .select("*")
-    .eq("guid_aluno", titulo.guid_aluno)
-    .eq("competencia_ano", titulo.competencia_ano)
-    .eq("competencia_mes", titulo.competencia_mes)
-    .single();
-    console.log("GUID:", titulo.guid_aluno);
-    console.log("COMPETENCIA:", titulo.competencia);
-    console.log("MENSALIDADE ENCONTRADA:", mensalidade);
-    console.log("ERRO MENSALIDADE:", erroMensalidade);
-
-    if (erroMensalidade || !mensalidade)
-        throw new Error("Mensalidade não encontrada.");
-
     const { data: aluno, error: erroAluno } = await supabase
         .from("alunos_master")
         .select("*")
-        .eq("guid", mensalidade.guid_aluno)
+        .eq("guid", titulo.guid_aluno)
         .single();
 
     if (erroAluno || !aluno)
         throw new Error("Aluno não encontrado.");
 
-    const numeroReemissao =
-    (titulo.numero_reemissao || 1) + 1;
-
-    console.log("===== MONTAR DADOS =====");
-console.log("TITULO:", titulo);
-console.log("MENSALIDADE:", mensalidade);
-console.log("ALUNO:", aluno);
-
     return {
 
-        idMensalidade: mensalidade.id_mensalidade,
+        idMensalidade: titulo.id_mensalidade,
 
-        guidAluno: mensalidade.guid_aluno,
+        guidAluno: titulo.guid_aluno,
 
-        guidResponsavel: mensalidade.guid_responsavel,
+        guidResponsavel: titulo.guid_responsavel,
 
         id_inter: titulo.id_inter,
 
-        observacoes: mensalidade.observacoes,
+        observacoes: titulo.observacao,
 
-        numero_reemissao: numeroReemissao,
+        numero_reemissao: (titulo.numero_reemissao || 1) + 1,
 
         id_titulo_anterior: titulo.id,
-        
+
         motivo_reemissao: null,
 
         responsavel: aluno.responsavel,
@@ -921,17 +896,17 @@ console.log("ALUNO:", aluno);
             aluno.responsavel_telefone ||
             aluno.telefone,
 
-        valorOriginal: mensalidade.valor_original,
+        valorOriginal: titulo.valor_original,
 
-        valorDesconto: mensalidade.valor_desconto,
+        valorDesconto: titulo.valor_desconto,
 
-        valorFinal: mensalidade.valor_final,
+        valorFinal: titulo.valor_final,
 
-        vencimento: mensalidade.vencimento,
+        vencimento: titulo.vencimento,
 
-        competencia: mensalidade.competencia,
+        competencia: titulo.competencia,
 
-        formaPagamento: mensalidade.forma_pagamento
+        formaPagamento: titulo.forma_pagamento || "BOLETO"
 
     };
 
@@ -1126,7 +1101,9 @@ console.log({
 
 });
 
-await sincronizarMensalidadeComTitulo(titulo);
+if (titulo.id_mensalidade) {
+    await sincronizarMensalidadeComTitulo(titulo);
+}
 
 return titulo;
 
