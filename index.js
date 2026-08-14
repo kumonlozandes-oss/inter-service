@@ -1345,15 +1345,24 @@ app.get("/alunos", async (req, res) => {
 
     res.json(data);
 
-  } catch (erro) {
+catch (erro) {
 
+    console.error("========== REEMISSÃO ==========");
     console.error(erro);
 
+    if (erro.response) {
+        console.error("STATUS:", erro.response.status);
+        console.error("DADOS:", erro.response.data);
+    }
+
+    console.error("===============================");
+
     res.status(500).json({
-      sucesso: false,
-      erro: erro.message
+        sucesso: false,
+        erro: erro.message
     });
-  }
+
+}
 });
 
 app.get("/mensalidades", async (req, res) => {
