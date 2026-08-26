@@ -1734,11 +1734,11 @@ valorFinal: Number(
 
             bloqueados.push({
 
-                ...registro,
+    ...registro,
 
-                motivo: `Já possui cobrança (${titulo.status}).`
+    motivo: `Já possui cobrança (${titulo.status}).`
 
-            });
+});
 
         }
         else if (erros.length > 0) {
