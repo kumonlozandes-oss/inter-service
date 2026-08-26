@@ -661,7 +661,11 @@ async function sincronizarBoletos() {
 
     log("Iniciando sincronização...");
 
-    const { token, cobrancas } = await listarCobrancasInter();
+const { token, cobrancas } = await listarCobrancasInter();
+
+console.log("ENTROU SINCRONIZAR");
+console.log("TOKEN:", !!token);
+console.log("TOTAL:", cobrancas.length);
 
     console.log("TOTAL COBRANCAS:", cobrancas.length);
 
@@ -676,7 +680,11 @@ async function sincronizarBoletos() {
 
             const codigo = item.cobranca.codigoSolicitacao;
 
+            console.log("VAI CONSULTAR:", codigo);
+
             const detalhe = await consultarCobranca(codigo, token);
+
+            console.log("CONSULTOU:", codigo);
 
 let dados = dadosTitulo(detalhe);
 
