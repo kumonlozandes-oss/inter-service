@@ -1550,10 +1550,15 @@ async function analisarCobrancas(competencia) {
 if (erroMensalidades)
     throw erroMensalidades;
 
-    const { data: titulos, error: erroTitulos } =
-        await supabase
-            .from("financeiro_titulos")
-.select(`
+const { data: titulos, error: erroTitulos } =
+await supabase
+    .from("financeiro_titulos")
+    .select(`
+        *
+    `)
+    .eq("competencia", competencia)
+    .neq("status", "CANCELADO");
+    
     id,
     id_inter,
     guid_aluno,
@@ -1587,24 +1592,25 @@ if (erroMensalidades)
     const aptosGeracao = [];
     const bloqueados = [];
 
-    const mapaTitulos = new Map();
+const mapaTitulos = new Map();
 
-    for (const titulo of titulos) {
+for (const titulo of titulos) {
 
-        mapaTitulos.set(
-            `${titulo.guid_aluno}_${titulo.competencia}`,
-            titulo
-        );
+    if (!titulo.guid_aluno) continue;
 
+    const chave = titulo.guid_aluno;
+
+    if (!mapaTitulos.has(chave)) {
+        mapaTitulos.set(chave, titulo);
     }
+
+}
 
     for (const mensalidade of mensalidades) {
 
          const erros = [];
 
-        const chave = `${mensalidade.guid_aluno}_${competencia}`;
-
-const titulo = mapaTitulos.get(chave);
+const titulo = mapaTitulos.get(mensalidade.guid_aluno);
 
 const possuiTitulo =
     !!titulo &&
