@@ -319,6 +319,8 @@ id_mensalidade = partes[1] || null;
 guid_aluno = partes[2] || null;
 competencia = partes[3] || null;
 
+    }
+
 if (competencia) {
 
     const [mes, ano] = competencia.split("/");
