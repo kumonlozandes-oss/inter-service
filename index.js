@@ -593,7 +593,43 @@ async function sincronizarBoletos() {
 
             const detalhe = await consultarCobranca(codigo, token);
 
-            const dados = dadosTitulo(detalhe);
+let dados = dadosTitulo(detalhe);
+
+if (!dados.guid_aluno && dados.cpf_responsavel) {
+
+    const cpf = String(dados.cpf_responsavel).replace(/\D/g, "");
+
+    const { data: aluno } = await supabase
+        .from("alunos_master")
+        .select("guid,guid_responsavel")
+        .or(
+            `responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`
+        )
+        .maybeSingle();
+
+    if (aluno) {
+
+        dados.guid_aluno = aluno.guid;
+        dados.guid_responsavel = aluno.guid_responsavel;
+
+        if (dados.competencia) {
+
+            const { data: mensalidade } = await supabase
+                .from("mensalidades")
+                .select("id_mensalidade")
+                .eq("guid_aluno", aluno.guid)
+                .eq("competencia", dados.competencia)
+                .maybeSingle();
+
+            if (mensalidade) {
+                dados.id_mensalidade = mensalidade.id_mensalidade;
+            }
+
+        }
+
+    }
+
+}
 
             const titulo = await salvarTitulo(dados);
 
