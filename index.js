@@ -197,8 +197,6 @@ async function consultarCobranca(idInter, token) {
 console.log("DETALHE INTER:");
 console.log(JSON.stringify(json, null, 2));
 
-throw new Error("PARAR AQUI");
-
 return json;
 
 }
@@ -320,6 +318,40 @@ guid_aluno = partes[2] || null;
 competencia = partes[3] || null;
 
     }
+
+else {
+
+    const meses = {
+        JANEIRO: "01",
+        FEVEREIRO: "02",
+        MARCO: "03",
+        MARÇO: "03",
+        ABRIL: "04",
+        MAIO: "05",
+        JUNHO: "06",
+        JULHO: "07",
+        AGOSTO: "08",
+        SETEMBRO: "09",
+        OUTUBRO: "10",
+        NOVEMBRO: "11",
+        DEZEMBRO: "12"
+    };
+
+    const m = seuNumero.match(/^([A-ZÇÃ]+)\/(\d{2})$/);
+
+    if (m) {
+
+        const mes = meses[m[1]];
+
+        if (mes) {
+
+            competencia = `${mes}/20${m[2]}`;
+
+        }
+
+    }
+
+}
 
 if (competencia) {
 
