@@ -1449,7 +1449,7 @@ async function gerarMensalidades(competencia) {
                 .eq("competencia", competencia)
                 .maybeSingle();
 
-        if (existente)
+if (existente)
     continue;
 
 const diaVencimento = Number(aluno.dia_vencimento || 5);
@@ -1476,9 +1476,7 @@ const { error: erroInsert } = await supabase
         valor_desconto: aluno.valor_desconto,
         valor_final: aluno.valor_final,
 
-        const diaVencimento = Number(aluno.dia_vencimento || 5);
-
-vencimento: `${ano}-${mes}-${String(diaVencimento).padStart(2, "0")}`,
+        vencimento: `${ano}-${mes}-${String(diaVencimento).padStart(2, "0")}`,
 
         status: "PENDENTE",
         origem: "ERP"
