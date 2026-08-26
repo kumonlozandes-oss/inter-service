@@ -285,7 +285,7 @@ function numero(valor) {
 
 }
 
-async function dadosTitulo(detalhe) {
+function dadosTitulo(detalhe) {
 
     const cobranca = detalhe.cobranca || {};
     const boleto = detalhe.boleto || {};
@@ -310,8 +310,6 @@ async function dadosTitulo(detalhe) {
     let id_mensalidade = null;
 
     const seuNumero = (cobranca.seuNumero || "").trim().toUpperCase();
-
-    const cpfResponsavel = String(cobranca.pagador?.cpfCnpj || "").replace(/\D/g, "");
 
 if (seuNumero.startsWith("ERP|")) {
 
@@ -346,40 +344,6 @@ if (competencia) {
     cobranca.situacao
 );
 
-    if (!guid_aluno && cpfResponsavel) {
-
-    const { data: aluno } = await supabase
-        .from("alunos_master")
-        .select("guid,guid_responsavel")
-        .or(
-            `responsavel_cpf.eq.${cpfResponsavel},responsavel2_cpf.eq.${cpfResponsavel},cpf.eq.${cpfResponsavel},cpf_aluno.eq.${cpfResponsavel}`
-        )
-        .maybeSingle();
-
-    if (aluno) {
-
-        guid_aluno = aluno.guid;
-        guid_responsavel = aluno.guid_responsavel;
-
-        if (competencia) {
-
-            const { data: mensalidade } = await supabase
-                .from("mensalidades")
-                .select("id_mensalidade")
-                .eq("guid_aluno", guid_aluno)
-                .eq("competencia", competencia)
-                .maybeSingle();
-
-            if (mensalidade) {
-                id_mensalidade = mensalidade.id_mensalidade;
-            }
-
-        }
-
-    }
-
-}
-
     return {
 
         origem: "INTER",
@@ -388,7 +352,7 @@ if (competencia) {
 
         guid_aluno,
 
-        guid_responsavel,
+        guid_responsavel: detalhe.guid_responsavel || null,
 
         cpf_responsavel: cobranca.pagador?.cpfCnpj || null,
 
