@@ -1689,11 +1689,13 @@ const listaTitulos = mapaTitulos.get(mensalidade.guid_aluno) || [];
 const titulo = listaTitulos.find(t =>
     t.id_mensalidade === mensalidade.id_mensalidade
 ) || listaTitulos.find(t =>
+    t.id_mensalidade &&
     t.status !== "CANCELADO"
 ) || null;
 
 const possuiTitulo =
     !!titulo &&
+    !!titulo.id_mensalidade &&
     !["CANCELADO", "CANCELADA"].includes(titulo.status);
 
         if (possuiTitulo) {
