@@ -562,6 +562,60 @@ if (erroInsert) throw erroInsert;
 
 }
 
+async function reconciliarTitulo(titulo) {
+
+    if (titulo.guid_aluno && titulo.id_mensalidade)
+        return titulo;
+
+    const cpf = String(titulo.cpf_responsavel || "").replace(/\D/g, "");
+
+    if (!cpf)
+        return titulo;
+
+    const { data: aluno } = await supabase
+        .from("alunos_master")
+        .select("guid,guid_responsavel")
+        .or(`responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`)
+        .maybeSingle();
+
+    if (!aluno)
+        return titulo;
+
+    const { data: mensalidade } = await supabase
+        .from("mensalidades")
+        .select("id_mensalidade,competencia,competencia_mes,competencia_ano")
+        .eq("guid_aluno", aluno.guid)
+        .eq("status", "PENDENTE")
+        .order("competencia_ano", { ascending: false })
+        .order("competencia_mes", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (!mensalidade)
+        return titulo;
+
+    const { data } = await supabase
+        .from("financeiro_titulos")
+        .update({
+
+            guid_aluno: aluno.guid,
+            guid_responsavel: aluno.guid_responsavel,
+
+            id_mensalidade: mensalidade.id_mensalidade,
+
+            competencia: mensalidade.competencia,
+            competencia_mes: mensalidade.competencia_mes,
+            competencia_ano: mensalidade.competencia_ano
+
+        })
+        .eq("id", titulo.id)
+        .select()
+        .single();
+
+    return data || titulo;
+
+}
+
 async function sincronizarMensalidadeComTitulo(titulo) {
 
     if (!titulo?.id_mensalidade)
@@ -667,9 +721,11 @@ if (!dados.guid_aluno && dados.cpf_responsavel) {
 
 }
 
-            const titulo = await salvarTitulo(dados);
+const titulo = await salvarTitulo(dados);
 
-            await sincronizarMensalidadeComTitulo(titulo);
+const tituloFinal = await reconciliarTitulo(titulo);
+
+await sincronizarMensalidadeComTitulo(tituloFinal);
 
             atualizados++;
 
