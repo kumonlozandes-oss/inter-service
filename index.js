@@ -319,13 +319,36 @@ id_mensalidade = partes[1] || null;
 guid_aluno = partes[2] || null;
 competencia = partes[3] || null;
 
-} else if (seuNumero === "JULHO/26") {
+} else 
+    
+    const meses = {
+    JANEIRO: "01",
+    FEVEREIRO: "02",
+    MARCO: "03",
+    "MARÇO": "03",
+    ABRIL: "04",
+    MAIO: "05",
+    JUNHO: "06",
+    JULHO: "07",
+    AGOSTO: "08",
+    SETEMBRO: "09",
+    OUTUBRO: "10",
+    NOVEMBRO: "11",
+    DEZEMBRO: "12"
+};
 
-    competencia = "07/2026";
+if (!competencia) {
 
-} else if (seuNumero === "AGOSTO/26") {
+    const m = seuNumero.match(
+        /(JANEIRO|FEVEREIRO|MARÇO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)[\/\-]?(\d{2})/i
+    );
 
-    competencia = "08/2026";
+    if (m) {
+
+        competencia =
+            `${meses[m[1].toUpperCase()]}/20${m[2]}`;
+
+    }
 
 }
 
@@ -557,6 +580,12 @@ if (erroInsert) throw erroInsert;
         tituloSalvo = data;
 
     }
+
+    await reconciliarTitulo(tituloSalvo);
+
+if (tituloSalvo.id_mensalidade) {
+    await sincronizarMensalidadeComTitulo(tituloSalvo);
+}
 
     return tituloSalvo;
 
