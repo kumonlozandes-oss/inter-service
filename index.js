@@ -1559,25 +1559,6 @@ await supabase
     .eq("competencia", competencia)
     .neq("status", "CANCELADO");
     
-    id,
-    id_inter,
-    guid_aluno,
-    guid_responsavel,
-    competencia,
-    status,
-    status_inter,
-    nosso_numero,
-    seu_numero,
-    linha_digitavel,
-    codigo_barras,
-    codigo_pix,
-    pix_copia_cola,
-    url_pdf_boleto,
-    valor_original,
-    valor_desconto,
-    valor_final
-`);
-
     if (erroTitulos)
         throw erroTitulos;
 
