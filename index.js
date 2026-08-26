@@ -1638,8 +1638,10 @@ for (const titulo of titulos) {
     const chave = titulo.guid_aluno;
 
     if (!mapaTitulos.has(chave)) {
-        mapaTitulos.set(chave, titulo);
+        mapaTitulos.set(chave, []);
     }
+
+    mapaTitulos.get(chave).push(titulo);
 
 }
 
@@ -1647,7 +1649,13 @@ for (const titulo of titulos) {
 
          const erros = [];
 
-const titulo = mapaTitulos.get(mensalidade.guid_aluno);
+const listaTitulos = mapaTitulos.get(mensalidade.guid_aluno) || [];
+
+const titulo = listaTitulos.find(t =>
+    t.id_mensalidade === mensalidade.id_mensalidade
+) || listaTitulos.find(t =>
+    t.status !== "CANCELADO"
+) || null;
 
 const possuiTitulo =
     !!titulo &&
