@@ -582,14 +582,11 @@ async function reconciliarTitulo(titulo) {
         return titulo;
 
     const { data: mensalidade } = await supabase
-        .from("mensalidades")
-        .select("id_mensalidade,competencia,competencia_mes,competencia_ano")
-        .eq("guid_aluno", aluno.guid)
-        .eq("status", "PENDENTE")
-        .order("competencia_ano", { ascending: false })
-        .order("competencia_mes", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    .from("mensalidades")
+    .select("id_mensalidade,competencia,competencia_mes,competencia_ano")
+    .eq("guid_aluno", aluno.guid)
+    .eq("competencia", titulo.competencia)
+    .maybeSingle();
 
     if (!mensalidade)
         return titulo;
