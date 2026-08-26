@@ -285,7 +285,7 @@ function numero(valor) {
 
 }
 
-async function dadosTitulo(detalhe)
+async function dadosTitulo(detalhe) {
 
     const cobranca = detalhe.cobranca || {};
     const boleto = detalhe.boleto || {};
@@ -305,9 +305,9 @@ async function dadosTitulo(detalhe)
     let competencia_mes = null;
     let competencia_ano = null;
 
-let guid_aluno = null;
-let guid_responsavel = null;
-let id_mensalidade = null;
+    let guid_aluno = null;
+    let guid_responsavel = null;
+    let id_mensalidade = null;
 
     const seuNumero = (cobranca.seuNumero || "").trim().toUpperCase();
 
