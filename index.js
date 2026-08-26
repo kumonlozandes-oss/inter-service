@@ -321,36 +321,7 @@ competencia = partes[3] || null;
 
 } else 
     
-    const meses = {
-    JANEIRO: "01",
-    FEVEREIRO: "02",
-    MARCO: "03",
-    "MARÇO": "03",
-    ABRIL: "04",
-    MAIO: "05",
-    JUNHO: "06",
-    JULHO: "07",
-    AGOSTO: "08",
-    SETEMBRO: "09",
-    OUTUBRO: "10",
-    NOVEMBRO: "11",
-    DEZEMBRO: "12"
-};
 
-if (!competencia) {
-
-    const m = seuNumero.match(
-        /(JANEIRO|FEVEREIRO|MARÇO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)[\/\-]?(\d{2})/i
-    );
-
-    if (m) {
-
-        competencia =
-            `${meses[m[1].toUpperCase()]}/20${m[2]}`;
-
-    }
-
-}
 
 if (competencia) {
 
