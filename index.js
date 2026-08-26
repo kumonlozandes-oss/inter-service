@@ -1999,6 +1999,29 @@ app.get("/api/pendencias-vinculo", async (req, res) => {
 });
 
 
+app.get("/api/sincronizar-boletos", async (req, res) => {
+
+    try {
+
+        const resultado = await sincronizarBoletos();
+
+        res.json({
+            sucesso: true,
+            ...resultado
+        });
+
+    } catch (e) {
+
+        console.error(e);
+
+        res.status(500).json({
+            sucesso: false,
+            erro: e.message
+        });
+
+    }
+
+});
 
 
 app.listen(PORT, async () => {
