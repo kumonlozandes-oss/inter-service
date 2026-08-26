@@ -1899,28 +1899,48 @@ app.get("/api/reconstruir-financeiro", async (req, res) => {
 
     try {
 
-        const { data: mensalidades, error } = await supabase
-            .from("mensalidades")
+        const { data: titulos, error: erroTitulos } = await supabase
+            .from("financeiro_titulos")
             .select("*");
 
-        if (error) throw error;
+        if (erroTitulos) throw erroTitulos;
 
         let atualizados = 0;
 
-        for (const mensalidade of mensalidades) {
+        for (const titulo of titulos) {
 
-            const { error: erroUpdate } = await supabase
+            if (!titulo.guid_aluno) continue;
+            if (!titulo.competencia) continue;
+
+            const { data: mensalidade } = await supabase
+                .from("mensalidades")
+                .select(`
+                    id_mensalidade,
+                    guid_responsavel,
+                    competencia_mes,
+                    competencia_ano
+                `)
+                .eq("guid_aluno", titulo.guid_aluno)
+                .eq("competencia", titulo.competencia)
+                .maybeSingle();
+
+            if (!mensalidade) continue;
+
+            const { error } = await supabase
                 .from("financeiro_titulos")
                 .update({
 
                     id_mensalidade: mensalidade.id_mensalidade,
-                    guid_aluno: mensalidade.guid_aluno,
-                    guid_responsavel: mensalidade.guid_responsavel
+                    guid_responsavel: mensalidade.guid_responsavel,
+
+                    competencia: titulo.competencia,
+                    competencia_mes: mensalidade.competencia_mes,
+                    competencia_ano: mensalidade.competencia_ano
 
                 })
-                .eq("guid_aluno", mensalidade.guid_aluno);
+                .eq("id", titulo.id);
 
-            if (erroUpdate) throw erroUpdate;
+            if (error) throw error;
 
             atualizados++;
 
@@ -1949,7 +1969,6 @@ app.get("/api/reconstruir-financeiro", async (req, res) => {
     }
 
 });
-
 // ===============================
 // PENDÊNCIAS DE VÍNCULO
 // ===============================
