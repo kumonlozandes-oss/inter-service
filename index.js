@@ -1679,36 +1679,70 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
         await gerarMensalidades(competencia);
 
-const resultado = await analisarCobrancas(competencia);
+        const mensalidades = await supabase
+            .from("mensalidades")
+            .select(`
+                id_mensalidade,
+                competencia,
+                valor_final,
+                id_titulo,
+                alunos_master(
+                    nome,
+                    responsavel
+                )
+            `)
+            .eq("competencia", competencia);
 
-const lista = resultado.lista;
-const cobrancasInter = await listarCobrancasInter(competencia);
+        if (mensalidades.error) {
+            throw mensalidades.error;
+        }
 
-for (const item of lista) {
+        const lista = (mensalidades.data || []).map(item => ({
 
-    item.gerado = cobrancasInter.some(c =>
-        String(c.seuNumero || "").includes(item.idMensalidade)
-    );
+            idMensalidade: item.id_mensalidade,
 
-}
+            aluno: item.alunos_master?.nome || "",
 
-const pendentes = lista.filter(x => !x.gerado);
+            responsavel: item.alunos_master?.responsavel || "",
 
-res.json({
-    sucesso: true,
-    mensalidades: lista.length,
-    existentes: lista.length - pendentes.length,
-    pendentes: pendentes.length,
-    lista: pendentes
-});
+            competencia: item.competencia,
 
-    } catch (erro) {
+            valorFinal: Number(item.valor_final || 0),
+
+            gerado: !!item.id_titulo,
+
+            situacao: item.id_titulo ? "GERADO" : "GERAR"
+
+        }));
+
+        const pendentes = lista.filter(x => !x.gerado);
+
+        res.json({
+
+            sucesso: true,
+
+            mensalidades: lista.length,
+
+            existentes: lista.length - pendentes.length,
+
+            pendentes: pendentes.length,
+
+            lista: pendentes
+
+        });
+
+    }
+
+    catch (erro) {
 
         console.error(erro);
 
         res.status(500).json({
+
             sucesso: false,
+
             erro: erro.message
+
         });
 
     }
