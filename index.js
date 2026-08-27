@@ -1356,7 +1356,17 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
         console.log("PASSO 1");
 
-        const competencia = req.body.competencia;
+        const competencia =
+    req.body.competencia ||
+    req.body.competência ||
+    req.query.competencia;
+
+if (!competencia) {
+    return res.status(400).json({
+        sucesso: false,
+        erro: "Competência não enviada."
+    });
+}
         await gerarMensalidades(competencia);
         console.log("PASSO 2");
         const ids = req.body.idsMensalidades || [];
