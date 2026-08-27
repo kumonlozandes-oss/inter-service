@@ -1723,12 +1723,22 @@ for (const titulo of titulos) {
 
 const listaTitulos = mapaTitulos.get(mensalidade.guid_aluno) || [];
 
-const titulo = listaTitulos.find(t =>
-    t.id_mensalidade === mensalidade.id_mensalidade
-) || listaTitulos.find(t =>
-    t.id_mensalidade &&
-    t.status !== "CANCELADO"
-) || null;
+const titulo =
+    listaTitulos.find(t =>
+        t.id_mensalidade === mensalidade.id_mensalidade
+    )
+    ||
+    listaTitulos.find(t =>
+        t.competencia === mensalidade.competencia &&
+        t.status !== "CANCELADO"
+    )
+    ||
+    listaTitulos.find(t =>
+        t.vencimento === mensalidade.vencimento &&
+        t.status !== "CANCELADO"
+    )
+    ||
+    null;
 
 const possuiTitulo =
     !!titulo &&
