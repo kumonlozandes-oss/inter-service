@@ -1679,7 +1679,9 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
         await gerarMensalidades(competencia);
 
-const lista = await listarPendentesGeracao(competencia);
+const resultado = await analisarCobrancas(competencia);
+
+const lista = resultado.lista;
 const cobrancasInter = await listarCobrancasInter(competencia);
 
 for (const item of lista) {
