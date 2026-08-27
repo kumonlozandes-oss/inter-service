@@ -1441,15 +1441,16 @@ for (const item of listaGeracao) {
 
     } catch (erro) {
 
-        res.status(500).json({
+    console.error("========== ERRO GERAÇÃO ==========");
+    console.error(erro);
+    console.error(erro.stack);
 
-            sucesso: false,
+    res.status(500).json({
+        sucesso: false,
+        erro: erro.message
+    });
 
-            erro: erro.message
-
-        });
-
-    }
+}
 
 });
 
