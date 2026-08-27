@@ -1721,28 +1721,37 @@ for (const titulo of titulos) {
 
          const erros = [];
 
-const listaTitulos = mapaTitulos.get(mensalidade.guid_aluno) || [];
+let titulo = null;
 
-const titulo =
-    listaTitulos.find(t =>
-        t.id_mensalidade === mensalidade.id_mensalidade
-    )
-    ||
-    listaTitulos.find(t =>
-        t.competencia === mensalidade.competencia &&
-        t.status !== "CANCELADO"
-    )
-    ||
-    listaTitulos.find(t =>
-        t.vencimento === mensalidade.vencimento &&
-        t.status !== "CANCELADO"
-    )
-    ||
-    null;
+if (mensalidade.id_titulo) {
 
-const possuiTitulo =
-!!titulo &&
-!["CANCELADO", "CANCELADA"].includes(titulo.status);
+    titulo = {
+        id: mensalidade.id_titulo,
+        status: mensalidade.status
+    };
+
+} else {
+
+    const listaTitulos = mapaTitulos.get(mensalidade.guid_aluno) || [];
+
+    titulo =
+        listaTitulos.find(t => t.id_mensalidade === mensalidade.id_mensalidade)
+        ||
+        listaTitulos.find(t =>
+            t.competencia === mensalidade.competencia &&
+            t.status !== "CANCELADO"
+        )
+        ||
+        listaTitulos.find(t =>
+            t.vencimento === mensalidade.vencimento &&
+            t.status !== "CANCELADO"
+        )
+        ||
+        null;
+
+}
+
+const possuiTitulo = !!titulo;
 
         if (possuiTitulo) {
 
