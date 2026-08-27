@@ -1665,7 +1665,8 @@ async function listarCobrancasInter(competencia) {
             item?.cobranca?.seuNumero || ""
         );
 
-        return seuNumero.includes(competencia);
+        console.log(seuNumero);
+        return true;
 
     });
 
