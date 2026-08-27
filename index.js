@@ -122,11 +122,14 @@ async function obterTokenInter() {
 
     }, body);
 
-    const json = jsonSeguro(resposta.body);
+const json = jsonSeguro(resposta.body);
 
-    if (!json.access_token) {
-        throw new Error("Falha ao obter token do Banco Inter.");
-    }
+console.log("STATUS TOKEN:", resposta.status);
+console.log("RESPOSTA TOKEN:", resposta.body);
+
+if (!json.access_token) {
+    throw new Error("Falha ao obter token do Banco Inter.");
+}
 
     return json.access_token;
 
