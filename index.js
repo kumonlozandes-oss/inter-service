@@ -1438,12 +1438,13 @@ const lista = analise.aptosGeracao;
         console.log("PASSO 3", lista.length);
         console.log("PASSO 4", analise.aptosGeracao.length);
 
-        const listaGeracao =
-            ids.length === 0
-                ? lista
-                : lista.filter(item =>
-                      ids.includes(item.idMensalidade)
-                  );
+const listaGeracao =
+    ids.length === 0
+        ? lista
+        : lista.filter(item =>
+              ids.includes(item.guidAluno) ||
+              ids.includes(item.idMensalidade)
+          );
 
 console.log("IDS:", ids);
 console.log("LISTA:", lista.length);
