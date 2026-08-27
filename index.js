@@ -1346,6 +1346,68 @@ app.post("/gerar-boleto", async (req, res) => {
 
 });
 
+async function listarPendentesGeracao(competencia) {
+
+    const { data: lista, error } = await supabase
+        .from("mensalidades")
+        .select(`
+            id_mensalidade,
+            guid_aluno,
+            aluno,
+            responsavel,
+            competencia,
+            valor_final
+        `)
+        .eq("competencia", competencia)
+        .eq("status", "PENDENTE");
+
+    if (error)
+        throw error;
+
+    return (lista || []).map(item => ({
+        idMensalidade: item.id_mensalidade,
+        guidAluno: item.guid_aluno,
+        aluno: item.aluno,
+        responsavel: item.responsavel,
+        competencia: item.competencia,
+        valorFinal: Number(item.valor_final || 0)
+    }));
+
+}
+
+async function analisarCobrancas(competencia) {
+
+    const lista = await listarPendentesGeracao(competencia);
+
+    const cobrancasInter = await listarCobrancasInter(competencia);
+
+    const aptosGeracao = [];
+
+    for (const item of lista) {
+
+        const jaExiste = cobrancasInter.some(c => {
+            const seuNumero = String(
+                c?.cobranca?.seuNumero ||
+                c?.seuNumero ||
+                ""
+            );
+
+            return seuNumero.includes(item.idMensalidade);
+        });
+
+        if (!jaExiste) {
+            aptosGeracao.push(item);
+        }
+
+    }
+
+    return {
+        lista,
+        aptosGeracao
+    };
+
+}
+
 // ======================================================
 // GERAÇÃO EM LOTE DAS COBRANÇAS
 // ======================================================
