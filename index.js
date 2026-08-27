@@ -450,7 +450,7 @@ function dadosTitulo(detalhe) {
 
 }
 
-async function listarTodasCobrancasInter() { {
+async function listarTodasCobrancasInter() {
 
     const token = await obterTokenInter();
 
