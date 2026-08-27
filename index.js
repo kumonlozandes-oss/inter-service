@@ -1721,13 +1721,7 @@ for (const titulo of titulos) {
 
          const erros = [];
 
-const listaTitulos =
-    (mapaTitulos.get(mensalidade.guid_aluno) || [])
-        .filter(t =>
-            t.id_mensalidade === mensalidade.id_mensalidade ||
-            t.competencia === mensalidade.competencia ||
-            t.vencimento === mensalidade.vencimento
-        );
+const listaTitulos = mapaTitulos.get(mensalidade.guid_aluno) || [];
 
 const titulo = listaTitulos.find(t =>
     t.id_mensalidade === mensalidade.id_mensalidade
