@@ -450,7 +450,7 @@ function dadosTitulo(detalhe) {
 
 }
 
-async function listarCobrancasInter() {
+async function listarTodasCobrancasInter() { {
 
     const token = await obterTokenInter();
 
@@ -1657,17 +1657,17 @@ if (erroInsert)
 
 async function listarCobrancasInter(competencia) {
 
-    const resposta = await apiInter(
-        "GET",
-        "/cobranca/v3/cobrancas",
-        {
-            filtrarDataPor: "VENCIMENTO",
-            dataInicial: `01/${competencia}`,
-            dataFinal: `31/${competencia}`
-        }
-    );
+    const { cobrancas } = await listarTodasCobrancasInter();
 
-    return resposta.cobrancas || [];
+    return (cobrancas || []).filter(item => {
+
+        const seuNumero = String(
+            item?.cobranca?.seuNumero || ""
+        );
+
+        return seuNumero.includes(competencia);
+
+    });
 
 }
 
