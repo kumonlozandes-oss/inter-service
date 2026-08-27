@@ -1657,275 +1657,66 @@ if (erroInsert)
 
 async function analisarCobrancas(competencia) {
 
-    const { data: mensalidades, error: erroMensalidades } =
-    await supabase
+    const { data: mensalidades, error } = await supabase
         .from("mensalidades")
         .select(`
-            *,
-                alunos_master!fk_mensalidades_aluno (
-                responsavel,
-                responsavel_cpf,
-                responsavel_telefone,
-                responsavel_cep,
-                responsavel_endereco,
-                responsavel_numero,
-                responsavel_bairro,
-                responsavel_cidade,
-                responsavel_uf
+            id_mensalidade,
+            competencia,
+            valor_final,
+            guid_aluno,
+            guid_responsavel,
+            id_titulo,
+            alunos_master(
+                nome,
+                responsavel
             )
         `)
-        .eq("competencia", competencia)
-        .eq("status", "PENDENTE");
+        .eq("competencia", competencia);
 
-if (erroMensalidades)
-    throw erroMensalidades;
-
-const { data: titulos, error: erroTitulos } =
-await supabase
-    .from("financeiro_titulos")
-    .select("*")
-    .not("guid_aluno", "is", null)
-    .neq("status", "CANCELADO");
-    
-    if (erroTitulos)
-        throw erroTitulos;
-
-    let existentes = 0;
-    let pendentes = 0;
-    let inconsistencias = 0;
-
-    let valorTotal = 0;
-    let valorGerar = 0;
+    if (error) throw error;
 
     const lista = [];
-    const aptosGeracao = [];
-    const bloqueados = [];
 
-const mapaTitulos = new Map();
+    let gerados = 0;
+    let pendentes = 0;
 
-for (const titulo of titulos) {
+    for (const mensalidade of mensalidades || []) {
 
-    if (!titulo.guid_aluno) continue;
+        const gerado = !!mensalidade.id_titulo;
 
-    const chave = titulo.guid_aluno;
-
-    if (!mapaTitulos.has(chave)) {
-        mapaTitulos.set(chave, []);
-    }
-
-    mapaTitulos.get(chave).push(titulo);
-
-}
-
-    for (const mensalidade of mensalidades) {
-
-         const erros = [];
-
-let titulo = null;
-
-if (mensalidade.id_titulo) {
-
-    titulo = {
-        id: mensalidade.id_titulo,
-        status: mensalidade.status
-    };
-
-} else {
-
-    const listaTitulos = mapaTitulos.get(mensalidade.guid_aluno) || [];
-
-    titulo =
-        listaTitulos.find(t => t.id_mensalidade === mensalidade.id_mensalidade)
-        ||
-        listaTitulos.find(t =>
-            t.competencia === mensalidade.competencia &&
-            t.status !== "CANCELADO"
-        )
-        ||
-        listaTitulos.find(t =>
-            t.vencimento === mensalidade.vencimento &&
-            t.status !== "CANCELADO"
-        )
-        ||
-        null;
-
-}
-
-const possuiTitulo = !!titulo;
-
-        if (possuiTitulo) {
-
-            existentes++;
-
+        if (gerado) {
+            gerados++;
         } else {
-
             pendentes++;
-
-valorGerar += Number(mensalidade.valor_final || 0);
-
         }
 
-        if (!mensalidade.alunos_master?.responsavel)
-            erros.push("Responsável não informado.");
+        lista.push({
 
-        if (!mensalidade.alunos_master?.responsavel_cpf)
-            erros.push("CPF do responsável não informado.");
+            idMensalidade: mensalidade.id_mensalidade,
 
-        if (!mensalidade.alunos_master?.responsavel_cep)
-            erros.push("CEP não informado.");
+            aluno: mensalidade.alunos_master?.nome || "",
 
-        if (!mensalidade.alunos_master?.responsavel_endereco)
-            erros.push("Endereço não informado.");
+            responsavel: mensalidade.alunos_master?.responsavel || "",
 
-        if (!mensalidade.alunos_master?.responsavel_numero)
-            erros.push("Número não informado.");
+            competencia: mensalidade.competencia,
 
-        if (!mensalidade.alunos_master?.responsavel_bairro)
-            erros.push("Bairro não informado.");
+            valorFinal: Number(mensalidade.valor_final || 0),
 
-        if (!mensalidade.alunos_master?.responsavel_cidade)
-            erros.push("Cidade não informada.");
+            gerado
 
-        if (!mensalidade.alunos_master?.responsavel_uf)
-            erros.push("UF não informada.");
-
-        const registro = {
-
-    idMensalidade: mensalidade.id_mensalidade,
-
-    idTitulo: titulo?.id ?? null,
-    
-    idInter: titulo?.id_inter ?? null,
-    
-    status: titulo?.status ?? mensalidade.status,
-    
-    statusInter: titulo?.status_inter ?? null,
-    
-    nossoNumero: titulo?.nosso_numero ?? null,
-    
-    seuNumero: titulo?.seu_numero ?? null,
-    
-    linhaDigitavel: titulo?.linha_digitavel ?? null,
-    
-    codigoBarras: titulo?.codigo_barras ?? null,
-    
-    codigoPix: titulo?.codigo_pix ?? null,
-    
-    pixCopiaCola: titulo?.pix_copia_cola ?? null,
-    
-    urlPdfBoleto: titulo?.url_pdf_boleto ?? null,
-            
-    guidAluno: mensalidade.guid_aluno,
-
-    guidResponsavel: mensalidade.guid_responsavel,
-
-    aluno: mensalidade.aluno,
-
-    responsavel: mensalidade.alunos_master?.responsavel,
-
-    responsavel_cpf: mensalidade.alunos_master?.responsavel_cpf,
-
-    responsavel_endereco: mensalidade.alunos_master?.responsavel_endereco,
-    
-    responsavel_numero: mensalidade.alunos_master?.responsavel_numero,
-    
-    responsavel_bairro: mensalidade.alunos_master?.responsavel_bairro,
-    
-    responsavel_cidade: mensalidade.alunos_master?.responsavel_cidade,
-    
-    responsavel_uf: mensalidade.alunos_master?.responsavel_uf,
-    
-    responsavel_cep: mensalidade.alunos_master?.responsavel_cep,
-
-    whatsapp: mensalidade.alunos_master?.responsavel_telefone,
-
-    competencia: mensalidade.competencia,
-
-    disciplinas: mensalidade.curso,
-
-valorOriginal: Number(
-    titulo?.valor_original ?? mensalidade.valor_original ?? 0
-),
-
-valorDesconto: Number(
-    titulo?.valor_desconto ?? mensalidade.valor_desconto ?? 0
-),
-
-valorFinal: Number(
-    titulo?.valor_final ?? mensalidade.valor_final ?? 0
-),
-
-    vencimento: mensalidade.vencimento,
-
-    formaPagamento: mensalidade.forma_pagamento,
-
-    possuiTitulo,
-
-    erros
-
-};
-
-        lista.push(registro);
-
-        if (possuiTitulo) {
-
-            bloqueados.push({
-
-    ...registro,
-
-    motivo: `Já possui cobrança (${titulo.status}).`
-
-});
-
-        }
-        else if (erros.length > 0) {
-
-            inconsistencias++;
-
-            bloqueados.push({
-
-                ...registro,
-
-                motivo: "Cadastro incompleto."
-
-            });
-
-        }
-        else {
-
-            aptosGeracao.push(registro);
-
-        }
-
-        valorTotal += Number(mensalidade.valor_final || 0);
+        });
 
     }
 
     return {
 
-        competencia,
+        mensalidades: lista.length,
 
-        mensalidades: mensalidades.length,
-
-        existentes,
+        existentes: gerados,
 
         pendentes,
 
-        inconsistencias,
-
-        aptos: aptosGeracao.length,
-
-        bloqueados: bloqueados.length,
-
-        valorTotal,
-
-        valorGerar,
-
-        aptosGeracao,
-
-        bloqueados,
-
-        lista: aptosGeracao
+        lista
 
     };
 
@@ -1935,37 +1726,32 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
     try {
 
-const competencia = req.query.competencia;
+        const competencia = req.query.competencia;
 
-await gerarMensalidades(competencia);
+        await gerarMensalidades(competencia);
 
-const resultado = await analisarCobrancas(competencia);
+        const resultado = await analisarCobrancas(competencia);
 
         res.json({
+            sucesso: true,
+            lista: resultado.lista,
+            mensalidades: resultado.mensalidades,
+            existentes: resultado.existentes,
+            pendentes: resultado.pendentes
+        });
 
-    sucesso: true,
+    } catch (erro) {
 
-    ...resultado
+        console.error(erro);
 
-});
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
 
     }
 
-    catch (erro) {
-
-    console.error("ERRO ANALISAR COBRANÇAS:");
-    console.error(erro);
-
-    res.status(500).json({
-        sucesso: false,
-        erro: erro.message,
-        stack: erro.stack
-    });
-
-}
-
 });
-
 app.get("/", (req, res) => {
 
     res.json({
