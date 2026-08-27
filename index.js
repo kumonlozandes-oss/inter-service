@@ -1351,30 +1351,76 @@ app.post("/gerar-boleto", async (req, res) => {
 
 async function listarPendentesGeracao(competencia) {
 
-    const { data: lista, error } = await supabase
+    const { data, error } = await supabase
         .from("mensalidades")
         .select(`
             id_mensalidade,
-            guid_aluno,
-            aluno,
-            responsavel,
             competencia,
-            valor_final
+            valor_original,
+            valor_desconto,
+            valor_final,
+            vencimento,
+            alunos_master (
+                guid,
+                id_aluno,
+                nome,
+                responsavel,
+                cpf_responsavel,
+                email,
+                telefone,
+                cep,
+                endereco,
+                numero,
+                complemento,
+                bairro,
+                cidade,
+                uf,
+                cursos
+            )
         `)
         .eq("competencia", competencia)
-        .eq("status", "PENDENTE");
+        .eq("status", "PENDENTE")
+        .order("vencimento");
 
-    if (error)
-        throw error;
+    if (error) throw error;
 
-    return (lista || []).map(item => ({
-        idMensalidade: item.id_mensalidade,
-        guidAluno: item.guid_aluno,
-        aluno: item.aluno,
-        responsavel: item.responsavel,
-        competencia: item.competencia,
-        valorFinal: Number(item.valor_final || 0)
-    }));
+    return (data || []).map(item => {
+
+        const aluno = item.alunos_master || {};
+
+        return {
+
+            idMensalidade: item.id_mensalidade,
+            guidAluno: aluno.guid,
+
+            aluno: aluno.nome,
+            responsavel: aluno.responsavel,
+
+            competencia: item.competencia,
+
+            vencimento: item.vencimento,
+
+            valorOriginal: Number(item.valor_original || 0),
+            valorDesconto: Number(item.valor_desconto || 0),
+            valorFinal: Number(item.valor_final || 0),
+
+            curso: aluno.cursos,
+
+            responsavelCpf: aluno.cpf_responsavel,
+            email: aluno.email,
+            telefone: aluno.telefone,
+
+            cep: aluno.cep,
+            endereco: aluno.endereco,
+            numero: aluno.numero,
+            complemento: aluno.complemento,
+            bairro: aluno.bairro,
+            cidade: aluno.cidade,
+            uf: aluno.uf
+
+        };
+
+    });
 
 }
 
@@ -1385,28 +1431,44 @@ async function analisarCobrancas(competencia) {
     const cobrancasInter = await listarCobrancasInter(competencia);
 
     const aptosGeracao = [];
+    const existentes = [];
 
     for (const item of lista) {
 
-        const jaExiste = cobrancasInter.some(c => {
+        const existe = (cobrancasInter || []).some(c => {
+
             const seuNumero = String(
                 c?.cobranca?.seuNumero ||
                 c?.seuNumero ||
                 ""
             );
 
-            return seuNumero.includes(item.idMensalidade);
+            return seuNumero === item.idMensalidade;
+
         });
 
-        if (!jaExiste) {
+        if (existe) {
+            existentes.push(item);
+        } else {
             aptosGeracao.push(item);
         }
 
     }
 
     return {
+
         lista,
-        aptosGeracao
+
+        aptosGeracao,
+
+        existentes,
+
+        totalMensalidades: lista.length,
+
+        totalExistentes: existentes.length,
+
+        totalPendentes: aptosGeracao.length
+
     };
 
 }
@@ -1419,91 +1481,53 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
     try {
 
-        console.log("PASSO 1");
-
-        const competencia =
-    req.body.competencia ||
-    req.body.competência ||
-    req.query.competencia;
-
-if (!competencia) {
-    return res.status(400).json({
-        sucesso: false,
-        erro: "Competência não enviada."
-    });
-}
-        await gerarMensalidades(competencia);
-        console.log("PASSO 2");
+        const competencia = req.body.competencia;
         const ids = req.body.idsMensalidades || [];
 
+        await gerarMensalidades(competencia);
+
         const analise = await analisarCobrancas(competencia);
-const lista = analise.aptosGeracao;
-        console.log("PASSO 3", lista.length);
-        console.log("PASSO 4", analise.aptosGeracao.length);
 
-const listaGeracao =
-    ids.length === 0
-        ? lista
-        : lista.filter(item =>
-              ids.includes(item.guidAluno) ||
-              ids.includes(item.idMensalidade)
-          );
+        const listaGeracao =
+            ids.length === 0
+                ? analise.aptosGeracao
+                : analise.aptosGeracao.filter(item =>
+                      ids.includes(item.idMensalidade)
+                  );
 
-console.log("IDS:", ids);
-console.log("LISTA:", lista.length);
-console.log("GERAÇÃO:", listaGeracao.length);
-console.log(listaGeracao);
-        
         let geradas = 0;
         let erros = 0;
-        
+
         const resultado = [];
 
-
-for (const item of listaGeracao) {
-console.log("PASSO 4", listaGeracao.length);
+        for (const item of listaGeracao) {
 
             try {
 
                 item.seuNumero = item.idMensalidade;
 
-                const resposta = await gerarBoletoInterno(item);
+                const boleto = await gerarBoletoInterno(item);
+
+                await sincronizarMensalidadeComTitulo(boleto);
 
                 resultado.push({
-
                     aluno: item.aluno,
-
-                    sucesso: true,
-
-                    dados: resposta
-
+                    sucesso: true
                 });
 
                 geradas++;
 
-} catch (erro) {
+            } catch (erro) {
 
-    console.error("===== ERRO BOLETO =====");
-    console.error(erro);
+                resultado.push({
+                    aluno: item.aluno,
+                    sucesso: false,
+                    erro: erro instanceof Error ? erro.message : String(erro)
+                });
 
-    if (erro instanceof Error) {
-        console.error("MESSAGE:", erro.message);
-        console.error("STACK:", erro.stack);
-    }
+                erros++;
 
-    if (erro.response) {
-        console.error("RESPONSE:");
-        console.error(erro.response.data);
-    }
-
-    resultado.push({
-        aluno: item.aluno,
-        sucesso: false,
-        erro: erro instanceof Error ? erro.message : String(erro)
-    });
-
-    erros++;
-}
+            }
 
         }
 
@@ -1523,27 +1547,19 @@ console.log("PASSO 4", listaGeracao.length);
 
         });
 
-} catch (erro) {
+    } catch (erro) {
 
-    console.error("========== ERRO GERAÇÃO ==========");
-    console.error(erro);
+        console.error(erro);
 
-    if (erro instanceof Error) {
-        console.error("MESSAGE:", erro.message);
-        console.error("STACK:", erro.stack);
+        res.status(500).json({
+
+            sucesso: false,
+
+            erro: erro instanceof Error ? erro.message : String(erro)
+
+        });
+
     }
-
-    if (erro.response) {
-        console.error("RESPONSE:");
-        console.error(erro.response.data);
-    }
-
-    res.status(500).json({
-        sucesso: false,
-        erro: erro instanceof Error ? erro.message : String(erro)
-    });
-
-}
 
 });
 
@@ -1774,67 +1790,25 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
         const competencia = req.query.competencia;
 
-        const cobrancasInter = await listarCobrancasInter(competencia);
-
         await gerarMensalidades(competencia);
 
-        const mensalidades = await supabase
-            .from("mensalidades")
-            .select(`
-                id_mensalidade,
-                competencia,
-                valor_final,
-                id_titulo,
-                alunos_master(
-                    nome,
-                    responsavel
-                )
-            `)
-            .eq("competencia", competencia);
-
-        if (mensalidades.error) {
-            throw mensalidades.error;
-        }
-
-        const lista = (mensalidades.data || []).map(item => ({
-
-            idMensalidade: item.id_mensalidade,
-
-            aluno: item.alunos_master?.nome || "",
-
-            responsavel: item.alunos_master?.responsavel || "",
-
-            competencia: item.competencia,
-
-            valorFinal: Number(item.valor_final || 0),
-
-            gerado: cobrancasInter.some(c =>
-                String(c.seuNumero || "").includes(item.id_mensalidade)
-            ),
-
-            situacao: item.id_titulo ? "GERADO" : "GERAR"
-
-        }));
-
-        const pendentes = lista.filter(x => !x.gerado);
+        const analise = await analisarCobrancas(competencia);
 
         res.json({
 
             sucesso: true,
 
-            mensalidades: lista.length,
+            mensalidades: analise.totalMensalidades,
 
-            existentes: lista.length - pendentes.length,
+            existentes: analise.totalExistentes,
 
-            pendentes: pendentes.length,
+            pendentes: analise.totalPendentes,
 
-            lista: pendentes
+            lista: analise.aptosGeracao
 
         });
 
-    }
-
-    catch (erro) {
+    } catch (erro) {
 
         console.error(erro);
 
@@ -1842,13 +1816,14 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
             sucesso: false,
 
-            erro: erro.message
+            erro: erro instanceof Error ? erro.message : String(erro)
 
         });
 
     }
 
 });
+
 app.get("/", (req, res) => {
 
     res.json({
