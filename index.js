@@ -1655,40 +1655,19 @@ if (erroInsert)
 
 }
 
-async function listarPendentesGeracao(competencia) {
+async function listarCobrancasInter(competencia) {
 
-    const { data: mensalidades, error } = await supabase
-        .from("mensalidades")
-        .select(`
-            id_mensalidade,
-            guid_responsavel,
-            competencia,
-            valor_final,
-            alunos_master(
-                nome,
-                responsavel
-            )
-        `)
-        .eq("competencia", competencia);
+    const resposta = await apiInter(
+        "GET",
+        "/cobranca/v3/cobrancas",
+        {
+            filtrarDataPor: "VENCIMENTO",
+            dataInicial: `01/${competencia}`,
+            dataFinal: `31/${competencia}`
+        }
+    );
 
-    if (error) throw error;
-
-    const lista = [];
-
-    for (const m of (mensalidades || [])) {
-
-        lista.push({
-            idMensalidade: m.id_mensalidade,
-            guidResponsavel: m.guid_responsavel,
-            aluno: m.alunos_master?.nome || "",
-            responsavel: m.alunos_master?.responsavel || "",
-            competencia: m.competencia,
-            valor: Number(m.valor_final || 0)
-        });
-
-    }
-
-    return lista;
+    return resposta.cobrancas || [];
 
 }
 
@@ -1701,13 +1680,24 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
         await gerarMensalidades(competencia);
 
 const lista = await listarPendentesGeracao(competencia);
+const cobrancasInter = await listarCobrancasInter(competencia);
+
+for (const item of lista) {
+
+    item.gerado = cobrancasInter.some(c =>
+        String(c.seuNumero || "").includes(item.idMensalidade)
+    );
+
+}
+
+const pendentes = lista.filter(x => !x.gerado);
 
 res.json({
     sucesso: true,
     mensalidades: lista.length,
-    existentes: 0,
-    pendentes: lista.length,
-    lista
+    existentes: lista.length - pendentes.length,
+    pendentes: pendentes.length,
+    lista: pendentes
 });
 
     } catch (erro) {
