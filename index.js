@@ -1690,21 +1690,21 @@ async function analisarCobrancas(competencia) {
             pendentes++;
         }
 
-        lista.push({
+lista.push({
 
-            idMensalidade: mensalidade.id_mensalidade,
+    idMensalidade: mensalidade.id_mensalidade,
 
-            aluno: mensalidade.alunos_master?.nome || "",
+    aluno: mensalidade.alunos_master?.nome || "",
 
-            responsavel: mensalidade.alunos_master?.responsavel || "",
+    responsavel: mensalidade.alunos_master?.responsavel || "",
 
-            competencia: mensalidade.competencia,
+    competencia: mensalidade.competencia,
 
-            valorFinal: Number(mensalidade.valor_final || 0),
+    valorFinal: Number(mensalidade.valor_final || 0),
 
-            gerado
+    situacao: gerado ? "JÁ GERADO" : "GERAR"
 
-        });
+});
 
     }
 
