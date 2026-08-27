@@ -1769,18 +1769,29 @@ if (erroInsert)
 
 async function listarCobrancasInter(competencia) {
 
-    const { cobrancas } = await listarTodasCobrancasInter();
+    const { token, cobrancas } = await listarTodasCobrancasInter();
 
-    return (cobrancas || []).filter(item => {
+    const lista = (cobrancas || []).filter(item => {
+
+        if (!competencia) return true;
 
         const seuNumero = String(
             item?.cobranca?.seuNumero || ""
+        ).toUpperCase();
+
+        return (
+            seuNumero.includes(competencia) ||
+            seuNumero.includes(
+                competencia.replace("/", "")
+            )
         );
 
-        console.log(seuNumero);
-        return true;
-
     });
+
+    return {
+        token,
+        cobrancas: lista
+    };
 
 }
 
