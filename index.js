@@ -1358,23 +1358,19 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
         await gerarMensalidades(competencia);
         const ids = req.body.idsMensalidades || [];
 
-        const analise = await analisarCobrancas(competencia);
-        console.log("APTOS:", analise.aptosGeracao.length);
-        console.log("PRIMEIRO APTO:", analise.aptosGeracao[0]);
+        const lista = await listarPendentesGeracao(competencia);
 
+        const listaGeracao =
+            ids.length === 0
+                ? lista
+                : lista.filter(item =>
+                      ids.includes(item.idMensalidade)
+                  );
+        
         let geradas = 0;
         let erros = 0;
-
-        const resultado = [];
-
         
-        const listaGeracao =
-    ids.length === 0
-        ? analise.aptosGeracao
-        : analise.aptosGeracao.filter(item =>
-              ids.includes(item.guidAluno) ||
-              ids.includes(item.idMensalidade)
-          );
+        const resultado = [];
 
 
 for (const item of listaGeracao) {
