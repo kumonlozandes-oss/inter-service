@@ -1452,15 +1452,24 @@ console.log("PASSO 4", listaGeracao.length);
 
         });
 
-    } catch (erro) {
+} catch (erro) {
 
     console.error("========== ERRO GERAÇÃO ==========");
     console.error(erro);
-    console.error(erro.stack);
+
+    if (erro instanceof Error) {
+        console.error("MESSAGE:", erro.message);
+        console.error("STACK:", erro.stack);
+    }
+
+    if (erro.response) {
+        console.error("RESPONSE:");
+        console.error(erro.response.data);
+    }
 
     res.status(500).json({
         sucesso: false,
-        erro: erro.message
+        erro: erro instanceof Error ? erro.message : String(erro)
     });
 
 }
