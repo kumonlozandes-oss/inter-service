@@ -1381,6 +1381,8 @@ for (const item of listaGeracao) {
 
             try {
 
+                item.seuNumero = item.idMensalidade;
+
                 const resposta = await gerarBoletoInterno(item);
 
                 resultado.push({
