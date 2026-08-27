@@ -1354,11 +1354,15 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
     try {
 
+        console.log("PASSO 1");
+
         const competencia = req.body.competencia;
         await gerarMensalidades(competencia);
+        console.log("PASSO 2");
         const ids = req.body.idsMensalidades || [];
 
         const lista = await listarPendentesGeracao(competencia);
+        console.log("PASSO 3", lista.length);
 
         const listaGeracao =
             ids.length === 0
@@ -1374,6 +1378,7 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
 
 for (const item of listaGeracao) {
+console.log("PASSO 4", listaGeracao.length);
 
             try {
 
