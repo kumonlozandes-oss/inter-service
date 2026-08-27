@@ -1655,17 +1655,15 @@ if (erroInsert)
 
 }
 
-async function analisarCobrancas(competencia) {
+async function listarPendentesGeracao(competencia) {
 
     const { data: mensalidades, error } = await supabase
         .from("mensalidades")
         .select(`
             id_mensalidade,
+            guid_responsavel,
             competencia,
             valor_final,
-            guid_aluno,
-            guid_responsavel,
-            id_titulo,
             alunos_master(
                 nome,
                 responsavel
@@ -1677,42 +1675,20 @@ async function analisarCobrancas(competencia) {
 
     const lista = [];
 
-    let gerados = 0;
-    let pendentes = 0;
-
-    for (const mensalidade of (mensalidades || [])) {
-
-        const gerado = !!mensalidade.id_titulo;
-
-        if (gerado) {
-            gerados++;
-        } else {
-            pendentes++;
-        }
-
-console.log(
-    mensalidade.alunos_master?.nome,
-    mensalidade.valor_final
-);
+    for (const m of (mensalidades || [])) {
 
         lista.push({
-            idMensalidade: mensalidade.id_mensalidade,
-            aluno: mensalidade.alunos_master?.nome || "",
-            responsavel: mensalidade.alunos_master?.responsavel || "",
-            competencia: mensalidade.competencia,
-            valorFinal: Number(mensalidade.valor_final || 0),
-            gerado: gerado,
-            situacao: gerado ? "GERADO" : "GERAR"
+            idMensalidade: m.id_mensalidade,
+            guidResponsavel: m.guid_responsavel,
+            aluno: m.alunos_master?.nome || "",
+            responsavel: m.alunos_master?.responsavel || "",
+            competencia: m.competencia,
+            valor: Number(m.valor_final || 0)
         });
 
     }
 
-    return {
-        mensalidades: lista.length,
-        existentes: gerados,
-        pendentes,
-        lista
-    };
+    return lista;
 
 }
 
@@ -1724,7 +1700,7 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
         await gerarMensalidades(competencia);
 
-        const resultado = await analisarCobrancas(competencia);
+        const lista = await listarPendentesGeracao(competencia);
 
         res.json({
             sucesso: true,
