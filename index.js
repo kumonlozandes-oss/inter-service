@@ -1680,7 +1680,7 @@ async function analisarCobrancas(competencia) {
     let gerados = 0;
     let pendentes = 0;
 
-    for (const mensalidade of mensalidades || []) {
+    for (const mensalidade of (mensalidades || [])) {
 
         const gerado = !!mensalidade.id_titulo;
 
@@ -1690,34 +1690,23 @@ async function analisarCobrancas(competencia) {
             pendentes++;
         }
 
-lista.push({
-
-    idMensalidade: mensalidade.id_mensalidade,
-
-    aluno: mensalidade.alunos_master?.nome || "",
-
-    responsavel: mensalidade.alunos_master?.responsavel || "",
-
-    competencia: mensalidade.competencia,
-
-    valorFinal: Number(mensalidade.valor_final || 0),
-
-    situacao: gerado ? "JÁ GERADO" : "GERAR"
-
-});
+        lista.push({
+            idMensalidade: mensalidade.id_mensalidade,
+            aluno: mensalidade.alunos_master?.nome || "",
+            responsavel: mensalidade.alunos_master?.responsavel || "",
+            competencia: mensalidade.competencia,
+            valorFinal: Number(mensalidade.valor_final || 0),
+            gerado: gerado,
+            situacao: gerado ? "GERADO" : "GERAR"
+        });
 
     }
 
     return {
-
         mensalidades: lista.length,
-
         existentes: gerados,
-
         pendentes,
-
         lista
-
     };
 
 }
