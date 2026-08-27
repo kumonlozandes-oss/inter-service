@@ -307,66 +307,93 @@ function dadosTitulo(detalhe) {
     let guid_responsavel = null;
     let id_mensalidade = null;
 
-    const seuNumero = (cobranca.seuNumero || "").trim().toUpperCase();
+    const seuNumero = String(cobranca.seuNumero || "")
+        .trim()
+        .toUpperCase();
 
-if (seuNumero.startsWith("ERP|")) {
+    // ======================================================
+    // 1 - BOLETOS GERADOS PELO ERP
+    // ======================================================
 
-const partes = seuNumero.split("|");
+    if (seuNumero.startsWith("ERP|")) {
 
-id_mensalidade = partes[1] || null;
-guid_aluno = partes[2] || null;
-competencia = partes[3] || null;
+        const partes = seuNumero.split("|");
+
+        id_mensalidade = partes[1] || null;
+        guid_aluno = partes[2] || null;
+        competencia = partes[3] || null;
 
     }
 
-else {
+    // ======================================================
+    // 2 - BOLETOS MANUAIS
+    // ======================================================
 
-    const meses = {
-        JANEIRO: "01",
-        FEVEREIRO: "02",
-        MARCO: "03",
-        MARÇO: "03",
-        ABRIL: "04",
-        MAIO: "05",
-        JUNHO: "06",
-        JULHO: "07",
-        AGOSTO: "08",
-        SETEMBRO: "09",
-        OUTUBRO: "10",
-        NOVEMBRO: "11",
-        DEZEMBRO: "12"
-    };
+    else {
 
-    const m = seuNumero.match(/^([A-ZÇÃ]+)\/(\d{2})$/);
+        const meses = {
+            JANEIRO: "01",
+            FEVEREIRO: "02",
+            MARCO: "03",
+            MARÇO: "03",
+            ABRIL: "04",
+            MAIO: "05",
+            JUNHO: "06",
+            JULHO: "07",
+            AGOSTO: "08",
+            SETEMBRO: "09",
+            OUTUBRO: "10",
+            NOVEMBRO: "11",
+            DEZEMBRO: "12"
+        };
 
-    if (m) {
+        // AGOSTO/26
+        let m = seuNumero.match(/^([A-ZÇÃ]+)[\/\-](\d{2})$/);
 
-        const mes = meses[m[1]];
+        if (m && meses[m[1]]) {
 
-        if (mes) {
+            competencia = `${meses[m[1]]}/20${m[2]}`;
 
-            competencia = `${mes}/20${m[2]}`;
+        }
+
+        // 08/2026
+        if (!competencia) {
+
+            m = seuNumero.match(/^(\d{1,2})[\/\-](\d{4})$/);
+
+            if (m) {
+
+                competencia =
+                    `${String(m[1]).padStart(2, "0")}/${m[2]}`;
+
+            }
+
+        }
+
+        // ÚLTIMA CAMADA: DATA DE VENCIMENTO
+        if (!competencia && cobranca.dataVencimento) {
+
+            const partes = cobranca.dataVencimento.split("-");
+
+            if (partes.length === 3) {
+
+                competencia =
+                    `${partes[1]}/${partes[0]}`;
+
+            }
 
         }
 
     }
 
-}
+    if (competencia) {
 
-if (competencia) {
+        const [mes, ano] = competencia.split("/");
 
-    const [mes, ano] = competencia.split("/");
+        competencia_mes = Number(mes);
+        competencia_ano = Number(ano);
 
-    competencia_mes = Number(mes);
-    competencia_ano = Number(ano);
-
-}
-
-    console.log(
-    "STATUS INTER:",
-    cobranca.codigoSolicitacao,
-    cobranca.situacao
-);
+    }
 
     return {
 
@@ -398,9 +425,10 @@ if (competencia) {
 
         valor_original: valorOriginal,
         valor_desconto: valorDesconto,
-        valor_final: valorOriginal === null
-            ? null
-            : valorOriginal - valorDesconto,
+        valor_final:
+            valorOriginal == null
+                ? null
+                : valorOriginal - valorDesconto,
 
         valor_recebido: numero(cobranca.valorTotalRecebido),
 
