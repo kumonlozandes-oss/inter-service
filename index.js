@@ -1444,6 +1444,11 @@ const lista = analise.aptosGeracao;
                 : lista.filter(item =>
                       ids.includes(item.idMensalidade)
                   );
+
+console.log("IDS:", ids);
+console.log("LISTA:", lista.length);
+console.log("GERAÇÃO:", listaGeracao.length);
+console.log(listaGeracao);
         
         let geradas = 0;
         let erros = 0;
