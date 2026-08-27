@@ -639,12 +639,23 @@ async function reconciliarTitulo(titulo) {
     if (!aluno)
         return titulo;
 
-    const { data: mensalidade } = await supabase
+    let consulta = supabase
     .from("mensalidades")
-    .select("id_mensalidade,competencia,competencia_mes,competencia_ano")
-    .eq("guid_aluno", aluno.guid)
-    .eq("competencia", titulo.competencia)
-    .maybeSingle();
+    .select("id_mensalidade,competencia,competencia_mes,competencia_ano,vencimento")
+    .eq("guid_aluno", aluno.guid);
+
+if (titulo.competencia) {
+
+    consulta = consulta.eq("competencia", titulo.competencia);
+
+} else if (titulo.vencimento) {
+
+    consulta = consulta.eq("vencimento", titulo.vencimento);
+
+}
+
+const { data: mensalidade } =
+    await consulta.maybeSingle();
 
     if (!mensalidade)
         return titulo;
