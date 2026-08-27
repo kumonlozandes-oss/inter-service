@@ -1365,7 +1365,7 @@ async function listarPendentesGeracao(competencia) {
                 id_aluno,
                 nome,
                 responsavel,
-                cpf_responsavel,
+                responsavel_cpf,
                 email,
                 telefone,
                 cep,
@@ -1406,7 +1406,7 @@ async function listarPendentesGeracao(competencia) {
 
             curso: aluno.cursos,
 
-            responsavelCpf: aluno.cpf_responsavel,
+            responsavelCpf: aluno.responsavel_cpf,
             email: aluno.email,
             telefone: aluno.telefone,
 
