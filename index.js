@@ -1683,10 +1683,8 @@ if (erroMensalidades)
 const { data: titulos, error: erroTitulos } =
 await supabase
     .from("financeiro_titulos")
-    .select(`
-        *
-    `)
-    .eq("competencia", competencia)
+    .select("*")
+    .not("guid_aluno", "is", null)
     .neq("status", "CANCELADO");
     
     if (erroTitulos)
@@ -1723,7 +1721,13 @@ for (const titulo of titulos) {
 
          const erros = [];
 
-const listaTitulos = mapaTitulos.get(mensalidade.guid_aluno) || [];
+const listaTitulos =
+    (mapaTitulos.get(mensalidade.guid_aluno) || [])
+        .filter(t =>
+            t.id_mensalidade === mensalidade.id_mensalidade ||
+            t.competencia === mensalidade.competencia ||
+            t.vencimento === mensalidade.vencimento
+        );
 
 const titulo = listaTitulos.find(t =>
     t.id_mensalidade === mensalidade.id_mensalidade
