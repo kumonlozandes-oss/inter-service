@@ -1741,9 +1741,8 @@ const titulo =
     null;
 
 const possuiTitulo =
-    !!titulo &&
-    !!titulo.id_mensalidade &&
-    !["CANCELADO", "CANCELADA"].includes(titulo.status);
+!!titulo &&
+!["CANCELADO", "CANCELADA"].includes(titulo.status);
 
         if (possuiTitulo) {
 
