@@ -1700,15 +1700,15 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
         await gerarMensalidades(competencia);
 
-        const lista = await listarPendentesGeracao(competencia);
+const lista = await listarPendentesGeracao(competencia);
 
-        res.json({
-            sucesso: true,
-            lista: resultado.lista,
-            mensalidades: resultado.mensalidades,
-            existentes: resultado.existentes,
-            pendentes: resultado.pendentes
-        });
+res.json({
+    sucesso: true,
+    mensalidades: lista.length,
+    existentes: 0,
+    pendentes: lista.length,
+    lista
+});
 
     } catch (erro) {
 
