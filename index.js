@@ -1677,6 +1677,8 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
         const competencia = req.query.competencia;
 
+        const cobrancasInter = await listarCobrancasInter(competencia);
+
         await gerarMensalidades(competencia);
 
         const mensalidades = await supabase
@@ -1709,7 +1711,9 @@ app.get("/api/cobrancas/analisar", async (req, res) => {
 
             valorFinal: Number(item.valor_final || 0),
 
-            gerado: !!item.id_titulo,
+            gerado: cobrancasInter.some(c =>
+                String(c.seuNumero || "").includes(item.id_mensalidade)
+            ),
 
             situacao: item.id_titulo ? "GERADO" : "GERAR"
 
