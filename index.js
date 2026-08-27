@@ -1690,15 +1690,16 @@ async function analisarCobrancas(competencia) {
             pendentes++;
         }
 
+console.log(
+    mensalidade.alunos_master?.nome,
+    mensalidade.valor_final
+);
+
         lista.push({
             idMensalidade: mensalidade.id_mensalidade,
             aluno: mensalidade.alunos_master?.nome || "",
             responsavel: mensalidade.alunos_master?.responsavel || "",
             competencia: mensalidade.competencia,
-            console.log(
-    mensalidade.alunos_master?.nome,
-    mensalidade.valor_final
-);
             valorFinal: Number(mensalidade.valor_final || 0),
             gerado: gerado,
             situacao: gerado ? "GERADO" : "GERAR"
