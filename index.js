@@ -298,9 +298,10 @@ function dadosTitulo(detalhe) {
 
     const valorOriginal = numero(cobranca.valorNominal);
 
-    const valorDesconto = descontos.reduce((total, desconto) => {
-        return total + (numero(desconto.valor) || 0);
-    }, 0);
+    const valorDesconto = descontos.reduce(
+        (t, d) => t + (numero(d.valor) || 0),
+        0
+    );
 
     let competencia = null;
     let competencia_mes = null;
@@ -308,82 +309,80 @@ function dadosTitulo(detalhe) {
 
     let guid_aluno = null;
     let guid_responsavel = null;
+
     let id_mensalidade = null;
 
-    const seuNumero = String(cobranca.seuNumero || "")
-        .trim()
-        .toUpperCase();
+    const seuNumero = String(
+        cobranca.seuNumero || ""
+    ).trim();
 
-    // ======================================================
-    // 1 - BOLETOS GERADOS PELO ERP
-    // ======================================================
+    // =====================================================
+    // BOLETO GERADO PELO ERP
+    // =====================================================
 
-    if (seuNumero.startsWith("ERP|")) {
+    if (/^[0-9a-fA-F-]{36}$/.test(seuNumero)) {
 
-        const partes = seuNumero.split("|");
-
-        id_mensalidade = partes[1] || null;
-        guid_aluno = partes[2] || null;
-        competencia = partes[3] || null;
+        id_mensalidade = seuNumero;
 
     }
 
-    // ======================================================
-    // 2 - BOLETOS MANUAIS
-    // ======================================================
+    // =====================================================
+    // BOLETO MANUAL
+    // =====================================================
 
     else {
 
         const meses = {
-            JANEIRO: "01",
-            FEVEREIRO: "02",
-            MARCO: "03",
-            MARÇO: "03",
-            ABRIL: "04",
-            MAIO: "05",
-            JUNHO: "06",
-            JULHO: "07",
-            AGOSTO: "08",
-            SETEMBRO: "09",
-            OUTUBRO: "10",
-            NOVEMBRO: "11",
-            DEZEMBRO: "12"
+
+            JANEIRO:"01",
+            FEVEREIRO:"02",
+            MARCO:"03",
+            MARÇO:"03",
+            ABRIL:"04",
+            MAIO:"05",
+            JUNHO:"06",
+            JULHO:"07",
+            AGOSTO:"08",
+            SETEMBRO:"09",
+            OUTUBRO:"10",
+            NOVEMBRO:"11",
+            DEZEMBRO:"12"
+
         };
 
-        // AGOSTO/26
-        let m = seuNumero.match(/^([A-ZÇÃ]+)[\/\-](\d{2})$/);
+        let m =
+            seuNumero
+            .toUpperCase()
+            .match(/^([A-ZÇÃ]+)[\/-](\d{2})$/);
 
         if (m && meses[m[1]]) {
 
-            competencia = `${meses[m[1]]}/20${m[2]}`;
+            competencia =
+                `${meses[m[1]]}/20${m[2]}`;
 
         }
 
-        // 08/2026
         if (!competencia) {
 
-            m = seuNumero.match(/^(\d{1,2})[\/\-](\d{4})$/);
+            m =
+            seuNumero.match(/^(\d{2})\/(\d{4})$/);
 
             if (m) {
 
                 competencia =
-                    `${String(m[1]).padStart(2, "0")}/${m[2]}`;
+                    `${m[1]}/${m[2]}`;
 
             }
 
         }
 
-        // ÚLTIMA CAMADA: DATA DE VENCIMENTO
         if (!competencia && cobranca.dataVencimento) {
 
-            const partes = cobranca.dataVencimento.split("-");
+            const p =
+                cobranca.dataVencimento.split("-");
 
-            if (partes.length === 3) {
-
-                competencia =
-                    `${partes[1]}/${partes[0]}`;
-
-            }
+            competencia =
+                `${p[1]}/${p[0]}`;
 
         }
 
@@ -391,7 +390,7 @@ function dadosTitulo(detalhe) {
 
     if (competencia) {
 
-        const [mes, ano] = competencia.split("/");
+        const [mes,ano] = competencia.split("/");
 
         competencia_mes = Number(mes);
         competencia_ano = Number(ano);
@@ -400,54 +399,85 @@ function dadosTitulo(detalhe) {
 
     return {
 
-        origem: "INTER",
+        origem:"INTER",
 
         id_mensalidade,
 
         guid_aluno,
 
-        guid_responsavel: detalhe.guid_responsavel || null,
+        guid_responsavel,
 
-        cpf_responsavel: cobranca.pagador?.cpfCnpj || null,
+        cpf_responsavel:
+            cobranca.pagador?.cpfCnpj || null,
 
         competencia,
         competencia_mes,
         competencia_ano,
 
-        id_inter: cobranca.codigoSolicitacao,
+        id_inter:
+            cobranca.codigoSolicitacao,
 
-        seu_numero: cobranca.seuNumero,
-        nosso_numero: boleto.nossoNumero,
+        seu_numero:
+            cobranca.seuNumero,
 
-        status_inter: cobranca.situacao,
-        status: statusInterno(cobranca.situacao),
+        nosso_numero:
+            boleto.nossoNumero,
 
-        vencimento: cobranca.dataVencimento,
-        data_emissao: cobranca.dataEmissao,
-        data_pagamento: cobranca.dataSituacao,
+        status_inter:
+            cobranca.situacao,
 
-        valor_original: valorOriginal,
-        valor_desconto: valorDesconto,
+        status:
+            statusInterno(cobranca.situacao),
+
+        vencimento:
+            cobranca.dataVencimento,
+
+        data_emissao:
+            cobranca.dataEmissao,
+
+        data_pagamento:
+            cobranca.dataSituacao,
+
+        valor_original:
+            valorOriginal,
+
+        valor_desconto:
+            valorDesconto,
+
         valor_final:
             valorOriginal == null
                 ? null
                 : valorOriginal - valorDesconto,
 
-        valor_recebido: numero(cobranca.valorTotalRecebido),
+        valor_recebido:
+            numero(cobranca.valorTotalRecebido),
 
-        valor_multa: numero(cobranca.multa?.taxa),
-        valor_juros: numero(cobranca.mora?.taxa),
+        valor_multa:
+            numero(cobranca.multa?.taxa),
 
-        linha_digitavel: boleto.linhaDigitavel,
-        codigo_barras: boleto.codigoBarras,
+        valor_juros:
+            numero(cobranca.mora?.taxa),
 
-        codigo_pix: pix.txid,
-        pix_copia_cola: pix.pixCopiaECola,
-        qr_code_pix: pix.imagemQrcode,
+        linha_digitavel:
+            boleto.linhaDigitavel,
 
-        url_pdf_boleto: detalhe.pdf,
+        codigo_barras:
+            boleto.codigoBarras,
 
-        json_inter: detalhe
+        codigo_pix:
+            pix.txid,
+
+        pix_copia_cola:
+            pix.pixCopiaECola,
+
+        qr_code_pix:
+            pix.imagemQrcode,
+
+        url_pdf_boleto:
+            detalhe.pdf,
+
+        json_inter:
+            detalhe
 
     };
 
@@ -472,7 +502,7 @@ async function listarTodasCobrancasInter() {
 
             filtrarDataPor: "VENCIMENTO",
 
-            "paginacao.itensPorPagina": "1000",
+            "paginacao.itensPorPagina": "100",
             "paginacao.paginaAtual": String(pagina)
 
         });
@@ -484,15 +514,20 @@ async function listarTodasCobrancasInter() {
 
         });
 
+        if (!json)
+            throw new Error("Banco Inter não retornou resposta.");
+
         totalPaginas = Number(json.totalPaginas || 1);
 
         for (const item of (json.cobrancas || [])) {
 
             const codigo = item?.cobranca?.codigoSolicitacao;
 
-            if (!codigo) continue;
+            if (!codigo)
+                continue;
 
-            if (codigos.has(codigo)) continue;
+            if (codigos.has(codigo))
+                continue;
 
             codigos.add(codigo);
 
@@ -512,6 +547,7 @@ async function listarTodasCobrancasInter() {
     };
 
 }
+
 async function salvarTitulo(dados) {
 
     console.log("SALVAR TITULO RECEBEU:");
@@ -529,7 +565,7 @@ console.log({
 
     if (error) throw error;
 
-    if (!dados.guid_aluno && dados.cpf_responsavel) {
+    if (dados.cpf_responsavel) {
 
     const cpf = String(dados.cpf_responsavel).replace(/\D/g, "");
 
@@ -546,32 +582,24 @@ console.log({
         dados.guid_aluno = aluno.guid;
         dados.guid_responsavel = aluno.guid_responsavel;
 
-        if (dados.competencia) {
-
-            const { data: mensalidade } = await supabase
-                .from("mensalidades")
-                .select("id_mensalidade")
-                .eq("guid_aluno", aluno.guid)
-                .eq("competencia", dados.competencia)
-                .maybeSingle();
-
-            if (mensalidade) {
-                dados.id_mensalidade = mensalidade.id_mensalidade;
-            }
-
-        }
-
     }
 
 }
 
-    if (!dados.id_mensalidade && dados.guid_aluno && dados.competencia) {
+if (dados.guid_aluno) {
 
-    const { data: mensalidade } = await supabase
+    let consulta = supabase
         .from("mensalidades")
         .select("id_mensalidade")
-        .eq("guid_aluno", dados.guid_aluno)
-        .eq("competencia", dados.competencia)
+        .eq("guid_aluno", dados.guid_aluno);
+
+    if (dados.competencia) {
+        consulta = consulta.eq("competencia", dados.competencia);
+    }
+
+    const { data: mensalidade } = await consulta
+        .order("vencimento", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
     if (mensalidade) {
@@ -580,7 +608,7 @@ console.log({
 
 }
 
-    const registro = {
+const registro = {
 
     ...(existente || {}),
 
