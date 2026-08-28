@@ -1406,7 +1406,7 @@ async function listarPendentesGeracao(competencia) {
 
             curso: aluno.cursos,
 
-            responsavelCpf: aluno.responsavel_cpf,
+            responsavel_cpf: aluno.responsavel_cpf,
             email: aluno.email,
             telefone: aluno.telefone,
 
@@ -1428,14 +1428,14 @@ async function analisarCobrancas(competencia) {
 
     const lista = await listarPendentesGeracao(competencia);
 
-    const cobrancasInter = await listarCobrancasInter(competencia);
+    const { cobrancas } = await listarCobrancasInter(competencia);
 
     const aptosGeracao = [];
     const existentes = [];
 
     for (const item of lista) {
 
-        const existe = (cobrancasInter || []).some(c => {
+        const existe = (cobrancas || []).some(c => {
 
             const seuNumero = String(
                 c?.cobranca?.seuNumero ||
