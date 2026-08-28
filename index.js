@@ -313,82 +313,51 @@ function dadosTitulo(detalhe) {
     let id_mensalidade = null;
 
     const seuNumero = String(cobranca.seuNumero || "")
-        .trim()
-        .toUpperCase();
+    .trim()
+    .toUpperCase();
 
-    // =====================================================
-    // NOVO PADRÃO ERP
-    // ERP|ID_MENSALIDADE|GUID_ALUNO|08/2026
-    // =====================================================
+// Não usamos mais o seuNumero para localizar a mensalidade.
+// Ele agora é apenas um identificador curto aceito pelo Banco Inter.
 
-    if (seuNumero.startsWith("ERP|")) {
+const meses = {
+    JANEIRO:"01",
+    FEVEREIRO:"02",
+    MARCO:"03",
+    MARÇO:"03",
+    ABRIL:"04",
+    MAIO:"05",
+    JUNHO:"06",
+    JULHO:"07",
+    AGOSTO:"08",
+    SETEMBRO:"09",
+    OUTUBRO:"10",
+    NOVEMBRO:"11",
+    DEZEMBRO:"12"
+};
 
-        const partes = seuNumero.split("|");
+let m = seuNumero.match(/^([A-ZÇÃ]+)[\/-](\d{2})$/);
 
-        id_mensalidade = partes[1] || null;
-        guid_aluno = partes[2] || null;
-        competencia = partes[3] || null;
+if (m && meses[m[1]]) {
+    competencia = `${meses[m[1]]}/20${m[2]}`;
+}
 
+if (!competencia) {
+
+    m = seuNumero.match(/^(\d{1,2})[\/-](\d{4})$/);
+
+    if (m) {
+        competencia = `${String(m[1]).padStart(2,"0")}/${m[2]}`;
     }
 
-    // =====================================================
-    // UUID ANTIGO
-    // =====================================================
+}
 
-    else if (/^[0-9A-F-]{36}$/.test(seuNumero)) {
+if (!competencia && cobranca.dataVencimento) {
 
-        id_mensalidade = seuNumero;
+    const [ano, mes] = cobranca.dataVencimento.split("-");
 
-    }
+    competencia = `${mes}/${ano}`;
 
-    // =====================================================
-    // BOLETOS MANUAIS
-    // =====================================================
-
-    else {
-
-        const meses = {
-            JANEIRO:"01",
-            FEVEREIRO:"02",
-            MARCO:"03",
-            MARÇO:"03",
-            ABRIL:"04",
-            MAIO:"05",
-            JUNHO:"06",
-            JULHO:"07",
-            AGOSTO:"08",
-            SETEMBRO:"09",
-            OUTUBRO:"10",
-            NOVEMBRO:"11",
-            DEZEMBRO:"12"
-        };
-
-        let m = seuNumero.match(/^([A-ZÇÃ]+)[\/-](\d{2})$/);
-
-        if (m && meses[m[1]]) {
-            competencia = `${meses[m[1]]}/20${m[2]}`;
-        }
-
-        if (!competencia) {
-
-            m = seuNumero.match(/^(\d{1,2})[\/-](\d{4})$/);
-
-            if (m) {
-                competencia =
-                    `${String(m[1]).padStart(2,"0")}/${m[2]}`;
-            }
-
-        }
-
-        if (!competencia && cobranca.dataVencimento) {
-
-            const [ano, mes] = cobranca.dataVencimento.split("-");
-
-            competencia = `${mes}/${ano}`;
-
-        }
-
-    }
+}
 
     if (competencia) {
 
@@ -1225,7 +1194,7 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
     const corpo = JSON.stringify({
 
-        seuNumero: id_mensalidade,
+        seuNumero: id_mensalidade.replace(/-/g, "").substring(0, 15),
 
         valorNominal: valorOriginalNumerico,
 
