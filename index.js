@@ -1456,39 +1456,39 @@ async function analisarCobrancas(competencia) {
 
     const { cobrancas } = await listarCobrancasInter();
 
-    const aptosGeracao = [];
     const existentes = [];
+    const aptosGeracao = [];
+
+    const existentesERP = new Set();
+
+    for (const c of (cobrancas || [])) {
+
+        const seuNumero = String(
+            c?.cobranca?.seuNumero || ""
+        ).trim();
+
+        // NOVO PADRÃO
+        if (seuNumero.startsWith("ERP|")) {
+
+            const partes = seuNumero.split("|");
+
+            if (partes.length >= 2) {
+                existentesERP.add(partes[1]);
+            }
+
+            continue;
+        }
+
+        // PADRÃO ANTIGO (UUID)
+        if (/^[0-9a-fA-F-]{36}$/.test(seuNumero)) {
+            existentesERP.add(seuNumero);
+        }
+
+    }
 
     for (const item of lista) {
 
-        const existe = (cobrancas || []).some(c => {
-
-            const seuNumero = String(
-                c?.cobranca?.seuNumero ||
-                c?.seuNumero ||
-                ""
-            ).trim().toUpperCase();
-
-            if (seuNumero === item.idMensalidade)
-                return true;
-
-            if (seuNumero === competencia.toUpperCase())
-                return true;
-
-            if (seuNumero === `ERP|${item.idMensalidade}`)
-                return true;
-
-            if (
-                seuNumero.startsWith("ERP|") &&
-                seuNumero.includes(item.idMensalidade)
-            )
-                return true;
-
-            return false;
-
-        });
-
-        if (existe) {
+        if (existentesERP.has(item.idMensalidade)) {
             existentes.push(item);
         } else {
             aptosGeracao.push(item);
