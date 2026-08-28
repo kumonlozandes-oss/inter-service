@@ -1519,6 +1519,7 @@ async function analisarCobrancas(competencia) {
 // ======================================================
 
 app.post("/api/cobrancas/gerar", async (req, res) => {
+    console.log(">>> ENTROU EM /api/cobrancas/gerar <<<");
 
     try {
 
