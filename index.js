@@ -1539,12 +1539,18 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
         const analise = await analisarCobrancas(competencia);
 
-        const listaGeracao =
-            ids.length === 0
-                ? analise.aptosGeracao
-                : analise.aptosGeracao.filter(item =>
-                      ids.includes(item.idMensalidade)
-                  );
+const listaGeracao =
+    ids.length === 0
+        ? analise.aptosGeracao
+        : analise.aptosGeracao.filter(item => {
+
+              const id =
+                  item.idMensalidade ??
+                  item.id_mensalidade;
+
+              return ids.includes(id);
+
+          });
 
         let geradas = 0;
         let erros = 0;
@@ -1555,7 +1561,9 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
             try {
 
-                item.seuNumero = item.idMensalidade;
+item.seuNumero =
+    item.idMensalidade ??
+    item.id_mensalidade;
 
                 const boleto = await gerarBoletoInterno(item);
 
