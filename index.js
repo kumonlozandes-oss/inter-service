@@ -1146,10 +1146,19 @@ async function montarDadosBoleto(idTitulo) {
 
 async function gerarBoletoInterno(dados) {
 
+const idMensalidade =
+    dados.idMensalidade ??
+    dados.id_mensalidade;
+
+const guidAluno =
+    dados.guidAluno ??
+    dados.guid_aluno;
+
+const guidResponsavel =
+    dados.guidResponsavel ??
+    dados.guid_responsavel;
+
 const {
-    idMensalidade,
-    guidAluno,
-    guidResponsavel,
 
     responsavel,
     responsavel_cpf,
