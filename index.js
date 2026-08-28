@@ -617,8 +617,23 @@ if (tituloSalvo.id_mensalidade) {
 
 async function reconciliarTitulo(titulo) {
 
-    if (titulo.guid_aluno && titulo.id_mensalidade)
-        return titulo;
+if (titulo.guid_aluno && titulo.id_mensalidade) {
+
+    const { error } = await supabase
+        .from("mensalidades")
+        .update({
+
+            id_titulo: titulo.id,
+            id_inter: titulo.id_inter
+
+        })
+        .eq("id_mensalidade", titulo.id_mensalidade);
+
+    if (error)
+        throw error;
+
+    return titulo;
+}
 
     const cpf = String(titulo.cpf_responsavel || "").replace(/\D/g, "");
 
