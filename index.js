@@ -7,6 +7,7 @@ const { randomUUID } = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
+let ultimaAlteracaoFinanceiro = Date.now();
 app.use(cors({
     origin: "*",
     methods: ["GET","POST","PUT","DELETE","OPTIONS"],
@@ -540,17 +541,13 @@ console.log({
 
 if (!dados.id_mensalidade && dados.guid_aluno) {
 
-    let consulta = supabase
+    const { data: mensalidade } = await supabase
         .from("mensalidades")
         .select("id_mensalidade")
-        .eq("guid_aluno", dados.guid_aluno);
-
-    if (dados.competencia) {
-        consulta = consulta.eq("competencia", dados.competencia);
-    }
-
-    const { data: mensalidade } = await consulta
-        .order("vencimento", { ascending: false })
+        .eq("guid_aluno", dados.guid_aluno)
+        .eq("status", "PENDENTE")
+        .order("competencia_ano", { ascending: false })
+        .order("competencia_mes", { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -1315,6 +1312,8 @@ if (titulo.id_mensalidade) {
     await sincronizarMensalidadeComTitulo(titulo);
 }
 
+    ultimaAlteracaoFinanceiro = Date.now();
+
 return titulo;
 
 }
@@ -2028,6 +2027,14 @@ app.get("/api/sincronizar-boletos", async (req, res) => {
         });
 
     }
+
+});
+
+app.get("/api/financeiro/status", (req, res) => {
+
+    res.json({
+        ultimaAlteracao: ultimaAlteracaoFinanceiro
+    });
 
 });
 
