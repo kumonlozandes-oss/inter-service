@@ -1225,7 +1225,7 @@ const documento = String(cpfCnpj || "").replace(/\D/g, "");
 
     const corpo = JSON.stringify({
 
-        seuNumero: `ERP|${id_mensalidade}|${guid_aluno}|${competencia}`,
+        seuNumero: id_mensalidade,
 
         valorNominal: valorOriginalNumerico,
 
