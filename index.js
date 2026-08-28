@@ -1526,7 +1526,6 @@ async function analisarCobrancas(competencia) {
 // ======================================================
 
 app.post("/api/cobrancas/gerar", async (req, res) => {
-    console.log(">>> ENTROU EM /api/cobrancas/gerar <<<");
 
     try {
 
@@ -1535,75 +1534,118 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
         await gerarMensalidades(competencia);
 
-const lista = await listarPendentesGeracao(competencia);
-
-const listaGeracao =
-    ids.length === 0
-        ? lista
-        : lista.filter(item => {
-
-            const id =
-                item.idMensalidade ??
-                item.id_mensalidade ??
-                item.id ??
-                "";
-
-            return ids.includes(id);
-
-        });
-
         let geradas = 0;
         let erros = 0;
 
         const resultado = [];
 
-        for (const item of listaGeracao) {
+        for (const id of ids) {
 
             try {
 
-item.seuNumero =
-    item.idMensalidade ??
-    item.id_mensalidade;
+                const { data: mensalidade, error } =
+                    await supabase
+                        .from("mensalidades")
+                        .select("*")
+                        .eq("id_mensalidade", id)
+                        .single();
 
-                const boleto = await gerarBoletoInterno(item);
+                if (error) throw error;
+
+                const { data: aluno, error: erroAluno } =
+                    await supabase
+                        .from("alunos_master")
+                        .select("*")
+                        .eq("guid", mensalidade.guid_aluno)
+                        .single();
+
+                if (erroAluno) throw erroAluno;
+
+                const boleto = await gerarBoletoInterno({
+
+                    idMensalidade: mensalidade.id_mensalidade,
+
+                    guidAluno: mensalidade.guid_aluno,
+
+                    guidResponsavel: mensalidade.guid_responsavel,
+
+                    responsavel: aluno.responsavel,
+
+                    responsavel_cpf: aluno.responsavel_cpf,
+
+                    responsavel_endereco: aluno.endereco,
+
+                    responsavel_numero: aluno.numero,
+
+                    responsavel_bairro: aluno.bairro,
+
+                    responsavel_cidade: aluno.cidade,
+
+                    responsavel_uf: aluno.uf,
+
+                    responsavel_cep: aluno.cep,
+
+                    whatsapp:
+                        aluno.responsavel_telefone ||
+                        aluno.telefone,
+
+                    valorOriginal: mensalidade.valor_original,
+
+                    valorDesconto: mensalidade.valor_desconto,
+
+                    valorFinal: mensalidade.valor_final,
+
+                    vencimento: mensalidade.vencimento,
+
+                    competencia: mensalidade.competencia,
+
+                    formaPagamento: "BOLETO"
+
+                });
 
                 await sincronizarMensalidadeComTitulo(boleto);
 
-                resultado.push({
-                    aluno: item.aluno,
-                    sucesso: true
-                });
-
                 geradas++;
 
-            } catch (erro) {
-
                 resultado.push({
-                    aluno: item.aluno,
-                    sucesso: false,
-                    erro: erro instanceof Error ? erro.message : String(erro)
+                    sucesso: true,
+                    aluno: aluno.nome
                 });
 
+            } catch (e) {
+
                 erros++;
+
+                resultado.push({
+                    sucesso: false,
+                    erro: e.message
+                });
 
             }
 
         }
 
-res.json({
-    idsRecebidos: ids,
-    listaGeracao
-});
+        res.json({
 
-    } catch (erro) {
+            sucesso: true,
 
-        console.error(erro);
+            competencia,
+
+            geradas,
+
+            erros,
+
+            resultado
+
+        });
+
+    } catch (e) {
 
         res.status(500).json({
 
             sucesso: false,
 
-            erro: erro instanceof Error ? erro.message : String(erro)
+            erro: e.message
 
         });
 
