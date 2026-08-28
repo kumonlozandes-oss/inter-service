@@ -1454,7 +1454,7 @@ async function analisarCobrancas(competencia) {
 
     const lista = await listarPendentesGeracao(competencia);
 
-    const { cobrancas } = await listarCobrancasInter(competencia);
+    const { cobrancas } = await listarCobrancasInter();
 
     const aptosGeracao = [];
     const existentes = [];
@@ -1467,9 +1467,24 @@ async function analisarCobrancas(competencia) {
                 c?.cobranca?.seuNumero ||
                 c?.seuNumero ||
                 ""
-            );
+            ).trim().toUpperCase();
 
-            return seuNumero === item.idMensalidade;
+            if (seuNumero === item.idMensalidade)
+                return true;
+
+            if (seuNumero === competencia.toUpperCase())
+                return true;
+
+            if (seuNumero === `ERP|${item.idMensalidade}`)
+                return true;
+
+            if (
+                seuNumero.startsWith("ERP|") &&
+                seuNumero.includes(item.idMensalidade)
+            )
+                return true;
+
+            return false;
 
         });
 
