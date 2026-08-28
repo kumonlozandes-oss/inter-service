@@ -565,6 +565,21 @@ console.log({
 
 }
 
+    if (!dados.id_mensalidade && dados.guid_aluno && dados.competencia) {
+
+    const { data: mensalidade } = await supabase
+        .from("mensalidades")
+        .select("id_mensalidade")
+        .eq("guid_aluno", dados.guid_aluno)
+        .eq("competencia", dados.competencia)
+        .maybeSingle();
+
+    if (mensalidade) {
+        dados.id_mensalidade = mensalidade.id_mensalidade;
+    }
+
+}
+
     const registro = {
 
     ...(existente || {}),
