@@ -1590,21 +1590,10 @@ item.seuNumero =
 
         }
 
-        res.json({
-
-            sucesso: true,
-
-            competencia,
-
-            total: listaGeracao.length,
-
-            geradas,
-
-            erros,
-
-            resultado
-
-        });
+res.json({
+    idsRecebidos: ids,
+    listaGeracao
+});
 
     } catch (erro) {
 
