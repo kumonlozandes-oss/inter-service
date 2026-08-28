@@ -1539,18 +1539,27 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
         const analise = await analisarCobrancas(competencia);
 
+const mapa = new Map();
+
+for (const item of analise.aptosGeracao) {
+
+    for (const valor of Object.values(item)) {
+
+        if (
+            typeof valor === "string" &&
+            ids.includes(valor)
+        ) {
+            mapa.set(valor, item);
+        }
+
+    }
+
+}
+
 const listaGeracao =
     ids.length === 0
         ? analise.aptosGeracao
-        : analise.aptosGeracao.filter(item => {
-
-              const id =
-                  item.idMensalidade ??
-                  item.id_mensalidade;
-
-              return ids.includes(id);
-
-          });
+        : [...mapa.values()];
 
         let geradas = 0;
         let erros = 0;
