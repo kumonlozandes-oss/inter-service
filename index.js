@@ -1537,29 +1537,22 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
         await gerarMensalidades(competencia);
 
-        const analise = await analisarCobrancas(competencia);
-
-const mapa = new Map();
-
-for (const item of analise.aptosGeracao) {
-
-    for (const valor of Object.values(item)) {
-
-        if (
-            typeof valor === "string" &&
-            ids.includes(valor)
-        ) {
-            mapa.set(valor, item);
-        }
-
-    }
-
-}
+const lista = await listarPendentesGeracao(competencia);
 
 const listaGeracao =
     ids.length === 0
-        ? analise.aptosGeracao
-        : [...mapa.values()];
+        ? lista
+        : lista.filter(item => {
+
+            const id =
+                item.idMensalidade ??
+                item.id_mensalidade ??
+                item.id ??
+                "";
+
+            return ids.includes(id);
+
+        });
 
         let geradas = 0;
         let erros = 0;
