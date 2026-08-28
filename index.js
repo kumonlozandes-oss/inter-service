@@ -173,12 +173,11 @@ async function requisicaoInter({
 
 if (resposta.status < 200 || resposta.status >= 300) {
 
-    throw new Error(
-        JSON.stringify({
-            status: resposta.status,
-            resposta: json
-        }, null, 2)
-    );
+const erro = new Error("Erro Banco Inter");
+erro.status = resposta.status;
+erro.resposta = json;
+
+throw erro;
 
 }
 
