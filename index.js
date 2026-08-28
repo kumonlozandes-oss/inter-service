@@ -517,7 +517,7 @@ console.log({
 
     if (error) throw error;
 
-    if (dados.cpf_responsavel) {
+    if (!dados.guid_aluno && dados.cpf_responsavel) {
 
     const cpf = String(dados.cpf_responsavel).replace(/\D/g, "");
 
@@ -538,7 +538,7 @@ console.log({
 
 }
 
-if (dados.guid_aluno) {
+if (!dados.id_mensalidade && dados.guid_aluno) {
 
     let consulta = supabase
         .from("mensalidades")
