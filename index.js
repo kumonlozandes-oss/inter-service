@@ -309,31 +309,44 @@ function dadosTitulo(detalhe) {
 
     let guid_aluno = null;
     let guid_responsavel = null;
-
     let id_mensalidade = null;
 
-    const seuNumero = String(
-        cobranca.seuNumero || ""
-    ).trim();
+    const seuNumero = String(cobranca.seuNumero || "")
+        .trim()
+        .toUpperCase();
 
     // =====================================================
-    // BOLETO GERADO PELO ERP
+    // NOVO PADRÃO ERP
+    // ERP|ID_MENSALIDADE|GUID_ALUNO|08/2026
     // =====================================================
 
-    if (/^[0-9a-fA-F-]{36}$/.test(seuNumero)) {
+    if (seuNumero.startsWith("ERP|")) {
+
+        const partes = seuNumero.split("|");
+
+        id_mensalidade = partes[1] || null;
+        guid_aluno = partes[2] || null;
+        competencia = partes[3] || null;
+
+    }
+
+    // =====================================================
+    // UUID ANTIGO
+    // =====================================================
+
+    else if (/^[0-9A-F-]{36}$/.test(seuNumero)) {
 
         id_mensalidade = seuNumero;
 
     }
 
     // =====================================================
-    // BOLETO MANUAL
+    // BOLETOS MANUAIS
     // =====================================================
 
     else {
 
         const meses = {
-
             JANEIRO:"01",
             FEVEREIRO:"02",
             MARCO:"03",
@@ -347,42 +360,30 @@ function dadosTitulo(detalhe) {
             OUTUBRO:"10",
             NOVEMBRO:"11",
             DEZEMBRO:"12"
-
         };
 
-        let m =
-            seuNumero
-            .toUpperCase()
-            .match(/^([A-ZÇÃ]+)[\/-](\d{2})$/);
+        let m = seuNumero.match(/^([A-ZÇÃ]+)[\/-](\d{2})$/);
 
         if (m && meses[m[1]]) {
-
-            competencia =
-                `${meses[m[1]]}/20${m[2]}`;
-
+            competencia = `${meses[m[1]]}/20${m[2]}`;
         }
 
         if (!competencia) {
 
-            m =
-            seuNumero.match(/^(\d{2})\/(\d{4})$/);
+            m = seuNumero.match(/^(\d{1,2})[\/-](\d{4})$/);
 
             if (m) {
-
                 competencia =
-                    `${m[1]}/${m[2]}`;
-
+                    `${String(m[1]).padStart(2,"0")}/${m[2]}`;
             }
 
         }
 
         if (!competencia && cobranca.dataVencimento) {
 
-            const p =
-                cobranca.dataVencimento.split("-");
+            const [ano, mes] = cobranca.dataVencimento.split("-");
 
-            competencia =
-                `${p[1]}/${p[0]}`;
+            competencia = `${mes}/${ano}`;
 
         }
 
@@ -390,7 +391,7 @@ function dadosTitulo(detalhe) {
 
     if (competencia) {
 
-        const [mes,ano] = competencia.split("/");
+        const [mes, ano] = competencia.split("/");
 
         competencia_mes = Number(mes);
         competencia_ano = Number(ano);
@@ -399,12 +400,10 @@ function dadosTitulo(detalhe) {
 
     return {
 
-        origem:"INTER",
+        origem: "INTER",
 
         id_mensalidade,
-
         guid_aluno,
-
         guid_responsavel,
 
         cpf_responsavel:
@@ -414,36 +413,20 @@ function dadosTitulo(detalhe) {
         competencia_mes,
         competencia_ano,
 
-        id_inter:
-            cobranca.codigoSolicitacao,
+        id_inter: cobranca.codigoSolicitacao,
 
-        seu_numero:
-            cobranca.seuNumero,
+        seu_numero: cobranca.seuNumero,
+        nosso_numero: boleto.nossoNumero,
 
-        nosso_numero:
-            boleto.nossoNumero,
+        status_inter: cobranca.situacao,
+        status: statusInterno(cobranca.situacao),
 
-        status_inter:
-            cobranca.situacao,
+        vencimento: cobranca.dataVencimento,
+        data_emissao: cobranca.dataEmissao,
+        data_pagamento: cobranca.dataSituacao,
 
-        status:
-            statusInterno(cobranca.situacao),
-
-        vencimento:
-            cobranca.dataVencimento,
-
-        data_emissao:
-            cobranca.dataEmissao,
-
-        data_pagamento:
-            cobranca.dataSituacao,
-
-        valor_original:
-            valorOriginal,
-
-        valor_desconto:
-            valorDesconto,
-
+        valor_original: valorOriginal,
+        valor_desconto: valorDesconto,
         valor_final:
             valorOriginal == null
                 ? null
