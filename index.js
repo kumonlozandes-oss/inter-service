@@ -1444,37 +1444,21 @@ async function analisarCobrancas(competencia) {
 
     const lista = await listarPendentesGeracao(competencia);
 
-    const { cobrancas } = await listarCobrancasInter();
-
     const existentes = [];
-    const aptosGeracao = [];
+const aptosGeracao = [];
 
-    const existentesERP = new Set();
+const { data: titulos, error } = await supabase
+    .from("financeiro_titulos")
+    .select("id_mensalidade");
 
-    for (const c of (cobrancas || [])) {
+if (error)
+    throw error;
 
-        const seuNumero = String(
-            c?.cobranca?.seuNumero || ""
-        ).trim();
-
-        // NOVO PADRÃO
-        if (seuNumero.startsWith("ERP|")) {
-
-            const partes = seuNumero.split("|");
-
-            if (partes.length >= 2) {
-                existentesERP.add(partes[1]);
-            }
-
-            continue;
-        }
-
-        // PADRÃO ANTIGO (UUID)
-        if (/^[0-9a-fA-F-]{36}$/.test(seuNumero)) {
-            existentesERP.add(seuNumero);
-        }
-
-    }
+const existentesERP = new Set(
+    (titulos || [])
+        .map(t => t.id_mensalidade)
+        .filter(Boolean)
+);
 
     for (const item of lista) {
 
