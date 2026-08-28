@@ -1386,76 +1386,74 @@ app.post("/gerar-boleto", async (req, res) => {
 
 async function listarPendentesGeracao(competencia) {
 
-    const { data, error } = await supabase
+    const { data: mensalidades, error } = await supabase
         .from("mensalidades")
-        .select(`
-            id_mensalidade,
-            competencia,
-            valor_original,
-            valor_desconto,
-            valor_final,
-            vencimento,
-            alunos_master (
-                guid,
-                id_aluno,
-                nome,
-                responsavel,
-                responsavel_cpf,
-                email,
-                telefone,
-                cep,
-                endereco,
-                numero,
-                complemento,
-                bairro,
-                cidade,
-                uf,
-                cursos
-            )
-        `)
+        .select("*")
         .eq("competencia", competencia)
         .eq("status", "PENDENTE")
         .order("vencimento");
 
     if (error) throw error;
 
-    return (data || []).map(item => {
+    const lista = [];
 
-        const aluno = item.alunos_master || {};
+    for (const m of (mensalidades || [])) {
 
-        return {
+        const { data: aluno } = await supabase
+            .from("alunos_master")
+            .select("*")
+            .eq("guid", m.guid_aluno)
+            .maybeSingle();
 
-            idMensalidade: item.id_mensalidade,
-            guidAluno: aluno.guid,
+        if (!aluno) continue;
+
+        lista.push({
+
+            idMensalidade: m.id_mensalidade,
+
+            guidAluno: m.guid_aluno,
+
+            guidResponsavel: m.guid_responsavel,
 
             aluno: aluno.nome,
+
             responsavel: aluno.responsavel,
 
-            competencia: item.competencia,
-
-            vencimento: item.vencimento,
-
-            valorOriginal: Number(item.valor_original || 0),
-            valorDesconto: Number(item.valor_desconto || 0),
-            valorFinal: Number(item.valor_final || 0),
-
-            curso: aluno.cursos,
-
             responsavel_cpf: aluno.responsavel_cpf,
-            email: aluno.email,
-            telefone: aluno.telefone,
 
-            cep: aluno.cep,
-            endereco: aluno.endereco,
-            numero: aluno.numero,
-            complemento: aluno.complemento,
-            bairro: aluno.bairro,
-            cidade: aluno.cidade,
-            uf: aluno.uf
+            responsavel_endereco: aluno.endereco,
 
-        };
+            responsavel_numero: aluno.numero,
 
-    });
+            responsavel_bairro: aluno.bairro,
+
+            responsavel_cidade: aluno.cidade,
+
+            responsavel_uf: aluno.uf,
+
+            responsavel_cep: aluno.cep,
+
+            whatsapp:
+                aluno.responsavel_telefone ??
+                aluno.telefone,
+
+            competencia: m.competencia,
+
+            vencimento: m.vencimento,
+
+            valorOriginal: Number(m.valor_original || 0),
+
+            valorDesconto: Number(m.valor_desconto || 0),
+
+            valorFinal: Number(m.valor_final || 0),
+
+            formaPagamento: "BOLETO"
+
+        });
+
+    }
+
+    return lista;
 
 }
 
