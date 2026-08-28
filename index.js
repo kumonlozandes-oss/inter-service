@@ -1529,77 +1529,54 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
     try {
 
-        const competencia = req.body.competencia;
-        const ids = req.body.idsMensalidades || [];
-
-        await gerarMensalidades(competencia);
+        const mensalidades = req.body.mensalidades || [];
 
         let geradas = 0;
         let erros = 0;
 
         const resultado = [];
 
-        for (const id of ids) {
+        for (const item of mensalidades) {
 
             try {
 
-                const { data: mensalidade, error } =
-                    await supabase
-                        .from("mensalidades")
-                        .select("*")
-                        .eq("id_mensalidade", id)
-                        .single();
-
-                if (error) throw error;
-
-                const { data: aluno, error: erroAluno } =
-                    await supabase
-                        .from("alunos_master")
-                        .select("*")
-                        .eq("guid", mensalidade.guid_aluno)
-                        .single();
-
-                if (erroAluno) throw erroAluno;
-
                 const boleto = await gerarBoletoInterno({
 
-                    idMensalidade: mensalidade.id_mensalidade,
+                    idMensalidade: item.idMensalidade,
 
-                    guidAluno: mensalidade.guid_aluno,
+                    guidAluno: item.guidAluno,
 
-                    guidResponsavel: mensalidade.guid_responsavel,
+                    guidResponsavel: item.guidResponsavel,
 
-                    responsavel: aluno.responsavel,
+                    responsavel: item.responsavel,
 
-                    responsavel_cpf: aluno.responsavel_cpf,
+                    responsavel_cpf: item.responsavel_cpf,
 
-                    responsavel_endereco: aluno.endereco,
+                    responsavel_endereco: item.responsavel_endereco,
 
-                    responsavel_numero: aluno.numero,
+                    responsavel_numero: item.responsavel_numero,
 
-                    responsavel_bairro: aluno.bairro,
+                    responsavel_bairro: item.responsavel_bairro,
 
-                    responsavel_cidade: aluno.cidade,
+                    responsavel_cidade: item.responsavel_cidade,
 
-                    responsavel_uf: aluno.uf,
+                    responsavel_uf: item.responsavel_uf,
 
-                    responsavel_cep: aluno.cep,
+                    responsavel_cep: item.responsavel_cep,
 
-                    whatsapp:
-                        aluno.responsavel_telefone ||
-                        aluno.telefone,
+                    whatsapp: item.whatsapp,
 
-                    valorOriginal: mensalidade.valor_original,
+                    valorOriginal: item.valorOriginal,
 
-                    valorDesconto: mensalidade.valor_desconto,
+                    valorDesconto: item.valorDesconto,
 
-                    valorFinal: mensalidade.valor_final,
+                    valorFinal: item.valorFinal,
 
-                    vencimento: mensalidade.vencimento,
+                    vencimento: item.vencimento,
 
-                    competencia: mensalidade.competencia,
+                    competencia: item.competencia,
 
-                    formaPagamento: "BOLETO"
+                    formaPagamento: item.formaPagamento
 
                 });
 
@@ -1608,8 +1585,11 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
                 geradas++;
 
                 resultado.push({
+
                     sucesso: true,
-                    aluno: aluno.nome
+
+                    aluno: item.aluno
+
                 });
 
             } catch (e) {
@@ -1617,8 +1597,13 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
                 erros++;
 
                 resultado.push({
+
                     sucesso: false,
+
+                    aluno: item.aluno,
+
                     erro: e.message
+
                 });
 
             }
@@ -1628,8 +1613,6 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
         res.json({
 
             sucesso: true,
-
-            competencia,
 
             geradas,
 
