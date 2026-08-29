@@ -2086,7 +2086,9 @@ app.get("/pdf/:idInter", async (req, res) => {
 
     try {
 
-        const detalhe = await consultarCobranca(req.params.idInter);
+        const token = await obterTokenInter();
+
+const detalhe = await consultarCobranca(req.params.idInter, token);
 
         if (!detalhe.pdf) {
             return res.status(404).send("PDF não disponível.");
@@ -2100,7 +2102,7 @@ app.get("/pdf/:idInter", async (req, res) => {
             cert: certificadosInter().cert,
             key: certificadosInter().key,
             headers: {
-                Authorization: `Bearer ${await obterTokenInter()}`
+                Authorization: `Bearer ${token}`
             }
         });
 
