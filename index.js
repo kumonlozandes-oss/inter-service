@@ -572,6 +572,11 @@ const registro = {
 
     ...dados,
 
+    codigo_solicitacao:
+    dados.codigo_solicitacao ??
+    existente?.codigo_solicitacao ??
+    null,
+
     guid_aluno: dados.guid_aluno ?? existente?.guid_aluno ?? null,
 
     guid_responsavel: dados.guid_responsavel ?? existente?.guid_responsavel ?? null,
