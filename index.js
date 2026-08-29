@@ -1758,29 +1758,19 @@ async function gerarMensalidades(competencia) {
         throw error;
 
     for (const aluno of alunos) {
-        console.log(aluno.nome);
-console.log({
-    valor_curso: aluno.valor_curso,
-    valor_desconto: aluno.valor_desconto,
-    valor_final: aluno.valor_final,
-    dia_vencimento: aluno.dia_vencimento
-});
 
         const diaVencimento = Number(aluno.dia_vencimento || 5);
 
-        if (aluno.nome === "MARIA EDUARDA REZENDE MAIA") {
-    console.log(JSON.stringify(aluno, null, 2));
-}
-
         const { data: existente } =
-            await supabase
-                .from("mensalidades")
-                .select("id_mensalidade")
+    await supabase
+        .from("mensalidades")
+        .select("id_mensalidade, valor_original, valor_desconto, valor_final")
                 .eq("guid_aluno", aluno.guid)
                 .eq("competencia", competencia)
                 .maybeSingle();
 
 if (existente) {
+    console.log("ANTES UPDATE:", existente);
 
     await supabase
         .from("mensalidades")
