@@ -1758,6 +1758,13 @@ async function gerarMensalidades(competencia) {
         throw error;
 
     for (const aluno of alunos) {
+        console.log(aluno.nome);
+console.log({
+    valor_curso: aluno.valor_curso,
+    valor_desconto: aluno.valor_desconto,
+    valor_final: aluno.valor_final,
+    dia_vencimento: aluno.dia_vencimento
+});
 
         const diaVencimento = Number(aluno.dia_vencimento || 5);
 
