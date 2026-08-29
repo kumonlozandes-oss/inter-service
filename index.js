@@ -2081,6 +2081,39 @@ app.get("/api/financeiro/status", (req, res) => {
 
 });
 
+app.get("/pdf/:idInter", async (req, res) => {
+
+    try {
+
+        const detalhe = await consultarCobranca(req.params.idInter);
+
+        if (!detalhe.pdf) {
+            return res.status(404).send("PDF não disponível.");
+        }
+
+        const resposta = await requisicaoHttps({
+            hostname: "cdnpj.partners.bancointer.com.br",
+            port: 443,
+            path: detalhe.pdf.replace("https://cdnpj.partners.bancointer.com.br", ""),
+            method: "GET",
+            cert: certificadosInter().cert,
+            key: certificadosInter().key,
+            headers: {
+                Authorization: `Bearer ${await obterTokenInter()}`
+            }
+        });
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.send(Buffer.from(resposta.body, "binary"));
+
+    } catch (e) {
+
+        console.error(e);
+        res.status(500).send("Erro ao obter PDF.");
+
+    }
+
+});
 
 app.listen(PORT, async () => {
 
