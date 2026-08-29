@@ -129,7 +129,14 @@ console.log("STATUS TOKEN:", resposta.status);
 console.log("RESPOSTA TOKEN:", resposta.body);
 
 if (!json.access_token) {
-    throw new Error("Falha ao obter token do Banco Inter.");
+
+    console.error("STATUS TOKEN:", resposta.status);
+    console.error("BODY TOKEN:", resposta.body);
+    console.error("JSON TOKEN:", json);
+
+    throw new Error(
+        `Falha ao obter token. HTTP ${resposta.status}`
+    );
 }
 
     return json.access_token;
@@ -1126,6 +1133,7 @@ async function montarDadosBoleto(idTitulo) {
 }
 
 async function gerarBoletoInterno(dados) {
+    
 
 const idMensalidade =
     dados.idMensalidade ??
@@ -1324,7 +1332,17 @@ console.log({
 });
 
 if (titulo.id_mensalidade) {
-    await sincronizarMensalidadeComTitulo(titulo);
+
+    try {
+
+        await sincronizarMensalidadeComTitulo(titulo);
+
+    } catch (e) {
+
+        console.error("Erro ao sincronizar mensalidade:", e);
+
+    }
+
 }
 
     ultimaAlteracaoFinanceiro = Date.now();
