@@ -2082,6 +2082,7 @@ app.get("/api/financeiro/status", (req, res) => {
 });
 
 app.get("/pdf/:idInter", async (req, res) => {
+    console.log("PDF solicitado:", req.params.idInter);
 
     try {
 
@@ -2106,12 +2107,18 @@ app.get("/pdf/:idInter", async (req, res) => {
         res.setHeader("Content-Type", "application/pdf");
         res.send(Buffer.from(resposta.body, "binary"));
 
-    } catch (e) {
+} catch (e) {
 
-        console.error(e);
-        res.status(500).send("Erro ao obter PDF.");
+    console.error("========== ERRO PDF ==========");
+    console.error(e);
 
-    }
+    res.status(500).json({
+        erro: e.message,
+        resposta: e.resposta || null,
+        stack: e.stack
+    });
+
+}
 
 });
 
