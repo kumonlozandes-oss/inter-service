@@ -1759,6 +1759,8 @@ async function gerarMensalidades(competencia) {
 
     for (const aluno of alunos) {
 
+        const diaVencimento = Number(aluno.dia_vencimento || 5);
+
         const { data: existente } =
             await supabase
                 .from("mensalidades")
@@ -1781,8 +1783,6 @@ if (existente) {
 
     continue;
 }
-
-const diaVencimento = Number(aluno.dia_vencimento || 5);
 
 const { error: erroInsert } = await supabase
     .from("mensalidades")
