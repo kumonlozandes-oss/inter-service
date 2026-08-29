@@ -1768,6 +1768,10 @@ console.log({
 
         const diaVencimento = Number(aluno.dia_vencimento || 5);
 
+        if (aluno.nome === "MARIA EDUARDA REZENDE MAIA") {
+    console.log(JSON.stringify(aluno, null, 2));
+}
+
         const { data: existente } =
             await supabase
                 .from("mensalidades")
