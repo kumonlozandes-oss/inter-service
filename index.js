@@ -1133,7 +1133,8 @@ async function montarDadosBoleto(idTitulo) {
 }
 
 async function gerarBoletoInterno(dados) {
-    
+
+const tokenInter = dados.tokenInter;    
 
 const idMensalidade =
     dados.idMensalidade ??
@@ -1275,7 +1276,9 @@ const emissao = await requisicaoInter({
 
     method: "POST",
 
-    body: corpo
+    body: corpo,
+
+    token: tokenInter
 
 });
 
@@ -1519,9 +1522,11 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
         let geradas = 0;
         let erros = 0;
 
-        const resultado = [];
+const resultado = [];
 
-        for (const item of mensalidades) {
+const tokenInter = await obterTokenInter();
+
+for (const item of mensalidades) {
 
             try {
 
@@ -1561,9 +1566,11 @@ app.post("/api/cobrancas/gerar", async (req, res) => {
 
                     competencia: item.competencia,
 
-                    formaPagamento: item.formaPagamento
+                    formaPagamento: item.formaPagamento,
 
-                });
+tokenInter
+
+});
 
                 await sincronizarMensalidadeComTitulo(boleto);
 
