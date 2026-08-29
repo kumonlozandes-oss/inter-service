@@ -1767,8 +1767,20 @@ async function gerarMensalidades(competencia) {
                 .eq("competencia", competencia)
                 .maybeSingle();
 
-if (existente)
+if (existente) {
+
+    await supabase
+        .from("mensalidades")
+        .update({
+            valor_original: aluno.valor_curso,
+            valor_desconto: aluno.valor_desconto,
+            valor_final: aluno.valor_final,
+            vencimento: `${ano}-${mes}-${String(diaVencimento).padStart(2, "0")}`
+        })
+        .eq("id_mensalidade", existente.id_mensalidade);
+
     continue;
+}
 
 const diaVencimento = Number(aluno.dia_vencimento || 5);
 
