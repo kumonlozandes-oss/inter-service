@@ -436,7 +436,7 @@ if (!competencia && cobranca.dataVencimento) {
             pix.imagemQrcode,
 
         url_pdf_boleto:
-            detalhe.pdf,
+    boleto.pdf,
 
         json_inter:
             detalhe
