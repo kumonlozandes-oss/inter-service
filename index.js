@@ -194,11 +194,14 @@ throw erro;
 }
 
 async function consultarCobranca(idInter, token) {
-
     const { json } = await requisicaoInter({
         path: `/cobranca/v3/cobrancas/${idInter}`,
         token
     });
+
+    console.log("========== RESPOSTA COMPLETA BANCO INTER ==========");
+    console.log(JSON.stringify(json, null, 2));
+    console.log("===================================================");
 
     return json;
 }
