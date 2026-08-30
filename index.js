@@ -390,9 +390,9 @@ if (!competencia && cobranca.dataVencimento) {
         competencia_mes,
         competencia_ano,
 
-        id_inter: cobranca.codigoSolicitacao,
+        id_inter: cobranca.id,
 
-        codigo_solicitacao: cobranca.codigoSolicitacao,
+        codigo_solicitacao: cobranca.codigoSolicitacao || cobranca.id,
 
         seu_numero: cobranca.seuNumero,
         nosso_numero: boleto.nossoNumero,
