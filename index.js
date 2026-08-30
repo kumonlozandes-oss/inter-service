@@ -2106,31 +2106,18 @@ const detalhe = await consultarCobranca(req.params.idInter, token);
 
 console.log("DEPOIS DE CONSULTAR COBRANÇA:", detalhe);
 
-        const urlPdf =
-    detalhe.pdf ||
-    detalhe.boleto?.pdf;
+const pdfBase64 = detalhe.pdf || detalhe.boleto?.pdf;
 
-if (!urlPdf) {
+if (!pdfBase64) {
     return res.status(404).send("PDF não disponível.");
 }
 
-        const resposta = await requisicaoHttps({
-            hostname: "cdpj.partners.bancointer.com.br",
-            port: 443,
-            path: urlPdf.replace(
-    "https://cdpj.partners.bancointer.com.br",
-    ""
-),
-            method: "GET",
-            cert: certificadosInter().cert,
-            key: certificadosInter().key,
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
+console.log("PDF recebido do Inter. Tamanho:", pdfBase64.length);
 
-        res.setHeader("Content-Type", "application/pdf");
-        res.send(Buffer.from(resposta.body, "binary"));
+res.setHeader("Content-Type", "application/pdf");
+res.setHeader("Content-Disposition", "inline; filename=boleto.pdf");
+
+res.send(Buffer.from(pdfBase64, "base64"));
 
 } catch (e) {
 
