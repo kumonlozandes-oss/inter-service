@@ -1784,14 +1784,42 @@ app.get("/mensalidades", async (req, res) => {
 
         const titulosPorMensalidade = new Map();
 
-        for (const titulo of (titulos || [])) {
-            if (titulo.id_mensalidade) {
-                titulosPorMensalidade.set(
-                    titulo.id_mensalidade,
-                    titulo
-                );
-            }
-        }
+for (const titulo of (titulos || [])) {
+    if (!titulo.id_mensalidade) {
+        continue;
+    }
+
+    const atual = titulosPorMensalidade.get(
+        titulo.id_mensalidade
+    );
+
+    // Se ainda não existe título para esta mensalidade,
+    // usa o primeiro encontrado.
+    if (!atual) {
+        titulosPorMensalidade.set(
+            titulo.id_mensalidade,
+            titulo
+        );
+        continue;
+    }
+
+    // Sempre prioriza o título ATIVO sobre um título
+    // cancelado/inativo (caso exista mais de um).
+    const tituloAtualAtivo =
+        atual.ativo !== false &&
+        atual.status !== "CANCELADO";
+
+    const novoTituloAtivo =
+        titulo.ativo !== false &&
+        titulo.status !== "CANCELADO";
+
+    if (!tituloAtualAtivo && novoTituloAtivo) {
+        titulosPorMensalidade.set(
+            titulo.id_mensalidade,
+            titulo
+        );
+    }
+}
 
         const resultado = (mensalidades || []).map(m => {
 
@@ -1806,9 +1834,8 @@ app.get("/mensalidades", async (req, res) => {
                 ...m,
 
                 id_inter:
-                    m.id_inter ??
-                    titulo.id_inter ??
-                    null,
+    titulo.id_inter ??
+    null,
 
                 nosso_numero:
                     m.nosso_numero ??
