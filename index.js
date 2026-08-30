@@ -199,10 +199,6 @@ async function consultarCobranca(idInter, token) {
         token
     });
 
-    console.log("========== RESPOSTA COMPLETA BANCO INTER ==========");
-    console.log(JSON.stringify(json, null, 2));
-    console.log("===================================================");
-
     return json;
 }
 
