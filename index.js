@@ -2111,10 +2111,10 @@ if (!urlPdf) {
 }
 
         const resposta = await requisicaoHttps({
-            hostname: "cdnpj.partners.bancointer.com",
+            hostname: "cdpj.partners.bancointer.com.br",
             port: 443,
             path: urlPdf.replace(
-    "https://cdnpj.partners.bancointer.com.br",
+    "https://cdpj.partners.bancointer.com.br",
     ""
 ),
             method: "GET",
