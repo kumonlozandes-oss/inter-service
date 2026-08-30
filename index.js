@@ -2232,6 +2232,8 @@ app.get("/dados-boleto/:idInter", async (req, res) => {
 
         const boleto = detalhe?.boleto || {};
         const pix = detalhe?.pix || {};
+        const cobranca = detalhe?.cobranca || {};
+const pagador = cobranca?.pagador || {};
 
         const linhaDigitavel =
             boleto.linhaDigitavel ||
@@ -2270,12 +2272,29 @@ app.get("/dados-boleto/:idInter", async (req, res) => {
         });
 
         res.json({
-            sucesso: true,
-            linha_digitavel: linhaDigitavel,
-            codigo_barras: codigoBarras,
-            pix_copia_cola: pixCopiaECola,
-            qr_code_pix: qrCodePix
-        });
+    sucesso: true,
+
+    linha_digitavel: linhaDigitavel,
+    codigo_barras: codigoBarras,
+    pix_copia_cola: pixCopiaECola,
+    qr_code_pix: qrCodePix,
+
+    beneficiario: {
+        nome: detalhe?.beneficiario?.nome ||
+              cobranca?.beneficiario?.nome ||
+              detalhe?.nomeBeneficiario ||
+              detalhe?.nome_beneficiario ||
+              null,
+
+        cpf_cnpj: detalhe?.beneficiario?.cpfCnpj ||
+                  detalhe?.beneficiario?.cpf_cnpj ||
+                  cobranca?.beneficiario?.cpfCnpj ||
+                  cobranca?.beneficiario?.cpf_cnpj ||
+                  detalhe?.cpfCnpjBeneficiario ||
+                  detalhe?.cpf_cnpj_beneficiario ||
+                  null
+    }
+});
 
     } catch (erro) {
         console.error(
