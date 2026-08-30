@@ -1753,19 +1753,135 @@ app.get("/mensalidades", async (req, res) => {
 
     console.log("=== CHAMOU /api/mensalidades ===");
 
-    const { data, count, error } = await supabase
-        .from("vw_mensalidades")
-        .select("*", { count: "exact" });
+    try {
 
-    console.log("Erro:", error);
-    console.log("Count:", count);
-    console.log("Primeiro:", data?.[0]);
+        const { data: mensalidades, error: erroMensalidades } =
+            await supabase
+                .from("vw_mensalidades")
+                .select("*");
 
-    if (error) {
-        return res.status(500).json(error);
+        if (erroMensalidades) {
+            throw erroMensalidades;
+        }
+
+        const { data: titulos, error: erroTitulos } =
+            await supabase
+                .from("financeiro_titulos")
+                .select(`
+                    id,
+                    id_mensalidade,
+                    id_inter,
+                    nosso_numero,
+                    linha_digitavel,
+                    codigo_barras,
+                    codigo_pix,
+                    pix_copia_cola
+                `);
+
+        if (erroTitulos) {
+            throw erroTitulos;
+        }
+
+        const titulosPorMensalidade = new Map();
+
+        for (const titulo of (titulos || [])) {
+            if (titulo.id_mensalidade) {
+                titulosPorMensalidade.set(
+                    titulo.id_mensalidade,
+                    titulo
+                );
+            }
+        }
+
+        const resultado = (mensalidades || []).map(m => {
+
+            const titulo =
+                titulosPorMensalidade.get(m.id_mensalidade);
+
+            if (!titulo) {
+                return m;
+            }
+
+            return {
+                ...m,
+
+                id_inter:
+                    m.id_inter ??
+                    titulo.id_inter ??
+                    null,
+
+                nosso_numero:
+                    m.nosso_numero ??
+                    titulo.nosso_numero ??
+                    null,
+
+                linha_digitavel:
+                    m.linha_digitavel ??
+                    titulo.linha_digitavel ??
+                    null,
+
+                codigo_barras:
+                    m.codigo_barras ??
+                    titulo.codigo_barras ??
+                    null,
+
+                codigo_pix:
+                    m.codigo_pix ??
+                    titulo.codigo_pix ??
+                    null,
+
+                pix_copia_cola:
+                    m.pix_copia_cola ??
+                    titulo.pix_copia_cola ??
+                    null
+            };
+
+        });
+
+        console.log(
+            "Mensalidades carregadas:",
+            resultado.length
+        );
+
+        console.log(
+            "Primeiro boleto:",
+            resultado.find(m => m.id_inter)
+                ? {
+                    id_mensalidade:
+                        resultado.find(m => m.id_inter)
+                            .id_mensalidade,
+
+                    id_inter:
+                        resultado.find(m => m.id_inter)
+                            .id_inter,
+
+                    linha_digitavel:
+                        !!resultado.find(m => m.id_inter)
+                            .linha_digitavel,
+
+                    pix_copia_cola:
+                        !!resultado.find(m => m.id_inter)
+                            .pix_copia_cola
+                }
+                : null
+        );
+
+        res.json(resultado);
+
+    } catch (erro) {
+
+        console.error(
+            "ERRO /mensalidades:",
+            erro
+        );
+
+        res.status(500).json({
+            erro:
+                erro instanceof Error
+                    ? erro.message
+                    : String(erro)
+        });
     }
-
-    res.json(data);
 
 });
 
