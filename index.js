@@ -402,7 +402,7 @@ if (!competencia && cobranca.dataVencimento) {
         competencia_mes,
         competencia_ano,
 
-        id_inter: cobranca.id,
+        id_inter: cobranca.codigoSolicitacao || cobranca.id,
 
         codigo_solicitacao: cobranca.codigoSolicitacao || cobranca.id,
 
