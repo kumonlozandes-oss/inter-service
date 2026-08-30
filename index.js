@@ -200,7 +200,7 @@ async function consultarCobranca(idInter, token) {
 
     const { json } = await requisicaoInter({
 
-        path: `/cobranca/v3/cobrancas/${idInter}`,
+        path: `/cobranca/v3/cobrancas/${idInter}?pdf=true`,
         token
 
     });
