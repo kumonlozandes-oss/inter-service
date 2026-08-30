@@ -200,15 +200,27 @@ async function consultarCobranca(idInter, token) {
 
     const { json } = await requisicaoInter({
 
-        path: `/cobranca/v3/cobrancas/${idInter}?pdf=true`,
+        path: `/cobranca/v3/cobrancas/${idInter}`,
+
         token
 
     });
 
-console.log("DETALHE INTER:");
-console.log(JSON.stringify(json, null, 2));
+    if (!json.pdf) {
 
-return json;
+        const { json: pdf } = await requisicaoInter({
+
+            path: `/cobranca/v3/cobrancas/${idInter}/pdf`,
+
+            token
+
+        });
+
+        json.pdf = pdf.pdf || pdf.url || pdf.download || null;
+
+    }
+
+    return json;
 
 }
 
