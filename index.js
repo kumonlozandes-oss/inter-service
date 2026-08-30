@@ -2203,34 +2203,64 @@ app.get("/dados-boleto/:idInter", async (req, res) => {
             token
         );
 
+        const boleto = detalhe?.boleto || {};
+        const pix = detalhe?.pix || {};
+
+        const linhaDigitavel =
+            boleto.linhaDigitavel ||
+            boleto.linha_digitavel ||
+            detalhe.linhaDigitavel ||
+            detalhe.linha_digitavel ||
+            null;
+
+        const codigoBarras =
+            boleto.codigoBarras ||
+            boleto.codigo_barras ||
+            detalhe.codigoBarras ||
+            detalhe.codigo_barras ||
+            null;
+
+        const pixCopiaECola =
+            pix.pixCopiaECola ||
+            pix.pix_copia_cola ||
+            detalhe.pixCopiaECola ||
+            detalhe.pix_copia_cola ||
+            null;
+
+        const qrCodePix =
+            pix.imagemQrcode ||
+            pix.imagemQRCode ||
+            pix.qrCode ||
+            pix.qr_code ||
+            null;
+
+        console.log("DADOS BOLETO INTER:", {
+            idInter: req.params.idInter,
+            linhaDigitavel: !!linhaDigitavel,
+            codigoBarras: !!codigoBarras,
+            pixCopiaECola: !!pixCopiaECola,
+            qrCodePix: !!qrCodePix
+        });
+
         res.json({
             sucesso: true,
-            linha_digitavel:
-                detalhe.boleto?.linhaDigitavel ||
-                detalhe.linhaDigitavel ||
-                null,
-
-            codigo_barras:
-                detalhe.boleto?.codigoBarras ||
-                detalhe.codigoBarras ||
-                null,
-
-            pix_copia_cola:
-                detalhe.pix?.pixCopiaECola ||
-                null,
-
-            qr_code_pix:
-                detalhe.pix?.imagemQrcode ||
-                null
+            linha_digitavel: linhaDigitavel,
+            codigo_barras: codigoBarras,
+            pix_copia_cola: pixCopiaECola,
+            qr_code_pix: qrCodePix
         });
 
     } catch (erro) {
-
-        console.error("ERRO AO BUSCAR DADOS DO BOLETO:", erro);
+        console.error(
+            "ERRO AO BUSCAR DADOS DO BOLETO:",
+            erro
+        );
 
         res.status(500).json({
             sucesso: false,
-            erro: erro.message
+            erro: erro instanceof Error
+                ? erro.message
+                : String(erro)
         });
     }
 });
