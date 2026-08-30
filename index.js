@@ -2313,21 +2313,12 @@ const pagador = cobranca?.pagador || {};
     pix_copia_cola: pixCopiaECola,
     qr_code_pix: qrCodePix,
 
-    beneficiario: {
-        nome: detalhe?.beneficiario?.nome ||
-              cobranca?.beneficiario?.nome ||
-              detalhe?.nomeBeneficiario ||
-              detalhe?.nome_beneficiario ||
-              null,
-
-        cpf_cnpj: detalhe?.beneficiario?.cpfCnpj ||
-                  detalhe?.beneficiario?.cpf_cnpj ||
-                  cobranca?.beneficiario?.cpfCnpj ||
-                  cobranca?.beneficiario?.cpf_cnpj ||
-                  detalhe?.cpfCnpjBeneficiario ||
-                  detalhe?.cpf_cnpj_beneficiario ||
-                  null
-    }
+beneficiario: {
+    nome: nomeBeneficiario,
+    cpf_cnpj: cpfCnpjBeneficiario,
+    agencia: agenciaBeneficiario,
+    codigo_beneficiario: codigoBeneficiario
+}
 });
 
     } catch (erro) {
