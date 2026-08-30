@@ -2239,6 +2239,7 @@ app.get("/dados-boleto/:idInter", async (req, res) => {
 
 const beneficiario =
     detalhe?.beneficiario ||
+    detalhe?.cobranca?.beneficiario ||
     boleto?.beneficiario ||
     {};
 
