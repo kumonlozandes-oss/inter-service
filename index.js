@@ -2090,14 +2090,21 @@ app.get("/pdf/:idInter", async (req, res) => {
 
 const detalhe = await consultarCobranca(req.params.idInter, token);
 
-        if (!detalhe.pdf) {
-            return res.status(404).send("PDF não disponível.");
-        }
+        const urlPdf =
+    detalhe.pdf ||
+    detalhe.boleto?.pdf;
+
+if (!urlPdf) {
+    return res.status(404).send("PDF não disponível.");
+}
 
         const resposta = await requisicaoHttps({
             hostname: "cdnpj.partners.bancointer.com.br",
             port: 443,
-            path: detalhe.pdf.replace("https://cdnpj.partners.bancointer.com.br", ""),
+            path: urlPdf.replace(
+    "https://cdnpj.partners.bancointer.com.br",
+    ""
+),
             method: "GET",
             cert: certificadosInter().cert,
             key: certificadosInter().key,
