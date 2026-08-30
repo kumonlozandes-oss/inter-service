@@ -2229,6 +2229,11 @@ app.get("/dados-boleto/:idInter", async (req, res) => {
             token
         );
 
+        console.log(
+    "DETALHE COMPLETO DA COBRANÇA INTER:",
+    JSON.stringify(detalhe, null, 2)
+);
+
         const boleto = detalhe?.boleto || {};
         const pix = detalhe?.pix || {};
 
