@@ -125,9 +125,6 @@ async function obterTokenInter() {
 
 const json = jsonSeguro(resposta.body);
 
-console.log("STATUS TOKEN:", resposta.status);
-console.log("RESPOSTA TOKEN:", resposta.body);
-
 if (!json.access_token) {
 
     console.error("STATUS TOKEN:", resposta.status);
@@ -199,32 +196,22 @@ throw erro;
 async function consultarCobranca(idInter, token) {
 
     const { json } = await requisicaoInter({
-
         path: `/cobranca/v3/cobrancas/${idInter}`,
-
         token
-
     });
 
-    if (!json.pdf) {
-
-        const { json: pdf } = await requisicaoInter({
-
-            path: `/cobranca/v3/cobrancas/${idInter}/pdf`,
-
-            token
-
-        });
-
-        json.pdf = pdf.pdf || pdf.url || pdf.download || null;
-
-    }
-
     return json;
-
 }
 
+async function consultarPdfCobranca(idInter, token) {
 
+    const { json } = await requisicaoInter({
+        path: `/cobranca/v3/cobrancas/${idInter}/pdf`,
+        token
+    });
+
+    return json;
+}
 
 async function cancelarCobrancaInter(idInter, motivo = "Reemissão de cobrança") {
 
@@ -447,11 +434,20 @@ if (!competencia && cobranca.dataVencimento) {
         qr_code_pix:
             pix.imagemQrcode,
 
-url_pdf_boleto:
-    boleto.pdf,
+url_pdf_boleto: null,
 
-        json_inter:
-            detalhe
+json_inter: {
+    cobranca: detalhe.cobranca || null,
+    boleto: {
+        nossoNumero: boleto.nossoNumero || null,
+        codigoBarras: boleto.codigoBarras || null,
+        linhaDigitavel: boleto.linhaDigitavel || null
+    },
+    pix: {
+        txid: pix.txid || null,
+        pixCopiaECola: pix.pixCopiaECola || null
+    }
+}
 
     };
 
@@ -770,12 +766,6 @@ async function sincronizarBoletos() {
 
 const { token, cobrancas } = await listarCobrancasInter();
 
-console.log("ENTROU SINCRONIZAR");
-console.log("TOKEN:", !!token);
-console.log("TOTAL:", cobrancas.length);
-
-    console.log("TOTAL COBRANCAS:", cobrancas.length);
-
     let novos = 0;
     let atualizados = 0;
 
@@ -783,15 +773,10 @@ console.log("TOTAL:", cobrancas.length);
 
         try {
 
-            console.log("PROCESSANDO:", item.cobranca.codigoSolicitacao);
-
             const codigo = item.cobranca.codigoSolicitacao;
-
-            console.log("VAI CONSULTAR:", codigo);
 
             const detalhe = await consultarCobranca(codigo, token);
 
-            console.log("CONSULTOU:", codigo);
 
 let dados = dadosTitulo(detalhe);
 
