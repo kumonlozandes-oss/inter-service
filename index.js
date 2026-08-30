@@ -2079,44 +2079,88 @@ app.get("/api/financeiro/status", (req, res) => {
 });
 
 app.get("/pdf/:idInter", async (req, res) => {
+
     console.log("PDF solicitado:", req.params.idInter);
 
     try {
 
         const token = await obterTokenInter();
 
-console.log("ANTES DE CONSULTAR COBRANÇA:", req.params.idInter);
+        const pdf = await consultarPdfCobranca(
+            req.params.idInter,
+            token
+        );
 
-const detalhe = await consultarCobranca(req.params.idInter, token);
+        const conteudoPdf =
+            pdf?.pdf ||
+            pdf?.boleto?.pdf ||
+            pdf?.url ||
+            pdf?.download;
 
-console.log("DEPOIS DE CONSULTAR COBRANÇA:", detalhe);
+        if (!conteudoPdf) {
+            return res.status(404).send("PDF não disponível.");
+        }
 
-const pdfBase64 = detalhe.pdf || detalhe.boleto?.pdf;
+        // Banco Inter retornou o PDF em Base64
+        if (
+            typeof conteudoPdf === "string" &&
+            conteudoPdf.startsWith("JVBERi0")
+        ) {
 
-if (!pdfBase64) {
-    return res.status(404).send("PDF não disponível.");
-}
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader(
+                "Content-Disposition",
+                `inline; filename="boleto-${req.params.idInter}.pdf"`
+            );
 
-console.log("PDF recebido do Inter. Tamanho:", pdfBase64.length);
+            return res.send(
+                Buffer.from(conteudoPdf, "base64")
+            );
+        }
 
-res.setHeader("Content-Type", "application/pdf");
-res.setHeader("Content-Disposition", "inline; filename=boleto.pdf");
+        // Caso o Banco Inter retorne uma URL
+        if (
+            typeof conteudoPdf === "string" &&
+            /^https?:\/\//i.test(conteudoPdf)
+        ) {
 
-res.send(Buffer.from(pdfBase64, "base64"));
+            const url = new URL(conteudoPdf);
 
-} catch (e) {
+            const resposta = await requisicaoHttps({
+                hostname: url.hostname,
+                port: 443,
+                path: url.pathname + url.search,
+                method: "GET",
+                cert: certificadosInter().cert,
+                key: certificadosInter().key,
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
 
-    console.error("========== ERRO PDF ==========");
-    console.error(e);
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader(
+                "Content-Disposition",
+                `inline; filename="boleto-${req.params.idInter}.pdf"`
+            );
 
-    res.status(500).json({
-        erro: e.message,
-        resposta: e.resposta || null,
-        stack: e.stack
-    });
+            return res.send(
+                Buffer.from(resposta.body, "binary")
+            );
+        }
 
-}
+        return res.status(500).send(
+            "Formato de PDF retornado pelo Banco Inter não reconhecido."
+        );
 
+    } catch (e) {
+
+        console.error("ERRO AO OBTER PDF:", e.message);
+
+        res.status(500).json({
+            erro: e.message
+        });
+    }
 });
 
 app.listen(PORT, async () => {
