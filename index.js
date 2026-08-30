@@ -2232,6 +2232,41 @@ app.get("/dados-boleto/:idInter", async (req, res) => {
 
         const boleto = detalhe?.boleto || {};
         const pix = detalhe?.pix || {};
+
+const beneficiario =
+    detalhe?.beneficiario ||
+    boleto?.beneficiario ||
+    {};
+
+const nomeBeneficiario =
+    beneficiario?.nome ||
+    beneficiario?.razaoSocial ||
+    detalhe?.nomeBeneficiario ||
+    null;
+
+const cpfCnpjBeneficiario =
+    beneficiario?.cpfCnpj ||
+    beneficiario?.cpf_cnpj ||
+    beneficiario?.cnpj ||
+    detalhe?.cpfCnpjBeneficiario ||
+    detalhe?.cpf_cnpj ||
+    null;
+
+const agenciaBeneficiario =
+    beneficiario?.agencia ||
+    boleto?.agencia ||
+    detalhe?.agencia ||
+    null;
+
+const codigoBeneficiario =
+    beneficiario?.codigoBeneficiario ||
+    beneficiario?.codigo_beneficiario ||
+    boleto?.codigoBeneficiario ||
+    boleto?.codigo_beneficiario ||
+    detalhe?.codigoBeneficiario ||
+    detalhe?.codigo_beneficiario ||
+    null;
+        
         const cobranca = detalhe?.cobranca || {};
 const pagador = cobranca?.pagador || {};
 
