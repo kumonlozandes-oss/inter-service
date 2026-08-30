@@ -2100,7 +2100,11 @@ app.get("/pdf/:idInter", async (req, res) => {
 
         const token = await obterTokenInter();
 
+console.log("ANTES DE CONSULTAR COBRANÇA:", req.params.idInter);
+
 const detalhe = await consultarCobranca(req.params.idInter, token);
+
+console.log("DEPOIS DE CONSULTAR COBRANÇA:", detalhe);
 
         const urlPdf =
     detalhe.pdf ||
