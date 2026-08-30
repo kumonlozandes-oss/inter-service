@@ -2194,6 +2194,47 @@ app.get("/api/financeiro/status", (req, res) => {
 
 });
 
+app.get("/dados-boleto/:idInter", async (req, res) => {
+    try {
+        const token = await obterTokenInter();
+
+        const detalhe = await consultarCobranca(
+            req.params.idInter,
+            token
+        );
+
+        res.json({
+            sucesso: true,
+            linha_digitavel:
+                detalhe.boleto?.linhaDigitavel ||
+                detalhe.linhaDigitavel ||
+                null,
+
+            codigo_barras:
+                detalhe.boleto?.codigoBarras ||
+                detalhe.codigoBarras ||
+                null,
+
+            pix_copia_cola:
+                detalhe.pix?.pixCopiaECola ||
+                null,
+
+            qr_code_pix:
+                detalhe.pix?.imagemQrcode ||
+                null
+        });
+
+    } catch (erro) {
+
+        console.error("ERRO AO BUSCAR DADOS DO BOLETO:", erro);
+
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
 app.get("/pdf/:idInter", async (req, res) => {
 
     console.log("PDF solicitado:", req.params.idInter);
