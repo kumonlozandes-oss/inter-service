@@ -1093,6 +1093,8 @@ async function montarDadosBoleto(idTitulo) {
 
         observacoes: titulo.observacao,
 
+        status: titulo.status,
+
         numero_reemissao: (titulo.numero_reemissao || 1) + 1,
 
         id_titulo_anterior: titulo.id,
