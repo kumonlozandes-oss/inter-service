@@ -1657,30 +1657,27 @@ const dados = await montarDadosBoleto(idTitulo);
 
 dados.motivo_reemissao = reason;
 
-await cancelarCobrancaInter(
+if (dados.status === "PAGO") {
+    throw new Error("Cobranças pagas não podem ser reemitidas.");
+}
 
-    dados.id_inter,
+if (dados.status !== "CANCELADO") {
+    await cancelarCobrancaInter(
+        dados.id_inter,
+        reason || "Reemissão de cobrança"
+    );
 
-    reason || "Reemissão de cobrança"
-
-);
-
-await supabase
-.from("financeiro_titulos")
-.update({
-
-    status: "CANCELADO",
-
-    status_inter: "CANCELADO",
-
-    ativo: false,
-
-    data_cancelamento: new Date().toISOString(),
-
-    ultima_sincronizacao: new Date().toISOString()
-
-})
-.eq("id", dados.id_titulo_anterior);
+    await supabase
+        .from("financeiro_titulos")
+        .update({
+            status: "CANCELADO",
+            status_inter: "CANCELADO",
+            ativo: false,
+            data_cancelamento: new Date().toISOString(),
+            ultima_sincronizacao: new Date().toISOString()
+        })
+        .eq("id", dados.id_titulo_anterior);
+}
 
 dados.vencimento = newDueDate;
 
