@@ -1761,7 +1761,7 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
             "Cancelamento manual de cobrança"
         );
 
-        const { error } = await supabase
+        await supabase
             .from("financeiro_titulos")
             .update({
                 status: "CANCELADO",
@@ -1772,10 +1772,6 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
             })
             .eq("id", dados.id_titulo_anterior);
 
-        if (error) {
-            throw error;
-        }
-
         res.json({
             sucesso: true
         });
@@ -1785,7 +1781,7 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
 
         res.status(500).json({
             sucesso: false,
-            erro: erro.message || "Erro ao cancelar cobrança."
+            erro: erro.message
         });
     }
 });
