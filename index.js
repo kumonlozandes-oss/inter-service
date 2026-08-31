@@ -1789,10 +1789,17 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
 
     } catch (erro) {
         console.error("ERRO AO CANCELAR COBRANÇA:", erro);
+        console.error("STATUS INTER:", erro.status);
+        console.error("RESPOSTA INTER:", erro.resposta);
 
         res.status(500).json({
             sucesso: false,
-            erro: erro.message
+            erro:
+                erro.resposta?.detail ||
+                erro.resposta?.mensagem ||
+                erro.resposta?.title ||
+                erro.message ||
+                "Erro ao cancelar cobrança."
         });
     }
 });
