@@ -177,13 +177,19 @@ async function requisicaoInter({
     const json = jsonSeguro(resposta.body);
 
 if (resposta.status < 200 || resposta.status >= 300) {
+    const detalhe =
+        json?.message ||
+        json?.mensagem ||
+        json?.title ||
+        json?.detail ||
+        resposta.body ||
+        "Erro Banco Inter";
 
-const erro = new Error("Erro Banco Inter");
-erro.status = resposta.status;
-erro.resposta = json;
+    const erro = new Error(`Erro Banco Inter: ${detalhe}`);
+    erro.status = resposta.status;
+    erro.resposta = json;
 
-throw erro;
-
+    throw erro;
 }
 
     return {
