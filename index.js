@@ -238,6 +238,33 @@ async function cancelarCobrancaInter(idInter, motivo = "Reemissão de cobrança"
 
 }
 
+async function cancelarCobrancaManual(idTitulo, motivo = "Cancelamento de cobrança") {
+    const dados = await montarDadosBoleto(idTitulo);
+
+    if (!dados.id_inter) {
+        throw new Error("Cobrança não possui identificador no Banco Inter.");
+    }
+
+    await cancelarCobrancaInter(
+        dados.id_inter,
+        motivo
+    );
+
+    await supabase
+        .from("financeiro_titulos")
+        .update({
+            status: "CANCELADO",
+            status_inter: "CANCELADO",
+            ativo: false,
+            data_cancelamento: new Date().toISOString(),
+            ultima_sincronizacao: new Date().toISOString()
+        })
+        .eq("id", dados.id_titulo_anterior);
+
+    return {
+        sucesso: true
+    };
+}
 
 function data50Dias() {
 
@@ -1750,30 +1777,14 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
             throw new Error("ID do título não informado.");
         }
 
-        const dados = await montarDadosBoleto(idTitulo);
-
-        if (!dados.id_inter) {
-            throw new Error("Cobrança não possui identificador no Banco Inter.");
-        }
-
-        await cancelarCobrancaInter(
-            dados.id_inter,
+        const resultado = await cancelarCobrancaManual(
+            idTitulo,
             "Cancelamento manual de cobrança"
         );
 
-        await supabase
-            .from("financeiro_titulos")
-            .update({
-                status: "CANCELADO",
-                status_inter: "CANCELADO",
-                ativo: false,
-                data_cancelamento: new Date().toISOString(),
-                ultima_sincronizacao: new Date().toISOString()
-            })
-            .eq("id", dados.id_titulo_anterior);
-
         res.json({
-            sucesso: true
+            sucesso: true,
+            ...resultado
         });
 
     } catch (erro) {
