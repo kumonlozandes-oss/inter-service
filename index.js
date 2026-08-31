@@ -1770,33 +1770,86 @@ res.json({
 // ======================================================
 
 app.post("/api/cobrancas/cancelar", async (req, res) => {
+    console.log("========== INÍCIO CANCELAMENTO ==========");
+    console.log("BODY RECEBIDO:", req.body);
+
     try {
         const { idTitulo } = req.body;
+
+        console.log("ID TÍTULO:", idTitulo);
 
         if (!idTitulo) {
             throw new Error("ID do título não informado.");
         }
 
-        const resultado = await cancelarCobrancaManual(
-            idTitulo,
+        console.log("1 - Buscando dados do título...");
+
+        const dados = await montarDadosBoleto(idTitulo);
+
+        console.log("2 - DADOS DO TÍTULO:", {
+            id_titulo_anterior: dados.id_titulo_anterior,
+            id_inter: dados.id_inter,
+            status: dados.status
+        });
+
+        if (!dados.id_inter) {
+            throw new Error(
+                "O título foi encontrado, mas não possui id_inter."
+            );
+        }
+
+        console.log("3 - Enviando cancelamento para o Banco Inter...");
+        console.log("ID INTER:", dados.id_inter);
+
+        const respostaInter = await cancelarCobrancaInter(
+            dados.id_inter,
             "Cancelamento manual de cobrança"
         );
 
-        res.json({
+        console.log("4 - BANCO INTER RESPONDEU:", respostaInter);
+
+        console.log("5 - Atualizando título no Supabase...");
+
+        const { error: erroSupabase } = await supabase
+            .from("financeiro_titulos")
+            .update({
+                status: "CANCELADO",
+                status_inter: "CANCELADO",
+                ativo: false,
+                data_cancelamento: new Date().toISOString(),
+                ultima_sincronizacao: new Date().toISOString()
+            })
+            .eq("id", dados.id_titulo_anterior);
+
+        if (erroSupabase) {
+            console.error("ERRO SUPABASE:", erroSupabase);
+            throw erroSupabase;
+        }
+
+        console.log("6 - CANCELAMENTO CONCLUÍDO COM SUCESSO.");
+        console.log("=========================================");
+
+        return res.json({
             sucesso: true,
-            ...resultado
+            mensagem: "Cobrança cancelada com sucesso."
         });
 
     } catch (erro) {
-        console.error("ERRO AO CANCELAR COBRANÇA:", erro);
+        console.error("========== ERRO NO CANCELAMENTO ==========");
+        console.error("MENSAGEM:", erro?.message);
+        console.error("STATUS:", erro?.status);
+        console.error("RESPOSTA:", erro?.resposta);
+        console.error("ERRO COMPLETO:", erro);
+        console.error("==========================================");
 
-        res.status(500).json({
+        return res.status(500).json({
             sucesso: false,
-            erro: erro.message
+            erro: erro?.message || "Erro desconhecido ao cancelar cobrança.",
+            statusBancoInter: erro?.status || null,
+            respostaBancoInter: erro?.resposta || null
         });
     }
 });
-
 
 app.get("/alunos", async (req, res) => {
   try {
