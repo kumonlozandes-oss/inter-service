@@ -7,6 +7,11 @@ const { randomUUID } = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
+
+app.use((req, res, next) => {
+  console.log("REQUISIÇÃO RECEBIDA:", req.method, req.originalUrl);
+  next();
+});
 let ultimaAlteracaoFinanceiro = Date.now();
 app.use(cors({
     origin: "*",
