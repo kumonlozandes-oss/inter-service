@@ -1802,6 +1802,7 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
                 "Erro ao cancelar cobrança."
         });
     }
+        
 });
 
 
