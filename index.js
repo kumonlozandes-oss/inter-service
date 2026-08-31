@@ -238,33 +238,6 @@ async function cancelarCobrancaInter(idInter, motivo = "Reemissão de cobrança"
 
 }
 
-async function cancelarCobrancaManual(idTitulo, motivo = "Cancelamento de cobrança") {
-    const dados = await montarDadosBoleto(idTitulo);
-
-    if (!dados.id_inter) {
-        throw new Error("Cobrança não possui identificador no Banco Inter.");
-    }
-
-    await cancelarCobrancaInter(
-        dados.id_inter,
-        motivo
-    );
-
-    await supabase
-        .from("financeiro_titulos")
-        .update({
-            status: "CANCELADO",
-            status_inter: "CANCELADO",
-            ativo: false,
-            data_cancelamento: new Date().toISOString(),
-            ultima_sincronizacao: new Date().toISOString()
-        })
-        .eq("id", dados.id_titulo_anterior);
-
-    return {
-        sucesso: true
-    };
-}
 
 function data50Dias() {
 
@@ -1777,32 +1750,44 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
             throw new Error("ID do título não informado.");
         }
 
-        const resultado = await cancelarCobrancaManual(
-            idTitulo,
+        const dados = await montarDadosBoleto(idTitulo);
+
+        if (!dados.id_inter) {
+            throw new Error("Cobrança não possui identificador no Banco Inter.");
+        }
+
+        await cancelarCobrancaInter(
+            dados.id_inter,
             "Cancelamento manual de cobrança"
         );
 
+        const { error } = await supabase
+            .from("financeiro_titulos")
+            .update({
+                status: "CANCELADO",
+                status_inter: "CANCELADO",
+                ativo: false,
+                data_cancelamento: new Date().toISOString(),
+                ultima_sincronizacao: new Date().toISOString()
+            })
+            .eq("id", dados.id_titulo_anterior);
+
+        if (error) {
+            throw error;
+        }
+
         res.json({
-            sucesso: true,
-            ...resultado
+            sucesso: true
         });
 
     } catch (erro) {
         console.error("ERRO AO CANCELAR COBRANÇA:", erro);
-        console.error("STATUS INTER:", erro.status);
-        console.error("RESPOSTA INTER:", erro.resposta);
 
         res.status(500).json({
             sucesso: false,
-            erro:
-                erro.resposta?.detail ||
-                erro.resposta?.mensagem ||
-                erro.resposta?.title ||
-                erro.message ||
-                "Erro ao cancelar cobrança."
+            erro: erro.message || "Erro ao cancelar cobrança."
         });
     }
-        
 });
 
 
