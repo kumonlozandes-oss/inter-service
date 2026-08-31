@@ -1081,12 +1081,28 @@ async function montarDadosBoleto(idTitulo) {
     if (erroAluno || !aluno)
         throw new Error("Aluno não encontrado.");
 
-    return {
+    let idMensalidade = titulo.id_mensalidade;
 
-        idMensalidade: titulo.id_mensalidade,
+if (!idMensalidade) {
+    const { data: mensalidade, error: erroMensalidade } = await supabase
+        .from("mensalidades")
+        .select("id_mensalidade")
+        .eq("guid_aluno", titulo.guid_aluno)
+        .eq("competencia", titulo.competencia)
+        .maybeSingle();
 
-        guidAluno: titulo.guid_aluno,
+    if (erroMensalidade) throw erroMensalidade;
 
+    if (!mensalidade) {
+        throw new Error("Mensalidade não encontrada para reemissão.");
+    }
+
+    idMensalidade = mensalidade.id_mensalidade;
+}
+
+return {
+    idMensalidade: idMensalidade,
+    guidAluno: titulo.guid_aluno,
         guidResponsavel: titulo.guid_responsavel,
 
         id_inter: titulo.id_inter,
