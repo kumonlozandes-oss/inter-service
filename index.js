@@ -1838,6 +1838,18 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
             throw erroSupabase;
         }
 
+      const { data: tituloCancelado, error: erroTituloCancelado } = await supabase
+    .from("financeiro_titulos")
+    .select("*")
+    .eq("id", dados.id_titulo_anterior)
+    .single();
+
+if (erroTituloCancelado) {
+    throw erroTituloCancelado;
+}
+
+await sincronizarMensalidadeComTitulo(tituloCancelado);
+
         console.log("6 - CANCELAMENTO CONCLUÍDO COM SUCESSO.");
         console.log("=========================================");
 
