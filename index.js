@@ -255,16 +255,23 @@ async function cancelarCobrancaManual(idTitulo, motivo = "Cancelamento de cobran
         motivo
     );
 
-    await supabase
-        .from("financeiro_titulos")
-        .update({
-            status: "CANCELADO",
-            status_inter: "CANCELADO",
-            ativo: false,
-            data_cancelamento: new Date().toISOString(),
-            ultima_sincronizacao: new Date().toISOString()
-        })
-        .eq("id", dados.id_titulo_anterior);
+const { error: erroSupabase } = await supabase
+    .from("financeiro_titulos")
+    .update({
+        status: "CANCELADO",
+        status_inter: "CANCELADO",
+        ativo: false,
+        data_cancelamento: new Date().toISOString(),
+        ultima_sincronizacao: new Date().toISOString()
+    })
+    .eq("id", dados.id_titulo_anterior);
+
+if (erroSupabase) {
+    console.error("ERRO AO ATUALIZAR SUPABASE:", erroSupabase);
+    throw erroSupabase;
+}
+
+console.log("TÍTULO ATUALIZADO NO SUPABASE COM SUCESSO");
 
     return {
         sucesso: true
