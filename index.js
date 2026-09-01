@@ -1892,6 +1892,310 @@ await sincronizarMensalidadeComTitulo(tituloCancelado);
     }
 });
 
+// =====================================================
+// USUÁRIOS
+// =====================================================
+
+app.get("/usuarios", async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("usuarios")
+            .select(`
+                id,
+                nome,
+                email,
+                login,
+                perfil,
+                ativo,
+                telefone,
+                cpf,
+                acesso_erp,
+                ultimo_acesso,
+                ultimo_login,
+                ultimo_logout
+            `)
+            .order("nome");
+
+        if (error) throw error;
+
+        res.json(data || []);
+    } catch (erro) {
+        console.error("ERRO AO LISTAR USUÁRIOS:", erro);
+
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
+
+app.post("/usuarios", async (req, res) => {
+    try {
+        const {
+            nome,
+            email,
+            login,
+            senha,
+            perfil,
+            ativo = true,
+            telefone,
+            cpf
+        } = req.body;
+
+        if (!nome || !email || !login || !perfil) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Nome, e-mail, login e perfil são obrigatórios."
+            });
+        }
+
+        const dados = {
+            nome,
+            email,
+            login,
+            perfil,
+            ativo,
+            telefone: telefone || null,
+            cpf: cpf || null,
+            acesso_erp: true,
+            atualizado_em: new Date().toISOString()
+        };
+
+        if (senha) {
+            dados.senha_hash = senha;
+        }
+
+        const { data, error } = await supabase
+            .from("usuarios")
+            .insert(dados)
+            .select(`
+                id,
+                nome,
+                email,
+                login,
+                perfil,
+                ativo,
+                telefone,
+                cpf,
+                acesso_erp,
+                ultimo_acesso,
+                ultimo_login,
+                ultimo_logout
+            `)
+            .single();
+
+        if (error) throw error;
+
+        res.json({
+            sucesso: true,
+            usuario: data
+        });
+
+    } catch (erro) {
+        console.error("ERRO AO CRIAR USUÁRIO:", erro);
+
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
+
+app.put("/usuarios/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const {
+            nome,
+            email,
+            login,
+            senha,
+            perfil,
+            ativo,
+            telefone,
+            cpf
+        } = req.body;
+
+        const dados = {
+            nome,
+            email,
+            login,
+            perfil,
+            ativo,
+            telefone: telefone || null,
+            cpf: cpf || null,
+            atualizado_em: new Date().toISOString()
+        };
+
+        if (senha) {
+            dados.senha_hash = senha;
+        }
+
+        const { data, error } = await supabase
+            .from("usuarios")
+            .update(dados)
+            .eq("id", id)
+            .select(`
+                id,
+                nome,
+                email,
+                login,
+                perfil,
+                ativo,
+                telefone,
+                cpf,
+                acesso_erp,
+                ultimo_acesso,
+                ultimo_login,
+                ultimo_logout
+            `)
+            .single();
+
+        if (error) throw error;
+
+        res.json({
+            sucesso: true,
+            usuario: data
+        });
+
+    } catch (erro) {
+        console.error("ERRO AO ATUALIZAR USUÁRIO:", erro);
+
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
+
+app.delete("/usuarios/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (String(id) === "1") {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "O usuário administrador principal não pode ser excluído."
+            });
+        }
+
+        const { error } = await supabase
+            .from("usuarios")
+            .delete()
+            .eq("id", id);
+
+        if (error) throw error;
+
+        res.json({
+            sucesso: true,
+            mensagem: "Usuário excluído com sucesso."
+        });
+
+    } catch (erro) {
+        console.error("ERRO AO EXCLUIR USUÁRIO:", erro);
+
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
+
+// =====================================================
+// LOGIN
+// =====================================================
+
+app.post("/login", async (req, res) => {
+    try {
+        const { usuario, senha } = req.body;
+
+        if (!usuario || !senha) {
+            return res.status(400).json({
+                sucesso: false,
+                erro: "Usuário e senha são obrigatórios."
+            });
+        }
+
+        const entrada = String(usuario).trim().toLowerCase();
+        const entradaCpf = entrada.replace(/\D/g, "");
+
+        const { data: usuarios, error } = await supabase
+            .from("usuarios")
+            .select(`
+                id,
+                nome,
+                email,
+                login,
+                senha_hash,
+                perfil,
+                ativo,
+                cpf
+            `)
+            .eq("ativo", true);
+
+        if (error) throw error;
+
+        const usuarioEncontrado = (usuarios || []).find((u) => {
+            const email = String(u.email || "").trim().toLowerCase();
+            const login = String(u.login || "").trim().toLowerCase();
+            const cpf = String(u.cpf || "").replace(/\D/g, "");
+
+            return (
+                email === entrada ||
+                login === entrada ||
+                (entradaCpf && cpf === entradaCpf)
+            );
+        });
+
+        if (!usuarioEncontrado) {
+            return res.status(401).json({
+                sucesso: false,
+                erro: "Usuário não encontrado."
+            });
+        }
+
+        if (String(usuarioEncontrado.senha_hash || "") !== String(senha)) {
+            return res.status(401).json({
+                sucesso: false,
+                erro: "Senha incorreta."
+            });
+        }
+
+        await supabase
+            .from("usuarios")
+            .update({
+                ultimo_acesso: new Date().toISOString(),
+                ultimo_login: new Date().toISOString()
+            })
+            .eq("id", usuarioEncontrado.id);
+
+        res.json({
+            sucesso: true,
+            usuario: {
+                id: usuarioEncontrado.id,
+                nome: usuarioEncontrado.nome,
+                email: usuarioEncontrado.email,
+                login: usuarioEncontrado.login,
+                perfil: usuarioEncontrado.perfil,
+                ativo: usuarioEncontrado.ativo,
+                cpf: usuarioEncontrado.cpf
+            }
+        });
+
+    } catch (erro) {
+        console.error("ERRO NO LOGIN:", erro);
+
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
 app.get("/alunos", async (req, res) => {
   try {
     const { data, error } = await supabase
