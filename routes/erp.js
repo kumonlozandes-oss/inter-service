@@ -125,4 +125,43 @@ router.get("/mensalidades", async (req, res) => {
 
 });
 
+/**
+ * ==========================
+ * USUÁRIOS
+ * ==========================
+ */
+
+router.get("/usuarios", async (req, res) => {
+
+  try {
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select(`
+        id,
+        nome,
+        email,
+        login,
+        perfil,
+        ativo,
+        cpf
+      `)
+      .order("nome");
+
+    if (error) throw error;
+
+    res.json(data);
+
+  } catch (e) {
+
+    console.error("ERRO AO CARREGAR USUÁRIOS:", e);
+
+    res.status(500).json({
+      erro: e.message
+    });
+
+  }
+
+});
+
 module.exports = router;
