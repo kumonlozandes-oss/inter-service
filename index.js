@@ -1838,6 +1838,23 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
             throw erroSupabase;
         }
 
+console.log("5.1 - Atualizando mensalidade vinculada...");
+
+const { error: erroMensalidade } = await supabase
+    .from("mensalidades")
+    .update({
+        status: "CANCELADO",
+        status_inter: "CANCELADO"
+    })
+    .eq("id_titulo", dados.id_titulo_anterior);
+
+if (erroMensalidade) {
+    console.error("ERRO AO ATUALIZAR MENSALIDADE:", erroMensalidade);
+    throw erroMensalidade;
+}
+
+console.log("5.2 - MENSALIDADE ATUALIZADA PARA CANCELADO.");      
+
       const { data: tituloCancelado, error: erroTituloCancelado } = await supabase
     .from("financeiro_titulos")
     .select("*")
