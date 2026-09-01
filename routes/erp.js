@@ -186,11 +186,16 @@ router.put("/usuarios/:id", async (req, res) => {
 
     if (error) throw error;
 
-    res.json(data);
+    res.json({
+      sucesso: true,
+      usuario: data
+    });
+
   } catch (e) {
     console.error("ERRO AO ATUALIZAR USUÁRIO:", e);
 
     res.status(500).json({
+      sucesso: false,
       erro: e.message
     });
   }
