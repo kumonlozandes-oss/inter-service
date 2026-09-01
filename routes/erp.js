@@ -164,6 +164,36 @@ router.get("/usuarios", async (req, res) => {
 
 });
 
-module.exports = router;
+router.put("/usuarios/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ativo } = req.body;
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update({ ativo })
+      .eq("id", id)
+      .select(`
+        id,
+        nome,
+        email,
+        login,
+        perfil,
+        ativo,
+        cpf
+      `)
+      .single();
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (e) {
+    console.error("ERRO AO ATUALIZAR USUÁRIO:", e);
+
+    res.status(500).json({
+      erro: e.message
+    });
+  }
+});
 
 module.exports = router;
