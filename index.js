@@ -1144,7 +1144,7 @@ return {
     guidAluno: titulo.guid_aluno,
         guidResponsavel: titulo.guid_responsavel,
 
-        id_inter: titulo.id_inter,
+        id_inter: titulo.id_inter || titulo.codigo_solicitacao,
 
         observacoes: titulo.observacao,
 
