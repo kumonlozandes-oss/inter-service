@@ -23,8 +23,19 @@ app.use(cors({
 app.use(express.json());
 const erpRoutes = require("./routes/erp");
 
-app.use(express.json());
 app.use("/api", autenticarSessao, erpRoutes);
+
+app.use((req, res, next) => {
+    if (
+        req.path === "/login" ||
+        req.path === "/" ||
+        req.method === "OPTIONS"
+    ) {
+        return next();
+    }
+
+    return autenticarSessao(req, res, next);
+});
 
 const PORT = process.env.PORT || 3000;
 
