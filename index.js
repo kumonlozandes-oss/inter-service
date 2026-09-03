@@ -110,6 +110,21 @@ function autenticarSessao(req, res, next) {
     next();
 }
 
+function exigirPerfil(...perfisPermitidos) {
+    return (req, res, next) => {
+        const perfil = req.usuarioAutenticado?.perfil;
+
+        if (!perfil || !perfisPermitidos.includes(perfil)) {
+            return res.status(403).json({
+                sucesso: false,
+                erro: "Você não possui permissão para realizar esta ação."
+            });
+        }
+
+        next();
+    };
+}
+
 function log(...msg) {
     console.log("[INTER]", ...msg);
 }
