@@ -132,9 +132,7 @@ router.get("/mensalidades", async (req, res) => {
  */
 
 router.get("/usuarios", async (req, res) => {
-
   try {
-
     const { data, error } = await supabase
       .from("usuarios")
       .select(`
@@ -144,24 +142,37 @@ router.get("/usuarios", async (req, res) => {
         login,
         perfil,
         ativo,
-        cpf
+        telefone,
+        cpf,
+        observacoes,
+        data_nascimento,
+        data_admissao,
+        cursos,
+        funcoes,
+        cep,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado,
+        cargo,
+        salario,
+        carga_horaria,
+        acesso_erp
       `)
       .order("nome");
 
     if (error) throw error;
 
     res.json(data);
-
   } catch (e) {
-
     console.error("ERRO AO CARREGAR USUÁRIOS:", e);
 
     res.status(500).json({
       erro: e.message
     });
-
   }
-
 });
 
 router.put("/usuarios/:id", async (req, res) => {
@@ -176,7 +187,23 @@ router.put("/usuarios/:id", async (req, res) => {
       perfil,
       ativo,
       telefone,
-      cpf
+      cpf,
+      observacoes,
+      data_nascimento,
+      data_admissao,
+      cursos,
+      funcoes,
+      cep,
+      logradouro,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      estado,
+      cargo,
+      salario,
+      carga_horaria,
+      acesso_erp
     } = req.body;
 
     const dados = {
@@ -186,7 +213,23 @@ router.put("/usuarios/:id", async (req, res) => {
       perfil,
       ativo,
       telefone: telefone || null,
-      cpf: cpf || null
+      cpf: cpf || null,
+      observacoes: observacoes || null,
+      data_nascimento: data_nascimento || null,
+      data_admissao: data_admissao || null,
+      cursos: cursos || [],
+      funcoes: funcoes || [],
+      cep: cep || null,
+      logradouro: logradouro || null,
+      numero: numero || null,
+      complemento: complemento || null,
+      bairro: bairro || null,
+      cidade: cidade || null,
+      estado: estado || null,
+      cargo: cargo || null,
+      salario: salario ?? null,
+      carga_horaria: carga_horaria ?? null,
+      acesso_erp: acesso_erp ?? false
     };
 
     if (senha) {
@@ -205,7 +248,23 @@ router.put("/usuarios/:id", async (req, res) => {
         perfil,
         ativo,
         telefone,
-        cpf
+        cpf,
+        observacoes,
+        data_nascimento,
+        data_admissao,
+        cursos,
+        funcoes,
+        cep,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado,
+        cargo,
+        salario,
+        carga_horaria,
+        acesso_erp
       `)
       .single();
 
@@ -215,7 +274,6 @@ router.put("/usuarios/:id", async (req, res) => {
       sucesso: true,
       usuario: data
     });
-
   } catch (e) {
     console.error("ERRO AO ATUALIZAR USUÁRIO:", e);
 
