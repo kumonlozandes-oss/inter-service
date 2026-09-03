@@ -1978,7 +1978,7 @@ await sincronizarMensalidadeComTitulo(tituloCancelado);
 // USUÁRIOS
 // =====================================================
 
-app.get("/usuarios", async (req, res) => {
+app.get("/usuarios", exigirPerfil("ADMIN"), async (req, res) => {
     try {
         const { data, error } = await supabase
             .from("usuarios")
@@ -2012,7 +2012,7 @@ app.get("/usuarios", async (req, res) => {
 });
 
 
-app.post("/usuarios", async (req, res) => {
+app.post("/usuarios", exigirPerfil("ADMIN"), async (req, res) => {
     try {
         const {
             nome,
@@ -2040,7 +2040,7 @@ app.post("/usuarios", async (req, res) => {
             ativo,
             telefone: telefone || null,
             cpf: cpf || null,
-            acesso_erp: true,
+            acesso_erp: acesso_erp ?? false,
             atualizado_em: new Date().toISOString()
         };
 
@@ -2085,7 +2085,7 @@ app.post("/usuarios", async (req, res) => {
 });
 
 
-app.put("/usuarios/:id", async (req, res) => {
+app.put("/usuarios/:id", exigirPerfil("ADMIN"), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -2200,7 +2200,7 @@ app.put("/usuarios/:id", async (req, res) => {
 });
 
 
-app.delete("/usuarios/:id", async (req, res) => {
+app.delete("/usuarios/:id", exigirPerfil("ADMIN"), async (req, res) => {
     try {
         const { id } = req.params;
 
