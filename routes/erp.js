@@ -167,11 +167,35 @@ router.get("/usuarios", async (req, res) => {
 router.put("/usuarios/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { ativo } = req.body;
+
+    const {
+      nome,
+      email,
+      login,
+      senha,
+      perfil,
+      ativo,
+      telefone,
+      cpf
+    } = req.body;
+
+    const dados = {
+      nome,
+      email,
+      login,
+      perfil,
+      ativo,
+      telefone: telefone || null,
+      cpf: cpf || null
+    };
+
+    if (senha) {
+      dados.senha_hash = senha;
+    }
 
     const { data, error } = await supabase
       .from("usuarios")
-      .update({ ativo })
+      .update(dados)
       .eq("id", id)
       .select(`
         id,
@@ -180,6 +204,7 @@ router.put("/usuarios/:id", async (req, res) => {
         login,
         perfil,
         ativo,
+        telefone,
         cpf
       `)
       .single();
