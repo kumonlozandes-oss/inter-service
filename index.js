@@ -24,7 +24,7 @@ app.use(express.json());
 const erpRoutes = require("./routes/erp");
 
 app.use(express.json());
-app.use("/api", erpRoutes);
+app.use("/api", autenticarSessao, erpRoutes);
 
 const PORT = process.env.PORT || 3000;
 
@@ -42,6 +42,62 @@ const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+const sessoesERP = new Map();
+const TEMPO_SESSAO_ERP = 30 * 60 * 1000; // 30 minutos
+
+function criarSessao(usuario) {
+    const token = randomUUID();
+
+    sessoesERP.set(token, {
+        usuarioId: usuario.id,
+        perfil: usuario.perfil,
+        acesso_erp: usuario.acesso_erp,
+        ultimaAtividade: Date.now()
+    });
+
+    return token;
+}
+
+function autenticarSessao(req, res, next) {
+    const autorizacao = req.headers.authorization || "";
+
+    if (!autorizacao.startsWith("Bearer ")) {
+        return res.status(401).json({
+            sucesso: false,
+            erro: "Sessão não autenticada."
+        });
+    }
+
+    const token = autorizacao.replace("Bearer ", "").trim();
+    const sessao = sessoesERP.get(token);
+
+    if (!sessao) {
+        return res.status(401).json({
+            sucesso: false,
+            erro: "Sessão inválida ou expirada."
+        });
+    }
+
+    if (Date.now() - sessao.ultimaAtividade >= TEMPO_SESSAO_ERP) {
+        sessoesERP.delete(token);
+
+        return res.status(401).json({
+            sucesso: false,
+            erro: "Sessão expirada. Faça login novamente."
+        });
+    }
+
+    sessao.ultimaAtividade = Date.now();
+
+    req.usuarioAutenticado = {
+        id: sessao.usuarioId,
+        perfil: sessao.perfil,
+        acesso_erp: sessao.acesso_erp
+    };
+
+    next();
+}
 
 function log(...msg) {
     console.log("[INTER]", ...msg);
@@ -2221,16 +2277,19 @@ app.post("/login", async (req, res) => {
         }
 
         await supabase
-            .from("usuarios")
-            .update({
-                ultimo_acesso: new Date().toISOString(),
-                ultimo_login: new Date().toISOString()
-            })
-            .eq("id", usuarioEncontrado.id);
+    .from("usuarios")
+    .update({
+        ultimo_acesso: new Date().toISOString(),
+        ultimo_login: new Date().toISOString()
+    })
+    .eq("id", usuarioEncontrado.id);
 
-        res.json({
-            sucesso: true,
-            usuario: {
+const token = criarSessao(usuarioEncontrado);
+
+res.json({
+    sucesso: true,
+    token,
+    usuario: {
                 id: usuarioEncontrado.id,
                 nome: usuarioEncontrado.nome,
                 email: usuarioEncontrado.email,
