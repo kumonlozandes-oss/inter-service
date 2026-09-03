@@ -2180,6 +2180,7 @@ app.post("/login", async (req, res) => {
                 senha_hash,
                 perfil,
                 ativo,
+                acesso_erp,
                 cpf
             `)
             .eq("ativo", true);
@@ -2201,7 +2202,14 @@ app.post("/login", async (req, res) => {
         if (!usuarioEncontrado) {
             return res.status(401).json({
                 sucesso: false,
-                erro: "Usuário não encontrado."
+                erro: "Usuário não encontrado ou usuário inativo."
+            });
+        }
+
+        if (!usuarioEncontrado.acesso_erp) {
+            return res.status(403).json({
+                sucesso: false,
+                erro: "Este usuário não possui acesso autorizado ao ERP."
             });
         }
 
@@ -2229,6 +2237,7 @@ app.post("/login", async (req, res) => {
                 login: usuarioEncontrado.login,
                 perfil: usuarioEncontrado.perfil,
                 ativo: usuarioEncontrado.ativo,
+                acesso_erp: usuarioEncontrado.acesso_erp,
                 cpf: usuarioEncontrado.cpf
             }
         });
