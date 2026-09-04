@@ -2454,9 +2454,7 @@ for (const titulo of (titulos || [])) {
             return {
                 ...m,
 
-status:
-    titulo.status ??
-    m.status,
+status: m.status,
 
 id_inter:
     titulo.id_inter ??
