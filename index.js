@@ -681,6 +681,24 @@ console.log({
 
 }
 
+if (!dados.id_mensalidade && dados.guid_aluno) {
+
+    const { data: mensalidade } = await supabase
+        .from("mensalidades")
+        .select("id_mensalidade")
+        .eq("guid_aluno", dados.guid_aluno)
+        .eq("status", "PENDENTE")
+        .order("competencia_ano", { ascending: false })
+        .order("competencia_mes", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (mensalidade) {
+        dados.id_mensalidade = mensalidade.id_mensalidade;
+    }
+
+}
+
 const registro = {
 
     ...(existente || {}),
@@ -821,101 +839,50 @@ const { data: mensalidade } =
 
 }
 
-function possuiIdentificadorInter(titulo) {
-    return Boolean(titulo?.codigo_solicitacao || titulo?.id_inter);
-}
-
-function dataMaisRecente(titulo) {
-    return new Date(
-        titulo?.data_pagamento ||
-        titulo?.ultima_sincronizacao ||
-        titulo?.data_emissao ||
-        0
-    ).getTime();
-}
-
-function tituloCanonico(titulos) {
-    const confirmados = (titulos || []).filter(possuiIdentificadorInter);
-
-    if (!confirmados.length) {
-        return null;
-    }
-
-    const maisRecente = (lista) =>
-        [...lista].sort((a, b) => {
-            const reemissao =
-                Number(b.numero_reemissao || 0) -
-                Number(a.numero_reemissao || 0);
-
-            return reemissao || dataMaisRecente(b) - dataMaisRecente(a);
-        })[0] || null;
-
-    const pagos = confirmados.filter(t => t.status === "PAGO");
-
-    if (pagos.length) {
-        return maisRecente(pagos);
-    }
-
-    const ativos = confirmados.filter(
-        t => t.ativo !== false && t.status !== "CANCELADO"
-    );
-
-    if (ativos.length) {
-        return maisRecente(ativos);
-    }
-
-    const cancelados = confirmados.filter(
-        t => t.status === "CANCELADO"
-    );
-
-    return maisRecente(cancelados) || maisRecente(confirmados);
-}
-
 async function sincronizarMensalidadeComTitulo(titulo) {
-    if (!titulo?.id_mensalidade) {
+
+    if (!titulo?.id_mensalidade)
         return;
-    }
-
-    const { data: titulos, error: erroTitulos } = await supabase
-        .from("financeiro_titulos")
-        .select("*")
-        .eq("id_mensalidade", titulo.id_mensalidade);
-
-    if (erroTitulos) {
-        throw erroTitulos;
-    }
-
-    const canonico = tituloCanonico(titulos);
-
-    if (!canonico) {
-        return;
-    }
 
     const { error } = await supabase
         .from("mensalidades")
         .update({
-            id_titulo: canonico.id,
-            id_inter: canonico.id_inter,
-            status: canonico.status,
-            status_inter: canonico.status_inter,
-            nosso_numero: canonico.nosso_numero,
-            seu_numero: canonico.seu_numero,
-            linha_digitavel: canonico.linha_digitavel,
-            codigo_barras: canonico.codigo_barras,
-            codigo_pix: canonico.codigo_pix,
-            pix_copia_cola: canonico.pix_copia_cola,
-            url_pdf_boleto: canonico.url_pdf_boleto,
-            forma_pagamento: canonico.forma_pagamento,
-            data_pagamento: canonico.data_pagamento,
+
+            id_titulo: titulo.id,
+
+            id_inter: titulo.id_inter,
+
+            status: titulo.status,
+
+            status_inter: titulo.status_inter,
+
+            nosso_numero: titulo.nosso_numero,
+
+            seu_numero: titulo.seu_numero,
+
+            linha_digitavel: titulo.linha_digitavel,
+
+            codigo_barras: titulo.codigo_barras,
+
+            codigo_pix: titulo.codigo_pix,
+
+            pix_copia_cola: titulo.pix_copia_cola,
+
+            url_pdf_boleto: titulo.url_pdf_boleto,
+
+            forma_pagamento: titulo.forma_pagamento,
+            
+            data_pagamento: titulo.data_pagamento,
+            
+           
             data_atualizacao: new Date().toISOString()
+
         })
-        .eq("id_mensalidade", canonico.id_mensalidade);
+        .eq("id_mensalidade", titulo.id_mensalidade);
 
-    if (error) {
+    if (error)
         throw error;
-    }
 
-    ultimaAlteracaoFinanceiro = Date.now();
 }
 
 async function sincronizarBoletos() {
@@ -1916,10 +1883,7 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
             id_inter: dados.id_inter,
             status: dados.status
         });
-        if (dados.status === "PAGO") {
-    throw new Error("Cobranças pagas não podem ser canceladas.");
-}
-      
+
         if (!dados.id_inter) {
             throw new Error(
                 "O título foi encontrado, mas não possui id_inter."
@@ -2425,13 +2389,6 @@ app.get("/mensalidades", async (req, res) => {
                     id,
                     id_mensalidade,
                     id_inter,
-                    codigo_solicitacao,
-                    status,
-                    ativo,
-                    numero_reemissao,
-                    data_emissao,
-                    data_pagamento,
-                    ultima_sincronizacao,
                     nosso_numero,
                     linha_digitavel,
                     codigo_barras,
@@ -2442,7 +2399,9 @@ app.get("/mensalidades", async (req, res) => {
         if (erroTitulos) {
             throw erroTitulos;
         }
-const titulosPorMensalidade = new Map();
+
+        const titulosPorMensalidade = new Map();
+
 for (const titulo of (titulos || [])) {
     if (!titulo.id_mensalidade) {
         continue;
@@ -2452,12 +2411,32 @@ for (const titulo of (titulos || [])) {
         titulo.id_mensalidade
     );
 
-    titulosPorMensalidade.set(
-        titulo.id_mensalidade,
-        tituloCanonico(
-            atual ? [atual, titulo] : [titulo]
-        )
-    );
+    // Se ainda não existe título para esta mensalidade,
+    // usa o primeiro encontrado.
+    if (!atual) {
+        titulosPorMensalidade.set(
+            titulo.id_mensalidade,
+            titulo
+        );
+        continue;
+    }
+
+    // Sempre prioriza o título ATIVO sobre um título
+    // cancelado/inativo (caso exista mais de um).
+    const tituloAtualAtivo =
+        atual.ativo !== false &&
+        atual.status !== "CANCELADO";
+
+    const novoTituloAtivo =
+        titulo.ativo !== false &&
+        titulo.status !== "CANCELADO";
+
+    if (!tituloAtualAtivo && novoTituloAtivo) {
+        titulosPorMensalidade.set(
+            titulo.id_mensalidade,
+            titulo
+        );
+    }
 }
 
         const resultado = (mensalidades || []).map(m => {
