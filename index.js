@@ -2386,15 +2386,18 @@ app.get("/mensalidades", async (req, res) => {
             await supabase
                 .from("financeiro_titulos")
                 .select(`
-                    id,
-                    id_mensalidade,
-                    id_inter,
-                    nosso_numero,
-                    linha_digitavel,
-                    codigo_barras,
-                    codigo_pix,
-                    pix_copia_cola
-                `);
+    id,
+    id_mensalidade,
+    id_inter,
+    nosso_numero,
+    linha_digitavel,
+    codigo_barras,
+    codigo_pix,
+    pix_copia_cola,
+    status,
+    status_inter,
+    ativo
+`);
 
         if (erroTitulos) {
             throw erroTitulos;
