@@ -63,7 +63,6 @@ function criarSessao(usuario) {
     sessoesERP.set(token, {
         usuarioId: usuario.id,
         perfil: usuario.perfil,
-        acesso_erp: usuario.acesso_erp,
         ultimaAtividade: Date.now()
     });
 
@@ -104,7 +103,6 @@ function autenticarSessao(req, res, next) {
     req.usuarioAutenticado = {
         id: sessao.usuarioId,
         perfil: sessao.perfil,
-        acesso_erp: sessao.acesso_erp
     };
 
     next();
@@ -1991,7 +1989,6 @@ app.get("/usuarios", exigirPerfil("ADMIN"), async (req, res) => {
                 ativo,
                 telefone,
                 cpf,
-                acesso_erp,
                 ultimo_acesso,
                 ultimo_login,
                 ultimo_logout
@@ -2040,7 +2037,6 @@ app.post("/usuarios", exigirPerfil("ADMIN"), async (req, res) => {
             ativo,
             telefone: telefone || null,
             cpf: cpf || null,
-            acesso_erp: acesso_erp ?? false,
             atualizado_em: new Date().toISOString()
         };
 
@@ -2060,7 +2056,6 @@ app.post("/usuarios", exigirPerfil("ADMIN"), async (req, res) => {
                 ativo,
                 telefone,
                 cpf,
-                acesso_erp,
                 ultimo_acesso,
                 ultimo_login,
                 ultimo_logout
@@ -2113,7 +2108,6 @@ app.put("/usuarios/:id", exigirPerfil("ADMIN"), async (req, res) => {
             cargo,
             salario,
             carga_horaria,
-            acesso_erp
         } = req.body;
 
         const dados = {
@@ -2139,7 +2133,6 @@ app.put("/usuarios/:id", exigirPerfil("ADMIN"), async (req, res) => {
             cargo: cargo || null,
             salario: salario || null,
             carga_horaria: carga_horaria || null,
-            acesso_erp: acesso_erp ?? false,
             atualizado_em: new Date().toISOString()
         };
 
@@ -2175,7 +2168,6 @@ app.put("/usuarios/:id", exigirPerfil("ADMIN"), async (req, res) => {
                 cargo,
                 salario,
                 carga_horaria,
-                acesso_erp,
                 ultimo_acesso,
                 ultimo_login,
                 ultimo_logout
@@ -2262,7 +2254,6 @@ app.post("/login", async (req, res) => {
                 senha_hash,
                 perfil,
                 ativo,
-                acesso_erp,
                 cpf
             `)
             .eq("ativo", true);
@@ -2285,13 +2276,6 @@ app.post("/login", async (req, res) => {
             return res.status(401).json({
                 sucesso: false,
                 erro: "Usuário não encontrado ou usuário inativo."
-            });
-        }
-
-        if (!usuarioEncontrado.acesso_erp) {
-            return res.status(403).json({
-                sucesso: false,
-                erro: "Este usuário não possui acesso autorizado ao ERP."
             });
         }
 
@@ -2322,7 +2306,6 @@ res.json({
                 login: usuarioEncontrado.login,
                 perfil: usuarioEncontrado.perfil,
                 ativo: usuarioEncontrado.ativo,
-                acesso_erp: usuarioEncontrado.acesso_erp,
                 cpf: usuarioEncontrado.cpf
             }
         });
