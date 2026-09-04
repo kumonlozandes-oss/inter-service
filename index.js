@@ -1893,12 +1893,28 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
         console.log("3 - Enviando cancelamento para o Banco Inter...");
         console.log("ID INTER:", dados.id_inter);
 
-        const respostaInter = await cancelarCobrancaInter(
-            dados.id_inter,
-            "Cancelamento manual de cobrança"
-        );
+        let respostaInter;
 
-        console.log("4 - BANCO INTER RESPONDEU:", respostaInter);
+try {
+    respostaInter = await cancelarCobrancaInter(
+        dados.id_inter,
+        "Cancelamento manual de cobrança"
+    );
+
+    console.log("4 - BANCO INTER RESPONDEU:", respostaInter);
+} catch (erroInter) {
+    const cobrancaJaCancelada =
+        erroInter?.status === 400 &&
+        erroInter?.resposta?.detail?.includes("se encontra na situação CANCELADO");
+
+    if (!cobrancaJaCancelada) {
+        throw erroInter;
+    }
+
+    console.log(
+        "4 - Banco Inter informou que a cobrança já estava CANCELADA. Sincronizando o Supabase."
+    );
+}
 
         console.log("5 - Atualizando título no Supabase...");
 
