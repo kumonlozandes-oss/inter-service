@@ -643,6 +643,33 @@ async function listarTodasCobrancasInter() {
 
 }
 
+async function localizarMensalidadePorCompetencia(dados) {
+    if (
+        !dados.guid_aluno ||
+        !dados.competencia_mes ||
+        !dados.competencia_ano
+    ) {
+        return null;
+    }
+
+    const { data, error } = await supabase
+        .from("mensalidades")
+        .select("id_mensalidade")
+        .eq("guid_aluno", dados.guid_aluno)
+        .eq("competencia_mes", dados.competencia_mes)
+        .eq("competencia_ano", dados.competencia_ano);
+
+    if (error) throw error;
+
+    // Só vincula automaticamente quando existe UMA mensalidade
+    // inequívoca para aquele aluno e aquela competência.
+    if (data?.length === 1) {
+        return data[0].id_mensalidade;
+    }
+
+    return null;
+}
+
 async function salvarTitulo(dados) {
 
     console.log("SALVAR TITULO RECEBEU:", {
@@ -708,6 +735,11 @@ async function salvarTitulo(dados) {
      * Se o id_mensalidade já veio no fluxo, ele é preservado.
      * Se não veio, permanece NULL.
      */
+
+  if (!dados.id_mensalidade) {
+    dados.id_mensalidade =
+        await localizarMensalidadePorCompetencia(dados);
+}
 
     const registro = {
         ...(existente || {}),
