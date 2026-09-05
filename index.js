@@ -2403,19 +2403,15 @@ app.get("/mensalidades", async (req, res) => {
             throw erroTitulos;
         }
 
-        const titulosPorMensalidade = new Map();
+const titulosPorMensalidade = new Map();
 
 for (const titulo of (titulos || [])) {
     if (!titulo.id_mensalidade) {
         continue;
     }
 
-    const atual = titulosPorMensalidade.get(
-        titulo.id_mensalidade
-    );
+    const atual = titulosPorMensalidade.get(titulo.id_mensalidade);
 
-    // Se ainda não existe título para esta mensalidade,
-    // usa o primeiro encontrado.
     if (!atual) {
         titulosPorMensalidade.set(
             titulo.id_mensalidade,
@@ -2424,17 +2420,13 @@ for (const titulo of (titulos || [])) {
         continue;
     }
 
-    // Sempre prioriza o título ATIVO sobre um título
-    // cancelado/inativo (caso exista mais de um).
-    const tituloAtualAtivo =
-        atual.ativo !== false &&
+    const atualAtivo =
         atual.status !== "CANCELADO";
 
-    const novoTituloAtivo =
-        titulo.ativo !== false &&
+    const novoAtivo =
         titulo.status !== "CANCELADO";
 
-    if (!tituloAtualAtivo && novoTituloAtivo) {
+    if (!atualAtivo && novoAtivo) {
         titulosPorMensalidade.set(
             titulo.id_mensalidade,
             titulo
