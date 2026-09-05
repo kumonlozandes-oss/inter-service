@@ -645,121 +645,147 @@ async function listarTodasCobrancasInter() {
 
 async function salvarTitulo(dados) {
 
-    console.log("SALVAR TITULO RECEBEU:");
-console.log({
-    id_mensalidade: dados.id_mensalidade,
-    guid_aluno: dados.guid_aluno,
-    guid_responsavel: dados.guid_responsavel
-});
+    console.log("SALVAR TITULO RECEBEU:", {
+        id_mensalidade: dados.id_mensalidade,
+        guid_aluno: dados.guid_aluno,
+        guid_responsavel: dados.guid_responsavel,
+        id_inter: dados.id_inter,
+        codigo_solicitacao: dados.codigo_solicitacao
+    });
 
-    const { data: existente, error } = await supabase
-        .from("financeiro_titulos")
-        .select("*")
-        .eq("id_inter", dados.id_inter)
-        .maybeSingle();
+    let existente = null;
 
-    if (error) throw error;
+    // 1. Primeiro procura pelo código único da cobrança do Inter
+    if (dados.codigo_solicitacao) {
 
+        const { data, error } = await supabase
+            .from("financeiro_titulos")
+            .select("*")
+            .eq("codigo_solicitacao", dados.codigo_solicitacao)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        existente = data;
+    }
+
+    // 2. Se não encontrou, procura pelo id_inter
+    if (!existente && dados.id_inter) {
+
+        const { data, error } = await supabase
+            .from("financeiro_titulos")
+            .select("*")
+            .eq("id_inter", dados.id_inter)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        existente = data;
+    }
+
+    // 3. Descobre o aluno pelo CPF somente quando necessário
     if (!dados.guid_aluno && dados.cpf_responsavel) {
 
-    const cpf = String(dados.cpf_responsavel).replace(/\D/g, "");
+        const cpf = String(dados.cpf_responsavel).replace(/\D/g, "");
 
-    const { data: aluno } = await supabase
-        .from("alunos_master")
-        .select("guid,guid_responsavel")
-        .or(
-            `responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`
-        )
-        .maybeSingle();
+        const { data: aluno } = await supabase
+            .from("alunos_master")
+            .select("guid,guid_responsavel")
+            .or(
+                `responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`
+            )
+            .maybeSingle();
 
-    if (aluno) {
-
-        dados.guid_aluno = aluno.guid;
-        dados.guid_responsavel = aluno.guid_responsavel;
-
+        if (aluno) {
+            dados.guid_aluno = aluno.guid;
+            dados.guid_responsavel = aluno.guid_responsavel;
+        }
     }
 
-}
+    /*
+     * IMPORTANTE:
+     * Não procurar automaticamente uma mensalidade PENDENTE.
+     * Se o id_mensalidade já veio no fluxo, ele é preservado.
+     * Se não veio, permanece NULL.
+     */
 
-if (!dados.id_mensalidade && dados.guid_aluno) {
+    const registro = {
+        ...(existente || {}),
+        ...dados,
 
-    const { data: mensalidade } = await supabase
-        .from("mensalidades")
-        .select("id_mensalidade")
-        .eq("guid_aluno", dados.guid_aluno)
-        .eq("status", "PENDENTE")
-        .order("competencia_ano", { ascending: false })
-        .order("competencia_mes", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        codigo_solicitacao:
+            dados.codigo_solicitacao ??
+            existente?.codigo_solicitacao ??
+            null,
 
-    if (mensalidade) {
-        dados.id_mensalidade = mensalidade.id_mensalidade;
-    }
+        guid_aluno:
+            dados.guid_aluno ??
+            existente?.guid_aluno ??
+            null,
 
-}
+        guid_responsavel:
+            dados.guid_responsavel ??
+            existente?.guid_responsavel ??
+            null,
 
-const registro = {
+        id_mensalidade:
+            dados.id_mensalidade ??
+            existente?.id_mensalidade ??
+            null,
 
-    ...(existente || {}),
+        competencia:
+            dados.competencia ??
+            existente?.competencia ??
+            null,
 
-    ...dados,
+        competencia_mes:
+            dados.competencia_mes ??
+            existente?.competencia_mes ??
+            null,
 
-    codigo_solicitacao:
-    dados.codigo_solicitacao ??
-    existente?.codigo_solicitacao ??
-    null,
+        competencia_ano:
+            dados.competencia_ano ??
+            existente?.competencia_ano ??
+            null,
 
-    guid_aluno: dados.guid_aluno ?? existente?.guid_aluno ?? null,
+        ultima_sincronizacao: new Date().toISOString()
+    };
 
-    guid_responsavel: dados.guid_responsavel ?? existente?.guid_responsavel ?? null,
-
-    id_mensalidade: dados.id_mensalidade ?? existente?.id_mensalidade ?? null,
-
-    competencia: dados.competencia ?? existente?.competencia ?? null,
-
-    competencia_mes: dados.competencia_mes ?? existente?.competencia_mes ?? null,
-
-    competencia_ano: dados.competencia_ano ?? existente?.competencia_ano ?? null,
-
-    ultima_sincronizacao: new Date().toISOString()
-
-};
     let tituloSalvo;
 
     if (existente) {
 
-const { data, error: erroUpdate } = await supabase
-    .from("financeiro_titulos")
-    .update(registro)
-    .eq("id", existente.id)
-    .select()
-    .single();
+        const { data, error } = await supabase
+            .from("financeiro_titulos")
+            .update(registro)
+            .eq("id", existente.id)
+            .select()
+            .single();
 
-if (erroUpdate) throw erroUpdate;
+        if (error) throw error;
+
         tituloSalvo = data;
 
     } else {
 
-const { data, error: erroInsert } = await supabase
-    .from("financeiro_titulos")
-    .insert(registro)
-    .select()
-    .single();
+        const { data, error } = await supabase
+            .from("financeiro_titulos")
+            .insert(registro)
+            .select()
+            .single();
 
-if (erroInsert) throw erroInsert;
+        if (error) throw error;
+
         tituloSalvo = data;
-
     }
 
     await reconciliarTitulo(tituloSalvo);
 
-if (tituloSalvo.id_mensalidade) {
-    await sincronizarMensalidadeComTitulo(tituloSalvo);
-}
+    if (tituloSalvo.id_mensalidade) {
+        await sincronizarMensalidadeComTitulo(tituloSalvo);
+    }
 
     return tituloSalvo;
-
 }
 
 async function reconciliarTitulo(titulo) {
@@ -841,8 +867,13 @@ const { data: mensalidade } =
 
 async function sincronizarMensalidadeComTitulo(titulo) {
 
-    if (!titulo?.id_mensalidade)
+    if (!titulo?.id_mensalidade) {
+        console.warn(
+            "Título sem id_mensalidade. Mensalidade não atualizada:",
+            titulo?.id
+        );
         return;
+    }
 
     const { error } = await supabase
         .from("mensalidades")
@@ -871,18 +902,17 @@ async function sincronizarMensalidadeComTitulo(titulo) {
             url_pdf_boleto: titulo.url_pdf_boleto,
 
             forma_pagamento: titulo.forma_pagamento,
-            
+
             data_pagamento: titulo.data_pagamento,
-            
-           
+
             data_atualizacao: new Date().toISOString()
 
         })
         .eq("id_mensalidade", titulo.id_mensalidade);
 
-    if (error)
+    if (error) {
         throw error;
-
+    }
 }
 
 async function sincronizarBoletos() {
@@ -1763,9 +1793,7 @@ tokenInter
 
 });
 
-                await sincronizarMensalidadeComTitulo(boleto);
-
-                geradas++;
+                   geradas++;
 
                 resultado.push({
 
