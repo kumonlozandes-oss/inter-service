@@ -822,129 +822,62 @@ async function salvarTitulo(dados) {
 
 async function reconciliarTitulo(titulo) {
 
-if (titulo.guid_aluno && titulo.id_mensalidade) {
-
-    const { error } = await supabase
-        .from("mensalidades")
-        .update({
-
-            id_titulo: titulo.id,
-            id_inter: titulo.id_inter
-
-        })
-        .eq("id_mensalidade", titulo.id_mensalidade);
-
-    if (error)
-        throw error;
-
-    return titulo;
-}
-
-    const cpf = String(titulo.cpf_responsavel || "").replace(/\D/g, "");
-
-    if (!cpf)
+    if (!titulo) {
         return titulo;
+    }
 
-    const { data: aluno } = await supabase
-        .from("alunos_master")
-        .select("guid,guid_responsavel")
-        .or(`responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`)
-        .maybeSingle();
+    // Se o título já possui uma mensalidade,
+    // mantém esse vínculo e apenas sincroniza os dados.
+    if (titulo.id_mensalidade) {
 
-    if (!aluno)
+        const { error } = await supabase
+            .from("mensalidades")
+            .update({
+                id_titulo: titulo.id,
+                id_inter: titulo.id_inter,
+                status: titulo.status,
+                status_inter: titulo.status_inter
+            })
+            .eq("id_mensalidade", titulo.id_mensalidade);
+
+        if (error) throw error;
+
         return titulo;
+    }
 
-    let consulta = supabase
-    .from("mensalidades")
-    .select("id_mensalidade,competencia,competencia_mes,competencia_ano,vencimento")
-    .eq("guid_aluno", aluno.guid);
+    // Se não possui mensalidade, procura SOMENTE
+    // pela combinação aluno + competência.
+    const idMensalidade =
+        await localizarMensalidadePorCompetencia(titulo);
 
-if (titulo.competencia) {
+    if (!idMensalidade) {
+        console.warn(
+            "Não foi possível vincular título à mensalidade:",
+            titulo.id
+        );
 
-    consulta = consulta.eq("competencia", titulo.competencia);
-
-} else if (titulo.vencimento) {
-
-    consulta = consulta.eq("vencimento", titulo.vencimento);
-
-}
-
-const { data: mensalidade } =
-    await consulta.maybeSingle();
-
-    if (!mensalidade)
         return titulo;
+    }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
         .from("financeiro_titulos")
         .update({
-
-            guid_aluno: aluno.guid,
-            guid_responsavel: aluno.guid_responsavel,
-
-            id_mensalidade: mensalidade.id_mensalidade,
-
-            competencia: mensalidade.competencia,
-            competencia_mes: mensalidade.competencia_mes,
-            competencia_ano: mensalidade.competencia_ano
-
+            id_mensalidade: idMensalidade
         })
         .eq("id", titulo.id)
         .select()
         .single();
 
-    return data || titulo;
+    if (error) throw error;
 
-}
+    const tituloAtualizado = data || {
+        ...titulo,
+        id_mensalidade: idMensalidade
+    };
 
-async function sincronizarMensalidadeComTitulo(titulo) {
+    await sincronizarMensalidadeComTitulo(tituloAtualizado);
 
-    if (!titulo?.id_mensalidade) {
-        console.warn(
-            "Título sem id_mensalidade. Mensalidade não atualizada:",
-            titulo?.id
-        );
-        return;
-    }
-
-    const { error } = await supabase
-        .from("mensalidades")
-        .update({
-
-            id_titulo: titulo.id,
-
-            id_inter: titulo.id_inter,
-
-            status: titulo.status,
-
-            status_inter: titulo.status_inter,
-
-            nosso_numero: titulo.nosso_numero,
-
-            seu_numero: titulo.seu_numero,
-
-            linha_digitavel: titulo.linha_digitavel,
-
-            codigo_barras: titulo.codigo_barras,
-
-            codigo_pix: titulo.codigo_pix,
-
-            pix_copia_cola: titulo.pix_copia_cola,
-
-            url_pdf_boleto: titulo.url_pdf_boleto,
-
-            forma_pagamento: titulo.forma_pagamento,
-
-            data_pagamento: titulo.data_pagamento,
-
-            data_atualizacao: new Date().toISOString()
-
-        })
-        .eq("id_mensalidade", titulo.id_mensalidade);
-
-    if (error) {
-        throw error;
-    }
+    return tituloAtualizado;
 }
 
 async function sincronizarBoletos() {
