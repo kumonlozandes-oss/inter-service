@@ -1454,9 +1454,43 @@ const emissao = await requisicaoInter({
         emissao.token
     );
 
-    const dadosTituloGerado = dadosTitulo(detalhe);
+const dadosTituloGerado = dadosTitulo(detalhe);
 
-    const [mes, ano] = competencia.split("/");
+const seuNumeroInter =
+    detalhe?.cobranca?.seuNumero ??
+    detalhe?.seuNumero ??
+    dadosTituloGerado?.seu_numero ??
+    dadosTituloGerado?.seuNumero ??
+    null;
+
+let idMensalidadeResolvido = id_mensalidade;
+
+if (seuNumeroInter) {
+    try {
+        const { data: mensalidadeResolvida, error: erroResolucao } =
+            await supabase.rpc(
+                "resolver_mensalidade_por_seu_numero",
+                {
+                    p_seu_numero: String(seuNumeroInter)
+                }
+            );
+
+        if (erroResolucao) {
+            throw erroResolucao;
+        }
+
+        if (mensalidadeResolvida) {
+            idMensalidadeResolvido = mensalidadeResolvida;
+        }
+    } catch (erro) {
+        console.error(
+            "Erro ao resolver mensalidade pelo seuNumero:",
+            erro
+        );
+    }
+}
+
+const [mes, ano] = competencia.split("/");
 
     console.log("ANTES DE SALVAR:");
 console.log({
@@ -1471,7 +1505,7 @@ console.log({
 
     origem: "ERP",
 
-    id_mensalidade,
+    id_mensalidade: idMensalidadeResolvido,
 
     guid_aluno,
 
