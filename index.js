@@ -2541,18 +2541,18 @@ app.get("/mensalidades", async (req, res) => {
             await supabase
                 .from("financeiro_titulos")
                 .select(`
-    id,
-    id_mensalidade,
-    id_inter,
-    nosso_numero,
-    linha_digitavel,
-    codigo_barras,
-    codigo_pix,
-    pix_copia_cola,
-    status,
-    status_inter,
-    ativo
-`);
+                    id,
+                    id_mensalidade,
+                    id_inter,
+                    nosso_numero,
+                    linha_digitavel,
+                    codigo_barras,
+                    codigo_pix,
+                    pix_copia_cola,
+                    status,
+                    status_inter,
+                    ativo
+                `);
 
         if (erroTitulos) {
             throw erroTitulos;
@@ -2561,84 +2561,92 @@ app.get("/mensalidades", async (req, res) => {
 const titulosPorMensalidade = new Map();
 
 for (const titulo of (titulos || [])) {
+
     if (!titulo.id_mensalidade) {
         continue;
     }
 
-    const atual = titulosPorMensalidade.get(titulo.id_mensalidade);
-
-    if (!atual) {
+    if (!titulosPorMensalidade.has(titulo.id_mensalidade)) {
         titulosPorMensalidade.set(
             titulo.id_mensalidade,
-            titulo
+            []
         );
+    }
+
+    titulosPorMensalidade
+        .get(titulo.id_mensalidade)
+        .push(titulo);
+}
+
+
+const resultado = [];
+
+for (const mensalidade of (mensalidades || [])) {
+
+    const titulosDaMensalidade =
+        titulosPorMensalidade.get(
+            mensalidade.id_mensalidade
+        ) || [];
+
+
+    // Mensalidade sem boleto
+    if (titulosDaMensalidade.length === 0) {
+
+        resultado.push(mensalidade);
+
         continue;
     }
 
-    const atualAtivo =
-        atual.status !== "CANCELADO";
 
-    const novoAtivo =
-        titulo.status !== "CANCELADO";
+    // Cria um registro para cada boleto
+    for (const titulo of titulosDaMensalidade) {
 
-    if (!atualAtivo && novoAtivo) {
-        titulosPorMensalidade.set(
-            titulo.id_mensalidade,
-            titulo
-        );
+        resultado.push({
+
+            ...mensalidade,
+
+            id_titulo:
+                titulo.id,
+
+            status:
+                titulo.status ??
+                mensalidade.status,
+
+            id_inter:
+                titulo.id_inter ??
+                null,
+
+            nosso_numero:
+                mensalidade.nosso_numero ??
+                titulo.nosso_numero ??
+                null,
+
+            linha_digitavel:
+                mensalidade.linha_digitavel ??
+                titulo.linha_digitavel ??
+                null,
+
+            codigo_barras:
+                mensalidade.codigo_barras ??
+                titulo.codigo_barras ??
+                null,
+
+            codigo_pix:
+                mensalidade.codigo_pix ??
+                titulo.codigo_pix ??
+                null,
+
+            pix_copia_cola:
+                mensalidade.pix_copia_cola ??
+                titulo.pix_copia_cola ??
+                null
+        });
     }
 }
-
-        const resultado = (mensalidades || []).map(m => {
-
-            const titulo =
-                titulosPorMensalidade.get(m.id_mensalidade);
-
-            if (!titulo) {
-                return m;
-            }
-
-            return {
-                ...m,
-
-status: m.status,
-
-id_inter:
-    titulo.id_inter ??
-    null,
-
-                nosso_numero:
-                    m.nosso_numero ??
-                    titulo.nosso_numero ??
-                    null,
-
-                linha_digitavel:
-                    m.linha_digitavel ??
-                    titulo.linha_digitavel ??
-                    null,
-
-                codigo_barras:
-                    m.codigo_barras ??
-                    titulo.codigo_barras ??
-                    null,
-
-                codigo_pix:
-                    m.codigo_pix ??
-                    titulo.codigo_pix ??
-                    null,
-
-                pix_copia_cola:
-                    m.pix_copia_cola ??
-                    titulo.pix_copia_cola ??
-                    null
-            };
-
-        });
-
-        console.log(
-            "Mensalidades carregadas:",
-            resultado.length
-        );
+      console.log(
+    "Mensalidades carregadas:",
+    resultado.length
+);
 
         console.log(
             "Primeiro boleto:",
