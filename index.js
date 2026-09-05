@@ -1284,6 +1284,118 @@ return {
 
 }
 
+async function obterOuCriarMensalidadeDoBoleto(dados) {
+
+    const guidAluno =
+        dados.guidAluno ??
+        dados.guid_aluno;
+
+    const guidResponsavel =
+        dados.guidResponsavel ??
+        dados.guid_responsavel;
+
+    const competencia = dados.competencia;
+
+    if (!guidAluno) {
+        throw new Error(
+            "Não é possível gerar cobrança sem identificar o aluno."
+        );
+    }
+
+    if (!competencia) {
+        throw new Error(
+            "Não é possível gerar cobrança sem informar a competência."
+        );
+    }
+
+    // 1. Procura a mensalidade existente
+    const { data: existente, error: erroBusca } = await supabase
+        .from("mensalidades")
+        .select("id_mensalidade")
+        .eq("guid_aluno", guidAluno)
+        .eq("competencia", competencia)
+        .maybeSingle();
+
+    if (erroBusca) throw erroBusca;
+
+    if (existente?.id_mensalidade) {
+        return existente.id_mensalidade;
+    }
+
+    // 2. Busca os dados completos do aluno
+    const { data: aluno, error: erroAluno } = await supabase
+        .from("alunos_master")
+        .select("*")
+        .eq("guid", guidAluno)
+        .maybeSingle();
+
+    if (erroAluno) throw erroAluno;
+
+    if (!aluno) {
+        throw new Error(
+            "Aluno não encontrado para criação da mensalidade."
+        );
+    }
+
+    const [mes, ano] = competencia.split("/");
+
+    // 3. Cria a mensalidade antes do boleto
+    const { data: novaMensalidade, error: erroInsert } =
+        await supabase
+            .from("mensalidades")
+            .insert({
+                id_mensalidade: crypto.randomUUID(),
+
+                guid_aluno: guidAluno,
+                guid_responsavel:
+                    guidResponsavel ??
+                    aluno.guid_responsavel,
+
+                id_aluno: aluno.id_aluno,
+
+                aluno: aluno.nome,
+                responsavel: aluno.responsavel,
+                curso: aluno.cursos,
+
+                competencia,
+                competencia_mes: Number(mes),
+                competencia_ano: Number(ano),
+
+                valor_original: Number(
+                    dados.valorOriginal ??
+                    aluno.mensalidade_padrao ??
+                    0
+                ),
+
+                valor_desconto: Number(
+                    dados.valorDesconto ??
+                    aluno.desconto_padrao ??
+                    0
+                ),
+
+                valor_final: Number(
+                    dados.valorFinal ??
+                    aluno.valor_final_padrao ??
+                    0
+                ),
+
+                vencimento: dados.vencimento,
+
+                forma_pagamento:
+                    dados.formaPagamento ??
+                    "BOLETO",
+
+                status: "PENDENTE",
+                origem: "ERP"
+            })
+            .select("id_mensalidade")
+            .single();
+
+    if (erroInsert) throw erroInsert;
+
+    return novaMensalidade.id_mensalidade;
+}
+
 async function gerarBoletoInterno(dados) {
 
 const tokenInter = dados.tokenInter;    
@@ -1325,9 +1437,15 @@ const {
 } = dados;
 
 
-const id_mensalidade = idMensalidade;
 const guid_aluno = guidAluno;
 const guid_responsavel = guidResponsavel;
+
+let id_mensalidade = idMensalidade;
+
+if (!id_mensalidade) {
+    id_mensalidade =
+        await obterOuCriarMensalidadeDoBoleto(dados);
+}
 
 const cpfCnpj = responsavel_cpf;
 const nome = responsavel;
