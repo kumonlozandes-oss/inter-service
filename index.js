@@ -902,6 +902,16 @@ const { token, cobrancas } = await listarCobrancasInter();
 
             const detalhe = await consultarCobranca(codigo, token);
 
+          console.log("=== RETORNO BANCO INTER ===");
+console.log({
+    codigo,
+    situacao: detalhe?.cobranca?.situacao,
+    dataSituacao: detalhe?.cobranca?.dataSituacao,
+    valorTotalRecebido: detalhe?.cobranca?.valorTotalRecebido,
+    seuNumero: detalhe?.cobranca?.seuNumero,
+    dataVencimento: detalhe?.cobranca?.dataVencimento
+});
+
 
 let dados = dadosTitulo(detalhe);
 
