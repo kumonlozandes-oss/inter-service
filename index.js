@@ -236,9 +236,14 @@ async function requisicaoInter({
 
     const { cert, key } = certificadosInter();
 
-    const headers = {
-        Authorization: `Bearer ${acesso}`
-    };
+const headers = {
+    Authorization: `Bearer ${acesso}`
+};
+
+if (process.env.INTER_CONTA_CORRENTE) {
+    headers["x-conta-corrente"] =
+        process.env.INTER_CONTA_CORRENTE;
+}
 
     if (body) {
 
