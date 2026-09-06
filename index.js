@@ -1582,8 +1582,9 @@ const seuNumeroInter =
     null;
 
 let idMensalidadeResolvido = id_mensalidade;
+let competenciaResolvida = competencia;
 
-if (seuNumeroInter) {
+if (!idMensalidadeResolvido && seuNumeroInter) {
     try {
         const { data: mensalidadeResolvida, error: erroResolucao } =
             await supabase.rpc(
@@ -1608,7 +1609,24 @@ if (seuNumeroInter) {
     }
 }
 
-const [mes, ano] = competencia.split("/");
+if (idMensalidadeResolvido) {
+    const { data: mensalidadeVinculada, error: erroMensalidade } =
+        await supabase
+            .from("mensalidades")
+            .select("competencia, competencia_mes, competencia_ano")
+            .eq("id_mensalidade", idMensalidadeResolvido)
+            .maybeSingle();
+
+    if (erroMensalidade) {
+        throw erroMensalidade;
+    }
+
+    if (mensalidadeVinculada?.competencia) {
+        competenciaResolvida = mensalidadeVinculada.competencia;
+    }
+}
+
+const [mes, ano] = competenciaResolvida.split("/");
 
     console.log("ANTES DE SALVAR:");
 console.log({
@@ -1630,9 +1648,11 @@ console.log({
     guid_responsavel,
 
     competencia,
-
+      
+    competencia: competenciaResolvida,
+      
     competencia_mes: Number(mes),
-
+      
     competencia_ano: Number(ano),
 
     numero_reemissao: dados.numero_reemissao,
