@@ -448,51 +448,20 @@ function dadosTitulo(detalhe) {
     let guid_responsavel = null;
     let id_mensalidade = null;
 
-    const seuNumero = String(cobranca.seuNumero || "")
+const seuNumero = String(cobranca.seuNumero || "")
     .trim()
     .toUpperCase();
 
-// Não usamos mais o seuNumero para localizar a mensalidade.
-// Ele agora é apenas um identificador curto aceito pelo Banco Inter.
+// O seuNumero é armazenado como identificador do boleto.
+// Ele NÃO define sozinho a competência quando ainda
+// não sabemos a mensalidade correta.
 
-const meses = {
-    JANEIRO:"01",
-    FEVEREIRO:"02",
-    MARCO:"03",
-    MARÇO:"03",
-    ABRIL:"04",
-    MAIO:"05",
-    JUNHO:"06",
-    JULHO:"07",
-    AGOSTO:"08",
-    SETEMBRO:"09",
-    OUTUBRO:"10",
-    NOVEMBRO:"11",
-    DEZEMBRO:"12"
-};
-
-let m = seuNumero.match(/^([A-ZÇÃ]+)[\/-](\d{2})$/);
-
-if (m && meses[m[1]]) {
-    competencia = `${meses[m[1]]}/20${m[2]}`;
-}
-
-if (!competencia) {
-
-    m = seuNumero.match(/^(\d{1,2})[\/-](\d{4})$/);
-
-    if (m) {
-        competencia = `${String(m[1]).padStart(2,"0")}/${m[2]}`;
-    }
-
-}
-
+// O vencimento é apenas último recurso para competência.
+// Quando o título já estiver vinculado a uma mensalidade,
+// a competência será definida posteriormente pela mensalidade.
 if (!competencia && cobranca.dataVencimento) {
-
     const [ano, mes] = cobranca.dataVencimento.split("-");
-
     competencia = `${mes}/${ano}`;
-
 }
 
     if (competencia) {
@@ -1647,12 +1616,10 @@ console.log({
 
     guid_responsavel,
 
-    competencia,
-      
     competencia: competenciaResolvida,
-      
+
     competencia_mes: Number(mes),
-      
+
     competencia_ano: Number(ano),
 
     numero_reemissao: dados.numero_reemissao,
