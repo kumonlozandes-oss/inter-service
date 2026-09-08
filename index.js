@@ -710,7 +710,7 @@ async function salvarTitulo(dados) {
      * Se não veio, permanece NULL.
      */
 
-  if (!dados.id_mensalidade) {
+if (!dados.id_mensalidade && !existente?.id_mensalidade) {
     dados.id_mensalidade =
         await localizarMensalidadePorCompetencia(dados);
 }
