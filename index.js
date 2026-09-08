@@ -854,6 +854,51 @@ async function reconciliarTitulo(titulo) {
     return tituloAtualizado;
 }
 
+async function sincronizarMensalidadeComTitulo(titulo) {
+
+    if (!titulo?.id_mensalidade)
+        return;
+
+    const { error } = await supabase
+        .from("mensalidades")
+        .update({
+
+            id_titulo: titulo.id,
+
+            id_inter: titulo.id_inter,
+
+            status: titulo.status,
+
+            status_inter: titulo.status_inter,
+
+            nosso_numero: titulo.nosso_numero,
+
+            seu_numero: titulo.seu_numero,
+
+            linha_digitavel: titulo.linha_digitavel,
+
+            codigo_barras: titulo.codigo_barras,
+
+            codigo_pix: titulo.codigo_pix,
+
+            pix_copia_cola: titulo.pix_copia_cola,
+
+            url_pdf_boleto: titulo.url_pdf_boleto,
+
+            forma_pagamento: titulo.forma_pagamento,
+
+            data_pagamento: titulo.data_pagamento,
+
+            data_atualizacao: new Date().toISOString()
+
+        })
+        .eq("id_mensalidade", titulo.id_mensalidade);
+
+    if (error)
+        throw error;
+
+}
+
 async function sincronizarBoletos() {
 
     log("Iniciando sincronização...");
