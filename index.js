@@ -365,6 +365,29 @@ async function consultarCobrancaInter(idInter) {
     return resultado;
 }
 
+app.get("/api/diagnostico/cobranca/:idInter", async (req, res) => {
+    try {
+        const resultado = await consultarCobrancaInter(
+            req.params.idInter
+        );
+
+        return res.json(resultado);
+
+    } catch (erro) {
+        console.error(
+            "ERRO AO CONSULTAR COBRANÇA:",
+            erro
+        );
+
+        return res.status(500).json({
+            erro:
+                erro instanceof Error
+                    ? erro.message
+                    : String(erro)
+        });
+    }
+});
+
 async function cancelarCobrancaManual(idTitulo, motivo = "Cancelamento de cobrança") {
     const dados = await montarDadosBoleto(idTitulo);
 
