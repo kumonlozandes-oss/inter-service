@@ -339,6 +339,32 @@ async function cancelarCobrancaInter(
     return resultado;
 }
 
+async function consultarCobrancaInter(idInter) {
+
+    const resultado = await requisicaoInter({
+        path:
+            `/cobranca/v3/cobrancas/${encodeURIComponent(idInter)}`,
+        method: "GET"
+    });
+
+    console.log(
+        "STATUS CONSULTA COBRANÇA BANCO INTER:",
+        resultado.status
+    );
+
+    console.log(
+        "SITUAÇÃO ATUAL COBRANÇA BANCO INTER:",
+        resultado.json?.cobranca?.situacao
+    );
+
+    console.log(
+        "RESPOSTA CONSULTA COBRANÇA BANCO INTER:",
+        resultado.json
+    );
+
+    return resultado;
+}
+
 async function cancelarCobrancaManual(idTitulo, motivo = "Cancelamento de cobrança") {
     const dados = await montarDadosBoleto(idTitulo);
 
@@ -2105,6 +2131,15 @@ try {
     );
 
     console.log("4 - BANCO INTER RESPONDEU:", respostaInter);
+
+const consultaAposCancelamento =
+    await consultarCobrancaInter(dados.id_inter);
+
+console.log(
+    "4.1 - SITUAÇÃO APÓS SOLICITAÇÃO DE CANCELAMENTO:",
+    consultaAposCancelamento?.json?.cobranca?.situacao
+);
+  
 } catch (erroInter) {
     const cobrancaJaCancelada =
         erroInter?.status === 400 &&
@@ -2154,8 +2189,8 @@ console.log("5.1 - Atualizando mensalidade vinculada...");
 const { error: erroMensalidade } = await supabase
     .from("mensalidades")
     .update({
-        status: "CANCELADO",
-        status_inter: "CANCELADO"
+        status: statusCancelamento,
+        status_inter: statusCancelamento
     })
     .eq("id_titulo", dados.id_titulo_anterior);
 
