@@ -282,10 +282,11 @@ if (resposta.status < 200 || resposta.status >= 300) {
     throw erro;
 }
 
-    return {
-        token: acesso,
-        json
-    };
+return {
+    token: acesso,
+    status: resposta.status,
+    json
+};
 
 }
 
@@ -308,24 +309,34 @@ async function consultarPdfCobranca(idInter, token) {
     return json;
 }
 
-async function cancelarCobrancaInter(idInter, motivo = "Reemissão de cobrança") {
+async function cancelarCobrancaInter(
+    idInter,
+    motivo = "Reemissão de cobrança"
+) {
 
-    const { json } = await requisicaoInter({
+    const acesso = await obterTokenInter();
 
-        path: `/cobranca/v3/cobrancas/${encodeURIComponent(idInter)}/cancelar`,
-
+    const resultado = await requisicaoInter({
+        path:
+            `/cobranca/v3/cobrancas/${encodeURIComponent(idInter)}/cancelar`,
         method: "POST",
-
+        token: acesso,
         body: JSON.stringify({
-
             motivoCancelamento: motivo
-
         })
-
     });
 
-    return json;
+    console.log(
+        "STATUS CANCELAMENTO BANCO INTER:",
+        resultado.status
+    );
 
+    console.log(
+        "RESPOSTA CANCELAMENTO BANCO INTER:",
+        resultado.json
+    );
+
+    return resultado;
 }
 
 async function cancelarCobrancaManual(idTitulo, motivo = "Cancelamento de cobrança") {
@@ -2110,16 +2121,28 @@ try {
 
         console.log("5 - Atualizando título no Supabase...");
 
-        const { error: erroSupabase } = await supabase
-            .from("financeiro_titulos")
-            .update({
-                status: "CANCELADO",
-                status_inter: "CANCELADO",
-                ativo: false,
-                data_cancelamento: new Date().toISOString(),
-                ultima_sincronizacao: new Date().toISOString()
-            })
-            .eq("id", dados.id_titulo_anterior);
+const cancelamentoConfirmado =
+    respostaInter?.status === 200;
+
+const statusCancelamento =
+    cancelamentoConfirmado
+        ? "CANCELADO"
+        : "CANCELANDO";
+
+const { error: erroSupabase } = await supabase
+    .from("financeiro_titulos")
+    .update({
+        status: statusCancelamento,
+        status_inter: statusCancelamento,
+        ativo: cancelamentoConfirmado,
+        data_cancelamento:
+            cancelamentoConfirmado
+                ? new Date().toISOString()
+                : null,
+        ultima_sincronizacao:
+            new Date().toISOString()
+    })
+    .eq("id", dados.id_titulo_anterior);
 
         if (erroSupabase) {
             console.error("ERRO SUPABASE:", erroSupabase);
