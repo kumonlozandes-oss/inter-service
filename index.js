@@ -397,6 +397,51 @@ app.get("/api/diagnostico/cobranca/:idInter", async (req, res) => {
     }
 });
 
+async function consultarCallbacksInter(codigoSolicitacao) {
+    const resultado = await requisicaoInter({
+        path:
+            `/cobranca/v3/webhook/callbacks?codigoSolicitacao=${encodeURIComponent(codigoSolicitacao)}`,
+        method: "GET"
+    });
+
+    console.log(
+        "STATUS CONSULTA CALLBACKS INTER:",
+        resultado.status
+    );
+
+    console.log(
+        "RESPOSTA CALLBACKS INTER:",
+        JSON.stringify(resultado.json, null, 2)
+    );
+
+    return resultado;
+}
+
+app.get("/api/diagnostico/callbacks/:codigoSolicitacao", async (req, res) => {
+    try {
+        const resultado = await consultarCallbacksInter(
+            req.params.codigoSolicitacao
+        );
+
+        return res.json(resultado);
+
+    } catch (erro) {
+        console.error(
+            "ERRO AO CONSULTAR CALLBACKS INTER:",
+            erro
+        );
+
+        return res.status(500).json({
+            erro:
+                erro instanceof Error
+                    ? erro.message
+                    : String(erro),
+            statusBancoInter: erro?.status || null,
+            respostaBancoInter: erro?.resposta || null
+        });
+    }
+});
+
 async function cancelarCobrancaManual(idTitulo, motivo = "Cancelamento de cobrança") {
   const dados = await montarDadosBoleto(idTitulo);
 
