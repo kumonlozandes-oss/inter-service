@@ -299,6 +299,15 @@ async function consultarCobranca(idInter, token) {
     return json;
 }
 
+async function diagnosticarCobrancaInter(idInter) {
+  const cobranca = await consultarCobranca(idInter);
+
+  console.log("=== DIAGNÓSTICO COBRANÇA INTER ===");
+  console.log(JSON.stringify(cobranca, null, 2));
+
+  return cobranca;
+}
+
 async function consultarPdfCobranca(idInter, token) {
 
     const { json } = await requisicaoInter({
