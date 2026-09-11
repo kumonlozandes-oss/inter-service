@@ -2130,21 +2130,11 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
     try {
         const { idTitulo } = req.body;
 
-        console.log("ID TÍTULO:", idTitulo);
-
         if (!idTitulo) {
             throw new Error("ID do título não informado.");
         }
 
-        console.log("1 - Buscando dados do título...");
-
         const dados = await montarDadosBoleto(idTitulo);
-
-        console.log("2 - DADOS DO TÍTULO:", {
-            id_titulo_anterior: dados.id_titulo_anterior,
-            id_inter: dados.id_inter,
-            status: dados.status
-        });
 
         if (!dados.id_inter) {
             throw new Error(
@@ -2157,101 +2147,112 @@ app.post("/api/cobrancas/cancelar", async (req, res) => {
 
         let respostaInter;
 
-try {
-    respostaInter = await cancelarCobrancaInter(
-        dados.id_inter,
-        "Cancelamento manual de cobrança"
-    );
+        try {
+            respostaInter = await cancelarCobrancaInter(
+                dados.id_inter,
+                "Cancelamento manual de cobrança"
+            );
 
-    console.log("4 - BANCO INTER RESPONDEU:", respostaInter);
+            console.log("4 - BANCO INTER RESPONDEU:", respostaInter);
 
-const consultaAposCancelamento =
-    await consultarCobrancaInter(dados.id_inter);
+            const consultaAposCancelamento =
+                await consultarCobrancaInter(dados.id_inter);
 
-console.log(
-    "4.1 - SITUAÇÃO APÓS SOLICITAÇÃO DE CANCELAMENTO:",
-    consultaAposCancelamento?.json?.cobranca?.situacao
-);
-  
-} catch (erroInter) {
-    const cobrancaJaCancelada =
-        erroInter?.status === 400 &&
-        erroInter?.resposta?.detail?.includes("se encontra na situação CANCELADO");
+            console.log(
+                "4.1 - SITUAÇÃO APÓS SOLICITAÇÃO DE CANCELAMENTO:",
+                consultaAposCancelamento?.json?.cobranca?.situacao
+            );
 
-    if (!cobrancaJaCancelada) {
-        throw erroInter;
-    }
+        } catch (erroInter) {
+            const cobrancaJaCancelada =
+                erroInter?.status === 400 &&
+                erroInter?.resposta?.detail?.includes(
+                    "se encontra na situação CANCELADO"
+                );
 
-    console.log(
-        "4 - Banco Inter informou que a cobrança já estava CANCELADA. Sincronizando o Supabase."
-    );
-}
+            if (!cobrancaJaCancelada) {
+                throw erroInter;
+            }
 
-        console.log("5 - Atualizando título no Supabase...");
+            console.log(
+                "Banco Inter informou que a cobrança já estava CANCELADA."
+            );
 
-const cancelamentoConfirmado =
-    respostaInter?.status === 200;
+            respostaInter = {
+                status: 200
+            };
+        }
 
-const statusCancelamento =
-    cancelamentoConfirmado
-        ? "CANCELADO"
-        : "CANCELANDO";
+        const cancelamentoConfirmado =
+            respostaInter?.status === 200;
 
-const { error: erroSupabase } = await supabase
-    .from("financeiro_titulos")
-    .update({
-        status: statusCancelamento,
-        status_inter: statusCancelamento,
-        ativo: cancelamentoConfirmado,
-        data_cancelamento:
+        const statusCancelamento =
             cancelamentoConfirmado
-                ? new Date().toISOString()
-                : null,
-        ultima_sincronizacao:
-            new Date().toISOString()
-    })
-    .eq("id", dados.id_titulo_anterior);
+                ? "CANCELADO"
+                : "CANCELANDO";
+
+        console.log(
+            "STATUS FINAL DO CANCELAMENTO:",
+            statusCancelamento
+        );
+
+        const { error: erroSupabase } = await supabase
+            .from("financeiro_titulos")
+            .update({
+                status: statusCancelamento,
+                status_inter: statusCancelamento,
+                ativo: cancelamentoConfirmado,
+                data_cancelamento:
+                    cancelamentoConfirmado
+                        ? new Date().toISOString()
+                        : null,
+                ultima_sincronizacao:
+                    new Date().toISOString()
+            })
+            .eq("id", dados.id_titulo_anterior);
 
         if (erroSupabase) {
-            console.error("ERRO SUPABASE:", erroSupabase);
             throw erroSupabase;
         }
 
-console.log("5.1 - Atualizando mensalidade vinculada...");
+        const { error: erroMensalidade } = await supabase
+            .from("mensalidades")
+            .update({
+                status: statusCancelamento,
+                status_inter: statusCancelamento
+            })
+            .eq("id_titulo", dados.id_titulo_anterior);
 
-const { error: erroMensalidade } = await supabase
-    .from("mensalidades")
-    .update({
-        status: statusCancelamento,
-        status_inter: statusCancelamento
-    })
-    .eq("id_titulo", dados.id_titulo_anterior);
+        if (erroMensalidade) {
+            throw erroMensalidade;
+        }
 
-if (erroMensalidade) {
-    console.error("ERRO AO ATUALIZAR MENSALIDADE:", erroMensalidade);
-    throw erroMensalidade;
-}
+        const { data: tituloAtualizado, error: erroTitulo } =
+            await supabase
+                .from("financeiro_titulos")
+                .select("*")
+                .eq("id", dados.id_titulo_anterior)
+                .single();
 
-console.log("5.2 - MENSALIDADE ATUALIZADA PARA CANCELADO.");      
+        if (erroTitulo) {
+            throw erroTitulo;
+        }
 
-      const { data: tituloCancelado, error: erroTituloCancelado } = await supabase
-    .from("financeiro_titulos")
-    .select("*")
-    .eq("id", dados.id_titulo_anterior)
-    .single();
+        await sincronizarMensalidadeComTitulo(tituloAtualizado);
 
-if (erroTituloCancelado) {
-    throw erroTituloCancelado;
-}
+        console.log(
+            "STATUS DO CANCELAMENTO:",
+            statusCancelamento
+        );
 
-await sincronizarMensalidadeComTitulo(tituloCancelado);
-
-        console.log("6 - CANCELAMENTO CONCLUÍDO COM SUCESSO.");
         console.log("=========================================");
 
         return res.json({
             sucesso: true,
-            mensagem: "Cobrança cancelada com sucesso."
+            status: statusCancelamento,
+            mensagem: cancelamentoConfirmado
+                ? "Cobrança cancelada com sucesso."
+                : "Cancelamento solicitado. Aguardando confirmação do Banco Inter."
         });
 
     } catch (erro) {
@@ -2264,7 +2265,9 @@ await sincronizarMensalidadeComTitulo(tituloCancelado);
 
         return res.status(500).json({
             sucesso: false,
-            erro: erro?.message || "Erro desconhecido ao cancelar cobrança.",
+            erro:
+                erro?.message ||
+                "Erro desconhecido ao cancelar cobrança.",
             statusBancoInter: erro?.status || null,
             respostaBancoInter: erro?.resposta || null
         });
