@@ -389,40 +389,41 @@ app.get("/api/diagnostico/cobranca/:idInter", async (req, res) => {
 });
 
 async function cancelarCobrancaManual(idTitulo, motivo = "Cancelamento de cobrança") {
-    const dados = await montarDadosBoleto(idTitulo);
+  const dados = await montarDadosBoleto(idTitulo);
 
-    if (!dados.id_inter) {
-        throw new Error("Cobrança não possui identificador no Banco Inter.");
-    }
+  if (!dados.id_inter) {
+    throw new Error("Cobrança não possui identificador no Banco Inter.");
+  }
 
-    await cancelarCobrancaInter(
-        dados.id_inter,
-        motivo
-    );
+  await cancelarCobrancaInter(
+    dados.id_inter,
+    motivo
+  );
 
-const { error: erroSupabase } = await supabase
+  /*
+  const { error: erroSupabase } = await supabase
     .from("financeiro_titulos")
     .update({
-        status: "CANCELADO",
-        status_inter: "CANCELADO",
-        ativo: false,
-        data_cancelamento: new Date().toISOString(),
-        ultima_sincronizacao: new Date().toISOString()
+      status: "CANCELADO",
+      status_inter: "CANCELADO",
+      ativo: false,
+      data_cancelamento: new Date().toISOString(),
+      ultima_sincronizacao: new Date().toISOString()
     })
     .eq("id", dados.id_titulo_anterior);
 
-if (erroSupabase) {
+  if (erroSupabase) {
     console.error("ERRO AO ATUALIZAR SUPABASE:", erroSupabase);
     throw erroSupabase;
+  }
+
+  console.log("TÍTULO ATUALIZADO NO SUPABASE COM SUCESSO");
+  */
+
+  return {
+    sucesso: true
+  };
 }
-
-console.log("TÍTULO ATUALIZADO NO SUPABASE COM SUCESSO");
-
-    return {
-        sucesso: true
-    };
-}
-
 function data50Dias() {
 
     const data = new Date();
