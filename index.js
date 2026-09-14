@@ -732,41 +732,6 @@ async function listarTodasCobrancasInter() {
 
 }
 
-async function localizarAlunoPorCpf(cpfInformado) {
-
-    const cpf = String(cpfInformado || "").replace(/\D/g, "");
-
-    if (!cpf) return null;
-
-    const { data, error } = await supabase
-        .from("alunos_master")
-        .select("guid,guid_responsavel,cpf,cpf_aluno,responsavel_cpf,responsavel2_cpf");
-
-    if (error) throw error;
-
-    const encontrados = (data || []).filter(aluno =>
-        [
-            aluno.cpf,
-            aluno.cpf_aluno,
-            aluno.responsavel_cpf,
-            aluno.responsavel2_cpf
-        ]
-            .map(v => String(v || "").replace(/\D/g, ""))
-            .some(v => v === cpf)
-    );
-
-    if (encontrados.length === 1) return encontrados[0];
-
-    if (encontrados.length > 1) {
-        console.warn(
-            "CPF corresponde a mais de um aluno; vínculo automático não realizado:",
-            cpf
-        );
-    }
-
-    return null;
-}
-
 async function localizarMensalidadePorCompetencia(dados) {
     if (
         !dados.guid_aluno ||
@@ -806,7 +771,7 @@ async function salvarTitulo(dados) {
 
     let existente = null;
 
-    // 1. Procura pelo código único da cobrança do Inter
+    // 1. Primeiro procura pelo código único da cobrança do Inter
     if (dados.codigo_solicitacao) {
 
         const { data, error } = await supabase
@@ -837,9 +802,15 @@ async function salvarTitulo(dados) {
     // 3. Descobre o aluno pelo CPF somente quando necessário
     if (!dados.guid_aluno && dados.cpf_responsavel) {
 
-        const aluno = await localizarAlunoPorCpf(
-            dados.cpf_responsavel
-        );
+        const cpf = String(dados.cpf_responsavel).replace(/\D/g, "");
+
+        const { data: aluno } = await supabase
+            .from("alunos_master")
+            .select("guid,guid_responsavel")
+            .or(
+                `responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`
+            )
+            .maybeSingle();
 
         if (aluno) {
             dados.guid_aluno = aluno.guid;
@@ -847,13 +818,17 @@ async function salvarTitulo(dados) {
         }
     }
 
-    // 4. Resolve a mensalidade pela combinação:
-    // aluno + competência
-    if (!dados.id_mensalidade && !existente?.id_mensalidade) {
+    /*
+     * IMPORTANTE:
+     * Não procurar automaticamente uma mensalidade PENDENTE.
+     * Se o id_mensalidade já veio no fluxo, ele é preservado.
+     * Se não veio, permanece NULL.
+     */
 
-        dados.id_mensalidade =
-            await localizarMensalidadePorCompetencia(dados);
-    }
+if (!dados.id_mensalidade && !existente?.id_mensalidade) {
+    dados.id_mensalidade =
+        await localizarMensalidadePorCompetencia(dados);
+}
 
     const registro = {
         ...(existente || {}),
@@ -1043,7 +1018,7 @@ async function sincronizarBoletos() {
 
     log("Iniciando sincronização...");
 
-    const { token, cobrancas } = await listarCobrancasInter();
+const { token, cobrancas } = await listarCobrancasInter();
 
     let novos = 0;
     let atualizados = 0;
@@ -1056,82 +1031,80 @@ async function sincronizarBoletos() {
 
             const detalhe = await consultarCobranca(codigo, token);
 
-            console.log("=== RETORNO BANCO INTER ===");
-            console.log({
-                codigo,
-                situacao: detalhe?.cobranca?.situacao,
-                dataSituacao: detalhe?.cobranca?.dataSituacao,
-                valorTotalRecebido:
-                    detalhe?.cobranca?.valorTotalRecebido,
-                seuNumero:
-                    detalhe?.cobranca?.seuNumero,
-                dataVencimento:
-                    detalhe?.cobranca?.dataVencimento
-            });
+          console.log("=== RETORNO BANCO INTER ===");
+console.log({
+    codigo,
+    situacao: detalhe?.cobranca?.situacao,
+    dataSituacao: detalhe?.cobranca?.dataSituacao,
+    valorTotalRecebido: detalhe?.cobranca?.valorTotalRecebido,
+    seuNumero: detalhe?.cobranca?.seuNumero,
+    dataVencimento: detalhe?.cobranca?.dataVencimento
+});
 
-            let dados = dadosTitulo(detalhe);
 
-            // Localiza o aluno pelo CPF
-            if (!dados.guid_aluno && dados.cpf_responsavel) {
+let dados = dadosTitulo(detalhe);
 
-                const aluno = await localizarAlunoPorCpf(
-                    dados.cpf_responsavel
-                );
+if (!dados.guid_aluno && dados.cpf_responsavel) {
 
-                if (aluno) {
-                    dados.guid_aluno = aluno.guid;
-                    dados.guid_responsavel =
-                        aluno.guid_responsavel;
-                }
+    const cpf = String(dados.cpf_responsavel).replace(/\D/g, "");
+
+    const { data: aluno } = await supabase
+        .from("alunos_master")
+        .select("guid,guid_responsavel")
+        .or(
+            `responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`
+        )
+        .maybeSingle();
+
+    if (aluno) {
+
+        dados.guid_aluno = aluno.guid;
+        dados.guid_responsavel = aluno.guid_responsavel;
+
+        if (dados.competencia) {
+
+            const { data: mensalidade } = await supabase
+                .from("mensalidades")
+                .select("id_mensalidade")
+                .eq("guid_aluno", aluno.guid)
+                .eq("competencia", dados.competencia)
+                .maybeSingle();
+
+            if (mensalidade) {
+                dados.id_mensalidade = mensalidade.id_mensalidade;
             }
 
-            // Resolve a mensalidade por:
-            // ALUNO + COMPETÊNCIA
-            //
-            // O seuNumero NÃO é utilizado como filtro.
-            if (!dados.id_mensalidade) {
+        }
 
-                dados.id_mensalidade =
-                    await localizarMensalidadePorCompetencia(
-                        dados
-                    );
-            }
+    }
 
-            const titulo = await salvarTitulo(dados);
+}
 
-            const tituloFinal =
-                await reconciliarTitulo(titulo);
+const titulo = await salvarTitulo(dados);
 
-            await sincronizarMensalidadeComTitulo(
-                tituloFinal
-            );
+const tituloFinal = await reconciliarTitulo(titulo);
+
+await sincronizarMensalidadeComTitulo(tituloFinal);
 
             atualizados++;
 
         } catch (erro) {
 
-            console.error(
-                "ERRO AO PROCESSAR:",
-                item.cobranca.codigoSolicitacao
-            );
-
+            console.error("ERRO AO PROCESSAR:", item.cobranca.codigoSolicitacao);
             console.error(erro);
+
         }
+
     }
 
-    // Tenta corrigir também títulos antigos
-    // que ficaram sem vínculo.
-    await reconciliarTitulosPendentes();
-
-    log(
-        `Sincronização concluída. Atualizados: ${atualizados}`
-    );
+    log(`Sincronização concluída. Atualizados: ${atualizados}`);
 
     return {
         total: cobrancas.length,
         novos,
         atualizados
     };
+
 }
 
 
@@ -1152,96 +1125,113 @@ function competenciaAtual() {
 
 }
 
-async function reconciliarTitulosPendentes() {
-
-    const { data: titulos, error } = await supabase
-        .from("financeiro_titulos")
-        .select("*")
-        .is("id_mensalidade", null);
-
-    if (error) throw error;
-
-    let vinculados = 0;
-
-    for (const titulo of (titulos || [])) {
-
-        try {
-
-            // Primeiro tenta localizar o aluno pelo CPF
-            if (!titulo.guid_aluno && titulo.cpf_responsavel) {
-
-                const aluno = await localizarAlunoPorCpf(
-                    titulo.cpf_responsavel
-                );
-
-                if (aluno) {
-                    titulo.guid_aluno = aluno.guid;
-                    titulo.guid_responsavel =
-                        aluno.guid_responsavel;
-                }
-            }
-
-            // Depois localiza a mensalidade pela competência
-            const idMensalidade =
-                await localizarMensalidadePorCompetencia(
-                    titulo
-                );
-
-            if (!idMensalidade) continue;
-
-            const {
-                data: atualizado,
-                error: erroUpdate
-            } = await supabase
-                .from("financeiro_titulos")
-                .update({
-                    guid_aluno: titulo.guid_aluno,
-                    guid_responsavel:
-                        titulo.guid_responsavel,
-                    id_mensalidade: idMensalidade,
-                    alerta_vinculo: false,
-                    motivo_alerta: null
-                })
-                .eq("id", titulo.id)
-                .select()
-                .single();
-
-            if (erroUpdate) throw erroUpdate;
-
-            await sincronizarMensalidadeComTitulo(
-                atualizado
-            );
-
-            vinculados++;
-
-        } catch (erro) {
-
-            console.error(
-                "ERRO AO RECONCILIAR TITULO:",
-                titulo.id,
-                erro
-            );
-        }
-    }
-
-    log(
-        `Títulos pendentes reconciliados: ${vinculados}`
-    );
-
-    return vinculados;
-}
-
 
 async function vincularTitulosPorCpf() {
 
-    log("Vinculando títulos pendentes...");
+    log("Vinculando títulos por CPF...");
+    log("Buscando títulos...");
 
-    const total =
-        await reconciliarTitulosPendentes();
+    const { data: alunos, error: erroAlunos } = await supabase
+    .from("alunos_master")
+    .select(`
+        guid,
+        guid_responsavel,
+        cpf,
+        responsavel_cpf,
+        responsavel2_cpf,
+        cpf_aluno
+    `);
 
-    log(`Títulos vinculados: ${total}`);
+if (erroAlunos) throw erroAlunos;
 
-    return total;
+    const { data: titulos, error } = await supabase
+        .from("financeiro_titulos")
+        .select(`
+    id,
+    cpf_responsavel,
+    seu_numero,
+    competencia
+`)
+        .is("guid_aluno", null)
+        .not("cpf_responsavel", "is", null);
+
+    if (error) throw error;
+
+    log(`Títulos encontrados: ${titulos?.length || 0}`);
+
+    let vinculados = 0;
+
+    log("Iniciando processamento...");
+
+    for (const titulo of titulos) {
+        log(`CPF: ${titulo.cpf_responsavel}`);
+
+        const cpf = String(titulo.cpf_responsavel).replace(/\D/g, "");
+
+
+let aluno = null;
+
+for (const item of (alunos || [])) {
+
+    const cpfs = [
+
+    item.cpf,
+    item.cpf_aluno,
+    item.responsavel_cpf,
+    item.responsavel2_cpf
+
+].map(c => String(c || "").replace(/\D/g, ""));
+
+if (cpfs.some(c => c === cpf)) {
+
+    aluno = item;
+    break;
+
+}
+
+}
+
+        if (!aluno) {
+
+    const { error: erroAlerta } = await supabase
+    .from("financeiro_titulos")
+    .update({
+        alerta_vinculo: true,
+        motivo_alerta: "Não foi possível localizar o aluno automaticamente."
+    })
+    .eq("id", titulo.id);
+
+if (erroAlerta) throw erroAlerta;
+
+continue;
+
+}
+
+        const { error: erroUpdate } = await supabase
+            .from("financeiro_titulos")
+
+            .update({
+
+    guid_aluno: aluno.guid,
+    guid_responsavel: aluno.guid_responsavel,
+
+    alerta_vinculo: false,
+    motivo_alerta: null
+
+})
+            .eq("id", titulo.id);
+
+        if (erroUpdate)
+            throw erroUpdate;
+
+        vinculados++;
+
+    }
+
+    log(`Títulos vinculados: ${vinculados}`);
+
+    return vinculados;
+
 }
 
 // ======================================================
@@ -2711,8 +2701,6 @@ app.get("/alunos", async (req, res) => {
 app.get("/mensalidades", async (req, res) => {
 
     console.log("=== CHAMOU /api/mensalidades ===");
-
-  await reconciliarTitulosPendentes();
 
     try {
 
