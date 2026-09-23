@@ -567,7 +567,13 @@ function dadosTitulo(detalhe) {
     let guid_responsavel = null;
     let id_mensalidade = null;
 
-const seuNumero = String(cobranca.seuNumero || raiz.seuNumero || "")
+const seuNumero = String(
+    cobranca.seuNumero ||
+    raiz.seuNumero ||
+    cobranca.seu_numero ||
+    raiz.seu_numero ||
+    ""
+)
     .trim()
     .toUpperCase();
 
@@ -611,7 +617,7 @@ if (!competencia && cobranca.dataVencimento) {
 
         codigo_solicitacao: cobranca.codigoSolicitacao || cobranca.id,
 
-        seu_numero: cobranca.seuNumero,
+        seu_numero: seuNumero || null,
         nosso_numero: boleto.nossoNumero,
 
         status_inter: cobranca.situacao,
@@ -1103,8 +1109,14 @@ async function sincronizarBoletos() {
 
             // A listagem do Inter é a fonte de recuperação quando o detalhe
             // vier sem alguns campos. Preservamos seuNumero e CPF daqui.
-            if (!dados.seu_numero && item?.cobranca?.seuNumero) {
-                dados.seu_numero = String(item.cobranca.seuNumero).trim();
+            if (!dados.seu_numero) {
+                dados.seu_numero = String(
+                    item?.cobranca?.seuNumero ||
+                    item?.seuNumero ||
+                    item?.cobranca?.seu_numero ||
+                    item?.seu_numero ||
+                    ""
+                ).trim().toUpperCase() || null;
             }
 
             if (!dados.cpf_responsavel && item?.cobranca?.pagador?.cpfCnpj) {
