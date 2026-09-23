@@ -850,85 +850,165 @@ function candidatosUnicos(registros, predicado) {
     return encontrados.length === 1 ? encontrados[0] : null;
 }
 
-function resolverMensalidadeNoIndice(dados, indice) {
-    if (!indice?.registros?.length) return null;
-    if (dados?.id_mensalidade) return dados.id_mensalidade;
+function distanciaDatasConciliacao(a, b) {
+    if (!a || !b) return null;
+    const da = new Date(`${a}T00:00:00Z`);
+    const db = new Date(`${b}T00:00:00Z`);
+    if (Number.isNaN(da.getTime()) || Number.isNaN(db.getTime())) return null;
+    return Math.abs(Math.round((da - db) / 86400000));
+}
 
-    const registros = indice.registros;
-    const idsTecnicos = [
-        dados?.id_inter, dados?.codigo_solicitacao, dados?.nosso_numero,
-        dados?.linha_digitavel, dados?.codigo_barras, dados?.codigo_pix
-    ].map(normalizarChaveBoleto).filter(Boolean);
+function similaridadeNomePessoa(a, b) {
+    const na = normalizarTextoPessoa(a);
+    const nb = normalizarTextoPessoa(b);
+    if (!na || !nb) return 0;
+    if (na === nb) return 1;
 
-    // CAMADA 1 — vínculo técnico exato. É a única camada que pode ignorar
-    // CPF/competência porque o identificador do próprio título já é inequívoco.
-    for (const id of idsTecnicos) {
-        const encontrado = candidatosUnicos(registros, r => r.ids.has(id));
-        if (encontrado) return encontrado.mensalidade.id_mensalidade;
-    }
+    const ta = new Set(na.split(' ').filter(Boolean));
+    const tb = new Set(nb.split(' ').filter(Boolean));
+    if (!ta.size || !tb.size) return 0;
 
-    // CAMADA 2 — seuNumero não genérico. Útil para boletos manuais que usam
-    // uma identificação própria, desde que ela seja realmente única.
-    const seuNumero = normalizarChaveBoleto(dados?.seu_numero);
-    if (seuNumero && !ehSeuNumeroGenerico(dados?.seu_numero)) {
-        const encontrado = candidatosUnicos(registros, r => r.ids.has(seuNumero));
-        if (encontrado) return encontrado.mensalidade.id_mensalidade;
-    }
+    let inter = 0;
+    for (const t of ta) if (tb.has(t)) inter++;
+    return inter / new Set([...ta, ...tb]).size;
+}
 
+function pontuarCandidatoConciliacao(dados, registro) {
     const competencia = competenciaDoTitulo(dados);
     const cpf = normalizarCpf(dados?.cpf_responsavel);
     const nome = normalizarTextoPessoa(dados?.nome_pagador);
     const vencimento = normalizarDataConciliacao(dados?.vencimento);
     const valor = Number(dados?.valor_final ?? dados?.valor_original);
 
-    const ativos = registros.filter(r => !r.possuiTitulo || idsTecnicos.some(id => r.ids.has(id)));
-    const porCompetencia = competencia
-        ? ativos.filter(r => r.competencia === competencia)
-        : ativos;
+    let score = 0;
+    const motivos = [];
 
-    // CAMADA 3 — identidade forte + competência. Se a família possui vários
-    // alunos, valor/vencimento servem apenas para desempatar; nunca escolhemos
-    // entre dois candidatos equivalentes.
-    let candidatos = porCompetencia;
-    if (cpf) candidatos = candidatos.filter(r => r.cpfs.has(cpf));
-    if (cpf && candidatos.length === 1) return candidatos[0].mensalidade.id_mensalidade;
+    const idsTecnicos = [
+        dados?.id_inter,
+        dados?.codigo_solicitacao,
+        dados?.nosso_numero,
+        dados?.linha_digitavel,
+        dados?.codigo_barras,
+        dados?.codigo_pix
+    ].map(normalizarChaveBoleto).filter(Boolean);
 
-    if (cpf && candidatos.length > 1) {
-        const refinados = candidatos.filter(r =>
-            (vencimento && r.vencimento === vencimento) ||
-            (Number.isFinite(valor) && valorIgualConciliacao(valor, r.valor))
-        );
-        if (refinados.length === 1) return refinados[0].mensalidade.id_mensalidade;
-        candidatos = refinados;
-        if (candidatos.length === 1) return candidatos[0].mensalidade.id_mensalidade;
+    if (idsTecnicos.some(id => registro.ids.has(id))) {
+        score += 10000;
+        motivos.push('ID_TECNICO');
     }
 
-    // CAMADA 4 — nome + competência + dados financeiros.
+    const seuNumero = normalizarChaveBoleto(dados?.seu_numero);
+    if (seuNumero && !ehSeuNumeroGenerico(dados?.seu_numero) && registro.ids.has(seuNumero)) {
+        score += 9000;
+        motivos.push('SEU_NUMERO');
+    }
+
+    if (cpf && registro.cpfs.has(cpf)) {
+        score += 5000;
+        motivos.push('CPF');
+    }
+
     if (nome) {
-        let porNome = porCompetencia.filter(r => r.nomes.has(nome));
-        if (porNome.length === 1) return porNome[0].mensalidade.id_mensalidade;
-        if (porNome.length > 1) {
-            const refinados = porNome.filter(r =>
-                (vencimento && r.vencimento === vencimento) ||
-                (Number.isFinite(valor) && valorIgualConciliacao(valor, r.valor))
-            );
-            if (refinados.length === 1) return refinados[0].mensalidade.id_mensalidade;
+        if (registro.nomes.has(nome)) {
+            score += 3000;
+            motivos.push('NOME_EXATO');
+        } else {
+            const melhorNome = [...registro.nomes]
+                .map(n => similaridadeNomePessoa(nome, n))
+                .reduce((m, v) => Math.max(m, v), 0);
+            if (melhorNome >= 0.85) {
+                score += 1200;
+                motivos.push('NOME_SEMELHANTE');
+            }
         }
     }
 
-    // CAMADA 5 — sem identidade: só aceitamos combinação financeira única.
-    const fortes = porCompetencia.filter(r =>
-        (!vencimento || r.vencimento === vencimento) &&
-        Number.isFinite(valor) && valorIgualConciliacao(valor, r.valor)
-    );
-    if (fortes.length === 1) return fortes[0].mensalidade.id_mensalidade;
-
-    // CAMADA 6 — competência + vencimento, somente quando houver um único
-    // candidato. Isto cobre boletos manuais com identificação inconsistente.
-    if (competencia && vencimento) {
-        const unicos = porCompetencia.filter(r => r.vencimento === vencimento);
-        if (unicos.length === 1) return unicos[0].mensalidade.id_mensalidade;
+    if (competencia && registro.competencia === competencia) {
+        score += 1000;
+        motivos.push('COMPETENCIA');
     }
+
+    const mesmaData = vencimento && registro.vencimento === vencimento;
+    if (mesmaData) {
+        score += 800;
+        motivos.push('VENCIMENTO');
+    }
+
+    const mesmoValor = Number.isFinite(valor) && valorIgualConciliacao(valor, registro.valor);
+    if (mesmoValor) {
+        score += 800;
+        motivos.push('VALOR');
+    }
+
+    if (mesmaData && mesmoValor) {
+        score += 1200;
+        motivos.push('VENCIMENTO_VALOR');
+    }
+
+    // Identidade + dados financeiros tornam a conciliação muito mais forte.
+    if ((cpf || nome) && mesmaData && mesmoValor) {
+        score += 1800;
+        motivos.push('IDENTIDADE_FINANCEIRO');
+    }
+
+    // Uma mensalidade que já possui outro título não deve receber um segundo
+    // boleto por aproximação. O título atual continua permitido quando o ID
+    // técnico do boleto é o mesmo.
+    const possuiOutroTitulo = registro.possuiTitulo &&
+        !idsTecnicos.some(id => registro.ids.has(id));
+
+    if (possuiOutroTitulo) score -= 7000;
+
+    return { score, motivos, possuiOutroTitulo };
+}
+
+function resolverMensalidadeNoIndice(dados, indice) {
+    if (!indice?.registros?.length) return null;
+    if (dados?.id_mensalidade) return dados.id_mensalidade;
+
+    const resultados = indice.registros
+        .map(registro => ({
+            registro,
+            ...pontuarCandidatoConciliacao(dados, registro)
+        }))
+        .filter(r => r.score > 0 && !r.possuiOutroTitulo)
+        .sort((a, b) => b.score - a.score);
+
+    if (!resultados.length) return null;
+
+    const melhor = resultados[0];
+    const segundo = resultados[1];
+    const margem = segundo ? melhor.score - segundo.score : melhor.score;
+
+    // Chaves técnicas e seuNumero único são determinísticos.
+    if (melhor.motivos.includes('ID_TECNICO') || melhor.motivos.includes('SEU_NUMERO')) {
+        if (!segundo || margem >= 1000) return melhor.registro.mensalidade.id_mensalidade;
+    }
+
+    // CPF + competência + financeiro é forte para boleto manual.
+    if (melhor.motivos.includes('CPF') &&
+        melhor.motivos.includes('COMPETENCIA') &&
+        (melhor.motivos.includes('VENCIMENTO') || melhor.motivos.includes('VALOR')) &&
+        (!segundo || margem >= 1200)) {
+        return melhor.registro.mensalidade.id_mensalidade;
+    }
+
+    // Nome exato + competência + financeiro cobre pagador informado pelo nome.
+    if (melhor.motivos.includes('NOME_EXATO') &&
+        melhor.motivos.includes('COMPETENCIA') &&
+        (melhor.motivos.includes('VENCIMENTO') || melhor.motivos.includes('VALOR')) &&
+        (!segundo || margem >= 1200)) {
+        return melhor.registro.mensalidade.id_mensalidade;
+    }
+
+    // Sem CPF/nome confiável, só vinculamos quando competência + vencimento +
+    // valor apontam para UMA única mensalidade disponível.
+    const fortes = resultados.filter(r =>
+        r.motivos.includes('COMPETENCIA') &&
+        r.motivos.includes('VENCIMENTO') &&
+        r.motivos.includes('VALOR')
+    );
+    if (fortes.length === 1) return fortes[0].registro.mensalidade.id_mensalidade;
 
     return null;
 }
