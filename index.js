@@ -734,24 +734,51 @@ async function listarTodasCobrancasInter() {
 
 async function localizarMensalidadePorCompetencia(dados) {
 
-    // 1. O seuNumero gerado pelo ERP deriva diretamente do id_mensalidade.
-    // É o identificador mais forte para recuperar um boleto que existe no
-    // Banco Inter mas não foi salvo/vinculado corretamente no ERP.
-    if (dados?.seu_numero) {
-        try {
-            const { data, error } = await supabase.rpc(
-                "resolver_mensalidade_por_seu_numero",
-                { p_seu_numero: String(dados.seu_numero) }
-            );
+    const seuNumero = String(dados?.seu_numero || "").trim();
 
-            if (!error && data) {
-                return data;
-            }
-        } catch (erro) {
-            console.warn("Falha ao resolver mensalidade pelo seuNumero:", erro.message);
+    // 1. Primeiro tenta o seu_numero já gravado na mensalidade.
+    // Não depende de RPC criada manualmente no Supabase.
+    if (seuNumero) {
+        const { data: porSeuNumero, error: erroSeuNumero } = await supabase
+            .from("mensalidades")
+            .select("id_mensalidade,guid_aluno,guid_responsavel,competencia,competencia_mes,competencia_ano")
+            .eq("seu_numero", seuNumero)
+            .limit(2);
+
+        if (erroSeuNumero) throw erroSeuNumero;
+
+        if (porSeuNumero?.length === 1) {
+            return porSeuNumero[0].id_mensalidade;
         }
     }
 
+    // 2. No fluxo original do ERP, o seu_numero é formado pelos primeiros
+    // 15 caracteres do UUID da mensalidade, sem os hífens. Quando a
+    // mensalidade ainda não recebeu o seu_numero, recuperamos pelo próprio
+    // id, restringindo pela competência para evitar vínculo indevido.
+    if (seuNumero && dados?.competencia) {
+        const { data: candidatas, error: erroCandidatas } = await supabase
+            .from("mensalidades")
+            .select("id_mensalidade")
+            .eq("competencia", dados.competencia)
+            .limit(500);
+
+        if (erroCandidatas) throw erroCandidatas;
+
+        const alvo = seuNumero.toUpperCase();
+        const encontradas = (candidatas || []).filter(row =>
+            String(row.id_mensalidade || "")
+                .replace(/-/g, "")
+                .toUpperCase()
+                .startsWith(alvo)
+        );
+
+        if (encontradas.length === 1) {
+            return encontradas[0].id_mensalidade;
+        }
+    }
+
+    // 3. Fallback por aluno + competência.
     if (
         !dados?.guid_aluno ||
         !dados?.competencia_mes ||
@@ -765,7 +792,8 @@ async function localizarMensalidadePorCompetencia(dados) {
         .select("id_mensalidade")
         .eq("guid_aluno", dados.guid_aluno)
         .eq("competencia_mes", dados.competencia_mes)
-        .eq("competencia_ano", dados.competencia_ano);
+        .eq("competencia_ano", dados.competencia_ano)
+        .limit(2);
 
     if (error) throw error;
 
@@ -1158,6 +1186,30 @@ async function sincronizarBoletos() {
     };
 }
 
+
+// ======================================================
+// SINCRONIZAÇÃO AUTOMÁTICA
+// ======================================================
+
+async function sincronizacaoAutomatica() {
+
+    log("=======================================");
+    log("Sincronização iniciada");
+
+    try {
+        const resumo = await sincronizarBoletos();
+
+        log(`Total: ${resumo.total}`);
+        log(`Novos: ${resumo.novos}`);
+        log(`Atualizados: ${resumo.atualizados}`);
+        log(`Erros: ${resumo.erros || 0}`);
+    } catch (erro) {
+        console.error("[AUTO]", erro);
+    }
+
+    log("Sincronização finalizada");
+    log("=======================================");
+}
 
 // ======================================================
 // EXECUÇÃO AUTOMÁTICA
