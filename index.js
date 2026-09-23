@@ -1191,6 +1191,31 @@ async function sincronizarBoletos() {
 
 
 // ======================================================
+// SINCRONIZAÇÃO AUTOMÁTICA
+// ======================================================
+
+async function sincronizacaoAutomatica() {
+
+    log("=======================================");
+    log("Sincronização automática iniciada");
+
+    try {
+        const resumo = await sincronizarBoletos();
+
+        log(`Total Inter: ${resumo.total}`);
+        log(`Processados: ${resumo.processados}`);
+        log(`Vinculados: ${resumo.vinculados}`);
+        log(`Órfãos recuperados: ${resumo.orfaosRecuperados}`);
+        log(`Erros: ${resumo.erros || 0}`);
+    } catch (erro) {
+        console.error("[AUTO] ERRO NA SINCRONIZAÇÃO:", erro);
+    }
+
+    log("Sincronização automática finalizada");
+    log("=======================================");
+}
+
+// ======================================================
 // EXECUÇÃO AUTOMÁTICA
 // ======================================================
 
