@@ -552,11 +552,42 @@ function normalizarCpf(valor) {
     return String(valor || "").replace(/\D/g, "");
 }
 
+function normalizarChaveBoleto(valor) {
+    return normalizarTextoPessoa(valor).replace(/\s+/g, "");
+}
+
+function normalizarIdentificador(valor) {
+    return String(valor || "").trim().toUpperCase();
+}
+
+function extrairCobrancaInter(item) {
+    if (!item || typeof item !== "object") return {};
+    if (item.cobranca && typeof item.cobranca === "object") return item.cobranca;
+    if (item.data?.cobranca && typeof item.data.cobranca === "object") return item.data.cobranca;
+    return item;
+}
+
+function extrairSeuNumeroInter(item) {
+    const cobranca = extrairCobrancaInter(item);
+    return cobranca?.seuNumero ?? cobranca?.seu_numero ?? item?.seuNumero ?? item?.seu_numero ?? null;
+}
+
 function normalizarCompetencia(valor) {
-    const s = String(valor || "").trim().replace(/\s+/g, "");
+    const s = String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toUpperCase();
+
     if (!s) return null;
 
-    const m = s.match(/^(\d{1,2})[\/.-](\d{2}|\d{4})$/);
+    const nomes = {
+        JANEIRO: 1, FEVEREIRO: 2, MARCO: 3, ABRIL: 4,
+        MAIO: 5, JUNHO: 6, JULHO: 7, AGOSTO: 8,
+        SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12
+    };
+
+    let m = s.match(/^(\d{1,2})[./ -](\d{2}|\d{4})$/);
     if (m) {
         const mes = Number(m[1]);
         let ano = Number(m[2]);
@@ -565,15 +596,11 @@ function normalizarCompetencia(valor) {
         return `${String(mes).padStart(2, "0")}/${ano}`;
     }
 
-    const nomes = {
-        JANEIRO:1, FEVEREIRO:2, MARCO:3, ABRIL:4, MAIO:5, JUNHO:6,
-        JULHO:7, AGOSTO:8, SETEMBRO:9, OUTUBRO:10, NOVEMBRO:11, DEZEMBRO:12
-    };
-    const n = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/^([A-Z]+)\/?(\d{2}|\d{4})$/i);
-    if (n && nomes[n[1].toUpperCase()]) {
-        let ano = Number(n[2]);
+    m = s.match(/^([A-Z]+)[./ -]?(\d{2}|\d{4})$/);
+    if (m && nomes[m[1]]) {
+        let ano = Number(m[2]);
         if (ano < 100) ano += 2000;
-        return `${String(nomes[n[1].toUpperCase()]).padStart(2, "0")}/${ano}`;
+        return `${String(nomes[m[1]]).padStart(2, "0")}/${ano}`;
     }
 
     return null;
@@ -590,92 +617,87 @@ function competenciaDoTitulo(dados) {
     const direta = normalizarCompetencia(dados?.competencia);
     if (direta) return direta;
 
-    const vencimento = dados?.vencimento || dados?.dataVencimento;
-    if (!vencimento) return null;
+    const seuNumero = normalizarCompetencia(dados?.seu_numero ?? dados?.seuNumero);
+    if (seuNumero) return seuNumero;
 
-    const partes = String(vencimento).split("-");
-    if (partes.length >= 2) {
-        return normalizarCompetencia(`${partes[1]}/${partes[0]}`);
+    const vencimento = dados?.vencimento || dados?.dataVencimento;
+    if (vencimento) {
+        const m = String(vencimento).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return `${m[2]}/${m[1]}`;
     }
 
     return null;
 }
 
-function dadosTitulo(detalhe) {
+function normalizarDataConciliacao(valor) {
+    if (!valor) return "";
+    const s = String(valor).trim();
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    const br = s.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
+    if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+    return s;
+}
 
+function ehSeuNumeroGenerico(valor) {
+    const s = normalizarChaveBoleto(valor);
+    return /^(JANEIRO|FEVEREIRO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)(\/)?(\d{2}|\d{4})$/.test(s);
+}
+
+function valorIgualConciliacao(a, b) {
+    const na = Number(a);
+    const nb = Number(b);
+    return Number.isFinite(na) && Number.isFinite(nb) && Math.abs(na - nb) < 0.01;
+}
+
+function dadosTitulo(detalhe) {
     const raiz = detalhe || {};
-    const cobranca = raiz.cobranca || raiz;
+    const cobranca = extrairCobrancaInter(raiz);
     const boleto = raiz.boleto || cobranca.boleto || {};
     const pix = raiz.pix || cobranca.pix || {};
     const pagador = cobranca.pagador || raiz.pagador || {};
-
-    const descontos = Array.isArray(cobranca.descontos)
-        ? cobranca.descontos
-        : [];
+    const descontos = Array.isArray(cobranca.descontos) ? cobranca.descontos : [];
 
     const valorOriginal = numero(cobranca.valorNominal);
-
-    const valorDesconto = descontos.reduce(
-        (t, d) => t + (numero(d.valor) || 0),
-        0
-    );
-
-    const competencia = cobranca.competencia || null;
+    const valorDesconto = descontos.reduce((t, d) => t + (numero(d.valor) || 0), 0);
+    const seuNumero = extrairSeuNumeroInter(raiz);
     const vencimento = cobranca.dataVencimento || null;
-
-    const competenciaFinal = normalizarCompetencia(competencia) || (
-        vencimento
-            ? normalizarCompetencia(`${vencimento.split("-")[1]}/${vencimento.split("-")[0]}`)
-            : null
-    );
-
-    const [mes, ano] = competenciaFinal
-        ? competenciaFinal.split("/")
-        : [null, null];
+    const competencia = normalizarCompetencia(cobranca.competencia) ||
+        normalizarCompetencia(seuNumero) ||
+        competenciaDoTitulo({ vencimento });
+    const partes = competenciaPartes(competencia);
 
     return {
         origem: "INTER",
         id_mensalidade: null,
         guid_aluno: null,
         guid_responsavel: null,
-
-        cpf_responsavel: pagador?.cpfCnpj || null,
-        // Campo transitório usado APENAS na resolução; não é gravado em financeiro_titulos.
+        cpf_responsavel: pagador?.cpfCnpj || pagador?.cpf || null,
         nome_pagador: pagador?.nome || pagador?.razaoSocial || null,
-
-        competencia: competenciaFinal,
-        competencia_mes: mes ? Number(mes) : null,
-        competencia_ano: ano ? Number(ano) : null,
-
-        id_inter: cobranca.codigoSolicitacao || cobranca.id,
-        codigo_solicitacao: cobranca.codigoSolicitacao || cobranca.id,
-
-        seu_numero: cobranca.seuNumero || null,
+        competencia: partes?.competencia || null,
+        competencia_mes: partes?.mes || null,
+        competencia_ano: partes?.ano || null,
+        id_inter: cobranca.codigoSolicitacao || cobranca.id || null,
+        codigo_solicitacao: cobranca.codigoSolicitacao || cobranca.id || null,
+        seu_numero: seuNumero || null,
         nosso_numero: boleto.nossoNumero || null,
-
-        status_inter: cobranca.situacao,
+        status_inter: cobranca.situacao || null,
         status: statusInterno(cobranca.situacao),
-
         vencimento,
-        data_emissao: cobranca.dataEmissao,
-        data_pagamento: cobranca.dataSituacao,
-
+        data_emissao: cobranca.dataEmissao || null,
+        data_pagamento: cobranca.dataSituacao || null,
         valor_original: valorOriginal,
         valor_desconto: valorDesconto,
-        valor_final:
-            valorOriginal == null ? null : valorOriginal - valorDesconto,
-
+        valor_final: valorOriginal == null ? null : valorOriginal - valorDesconto,
         valor_recebido: numero(cobranca.valorTotalRecebido),
         valor_multa: numero(cobranca.multa?.taxa),
         valor_juros: numero(cobranca.mora?.taxa),
-
-        linha_digitavel: boleto.linhaDigitavel,
-        codigo_barras: boleto.codigoBarras,
-        codigo_pix: pix.txid,
-        pix_copia_cola: pix.pixCopiaECola,
-        qr_code_pix: pix.imagemQrcode,
+        linha_digitavel: boleto.linhaDigitavel || null,
+        codigo_barras: boleto.codigoBarras || null,
+        codigo_pix: pix.txid || null,
+        pix_copia_cola: pix.pixCopiaECola || null,
+        qr_code_pix: pix.imagemQrcode || null,
         url_pdf_boleto: null,
-
         json_inter: {
             cobranca: raiz.cobranca || cobranca || null,
             boleto: {
@@ -692,89 +714,71 @@ function dadosTitulo(detalhe) {
 }
 
 async function listarTodasCobrancasInter() {
-
     const token = await obterTokenInter();
-
     const cobrancas = [];
     const codigos = new Set();
 
-    let pagina = 0;
-    let totalPaginas = 1;
+    async function coletar(filtro, dataInicial, dataFinal) {
+        let pagina = 0;
+        let totalPaginas = 1;
 
-    do {
+        do {
+            const parametros = new URLSearchParams({
+                dataInicial,
+                dataFinal,
+                filtrarDataPor: filtro,
+                "paginacao.itensPorPagina": "100",
+                "paginacao.paginaAtual": String(pagina)
+            });
 
-        const parametros = new URLSearchParams({
+            const { json } = await requisicaoInter({
+                token,
+                path: `/cobranca/v3/cobrancas?${parametros}`
+            });
 
-            dataInicial: data50Dias(),
-            dataFinal: ultimoDiaMesSeguinte(),
+            if (!json) throw new Error("Banco Inter não retornou resposta.");
+            totalPaginas = Number(json.totalPaginas || 1);
 
-            filtrarDataPor: "VENCIMENTO",
+            for (const item of (json.cobrancas || [])) {
+                const cobranca = extrairCobrancaInter(item);
+                const codigo = cobranca?.codigoSolicitacao || cobranca?.id;
+                if (!codigo || codigos.has(codigo)) continue;
+                codigos.add(codigo);
+                cobrancas.push(item);
+            }
 
-            "paginacao.itensPorPagina": "100",
-            "paginacao.paginaAtual": String(pagina)
+            pagina++;
+        } while (pagina < totalPaginas);
+    }
 
-        });
+    // VENCIMENTO cobre o fluxo normal do Financeiro.
+    await coletar("VENCIMENTO", data50Dias(), ultimoDiaMesSeguinte());
 
-        const { json } = await requisicaoInter({
-
-            token,
-            path: `/cobranca/v3/cobrancas?${parametros}`
-
-        });
-
-        if (!json)
-            throw new Error("Banco Inter não retornou resposta.");
-
-        totalPaginas = Number(json.totalPaginas || 1);
-
-        for (const item of (json.cobrancas || [])) {
-
-            const codigo = item?.cobranca?.codigoSolicitacao;
-
-            if (!codigo)
-                continue;
-
-            if (codigos.has(codigo))
-                continue;
-
-            codigos.add(codigo);
-
-            cobrancas.push(item);
-
-        }
-
-        pagina++;
-
-    } while (pagina < totalPaginas);
+    // EMISSAO cobre o caso que quebrava o espelhamento: boleto criado agora,
+    // inclusive manual, mas com vencimento muito à frente ou identificador
+    // diferente do padrão do ERP. Assim a entrada no Inter é descoberta pela
+    // data em que foi realmente criada, não pela competência inferida.
+    const hoje = new Date().toISOString().slice(0, 10);
+    await coletar("EMISSAO", data50Dias(), hoje);
 
     log(`Boletos encontrados: ${cobrancas.length}`);
-
-    return {
-        token,
-        cobrancas
-    };
-
+    return { token, cobrancas };
 }
 
 
-function normalizarDataConciliacao(valor) {
-    if (!valor) return "";
-    const s = String(valor).trim();
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-    const m = s.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
-    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-    return s;
-}
-
-function ehSeuNumeroGenerico(soNumero) {
-    const s = normalizarTextoPessoa(soNumero).replace(/\s+/g, "");
-    return /^(JANEIRO|FEVEREIRO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)\/?\d{2,4}$/.test(s);
-}
-
-function valorIgualConciliacao(a, b) {
-    const na = Number(a);
-    const nb = Number(b);
-    return Number.isFinite(na) && Number.isFinite(nb) && Math.abs(na - nb) < 0.01;
+async function buscarPaginasSupabase(tabela, select, pageSize = 1000) {
+    const registros = [];
+    for (let inicio = 0; ; inicio += pageSize) {
+        const { data, error } = await supabase
+            .from(tabela)
+            .select(select)
+            .range(inicio, inicio + pageSize - 1);
+        if (error) throw error;
+        const pagina = data || [];
+        registros.push(...pagina);
+        if (pagina.length < pageSize) break;
+    }
+    return registros;
 }
 
 function prepararIndiceConciliacao(mensalidades, alunos) {
@@ -783,210 +787,147 @@ function prepararIndiceConciliacao(mensalidades, alunos) {
     const registros = (mensalidades || []).map(m => {
         const aluno = alunoPorGuid.get(String(m.guid_aluno)) || {};
         const cpfs = new Set([
-            aluno.responsavel_cpf,
-            aluno.responsavel2_cpf,
-            aluno.cpf,
-            aluno.cpf_aluno
+            aluno.responsavel_cpf, aluno.responsavel2_cpf,
+            aluno.cpf, aluno.cpf_aluno
         ].map(normalizarCpf).filter(Boolean));
 
         const nomes = new Set([
-            aluno.responsavel,
-            aluno.nome,
-            m.responsavel,
-            m.aluno
+            aluno.responsavel, aluno.nome, m.responsavel, m.aluno
         ].map(normalizarTextoPessoa).filter(Boolean));
+
+        const competencia = normalizarCompetencia(m.competencia) ||
+            (m.competencia_mes && m.competencia_ano
+                ? normalizarCompetencia(`${m.competencia_mes}/${m.competencia_ano}`)
+                : null);
+
+        const ids = new Set([
+            m.id_mensalidade, m.id_titulo, m.id_inter,
+            m.codigo_solicitacao, m.nosso_numero, m.linha_digitavel,
+            m.codigo_barras, m.codigo_pix, m.seu_numero
+        ].map(normalizarChaveBoleto).filter(Boolean));
 
         return {
             mensalidade: m,
             cpfs,
             nomes,
-            competencia: normalizarCompetencia(m.competencia) || (m.competencia_mes && m.competencia_ano ? normalizarCompetencia(`${m.competencia_mes}/${m.competencia_ano}`) : null),
+            competencia,
             vencimento: normalizarDataConciliacao(m.vencimento),
             valor: Number(m.valor_final ?? m.valor_original ?? 0),
-            ids: new Set([
-                m.id_inter,
-                m.id_titulo,
-                m.nosso_numero,
-                m.linha_digitavel,
-                m.codigo_barras,
-                m.codigo_pix,
-                m.seu_numero
-            ].map(v => String(v || "").trim()).filter(Boolean))
+            ids,
+            possuiTitulo: Boolean(m.id_titulo || m.id_inter)
         };
     });
 
     return { registros };
 }
 
-async function construirIndiceConciliacao(cobrancas) {
-    const competencias = new Set();
+async function construirIndiceConciliacao() {
+    const mensalidades = await buscarPaginasSupabase(
+        "mensalidades",
+        `id_mensalidade,guid_aluno,guid_responsavel,id_titulo,id_inter,aluno,responsavel,competencia,competencia_mes,competencia_ano,vencimento,valor_original,valor_final,nosso_numero,seu_numero,linha_digitavel,codigo_barras,codigo_pix`,
+        1000
+    );
 
-    for (const item of cobrancas || []) {
-        const c = extrairCobrancaInter(item) || {};
-        const vencimento = c.dataVencimento;
-        if (vencimento) {
-            const partes = String(vencimento).split("-");
-            if (partes.length >= 2) {
-                const c = normalizarCompetencia(`${partes[1]}/${partes[0]}`);
-                if (c) competencias.add(c);
-            }
-        }
+    const guids = [...new Set(mensalidades.map(m => m.guid_aluno).filter(Boolean))];
+    const alunos = [];
 
-
-    }
-
-    let query = supabase
-        .from("mensalidades")
-        .select(`
-            id_mensalidade,
-            guid_aluno,
-            guid_responsavel,
-            id_titulo,
-            id_inter,
-            aluno,
-            responsavel,
-            competencia,
-            competencia_mes,
-            competencia_ano,
-            vencimento,
-            valor_original,
-            valor_final,
-            nosso_numero,
-            seu_numero,
-            linha_digitavel,
-            codigo_barras,
-            codigo_pix
-        `)
-        .limit(10000);
-
-    if (competencias.size) {
-        const pares = [...competencias].map(c => competenciaPartes(c)).filter(Boolean);
-        // Não usamos a coluna textual `competencia` como chave de busca:
-        // existem títulos com formatos 10/26 e 10/2026.
-        // mês/ano numéricos são a representação canônica.
-        if (pares.length === 1) {
-            query = query.eq("competencia_mes", pares[0].mes).eq("competencia_ano", pares[0].ano);
-        } else {
-            // O Supabase não oferece OR simples entre pares sem montar uma expressão;
-            // carregamos o universo limitado e filtramos em memória.
-        }
-    }
-
-    const { data: mensalidades, error: erroMensalidades } = await query;
-    if (erroMensalidades) throw erroMensalidades;
-
-    const guids = [...new Set((mensalidades || []).map(m => m.guid_aluno).filter(Boolean))];
-
-    let alunos = [];
-    if (guids.length) {
+    for (let i = 0; i < guids.length; i += 500) {
+        const lote = guids.slice(i, i + 500);
+        if (!lote.length) continue;
         const { data, error } = await supabase
             .from("alunos_master")
-            .select(`
-                guid,
-                guid_responsavel,
-                nome,
-                responsavel,
-                responsavel_cpf,
-                responsavel2_cpf,
-                cpf,
-                cpf_aluno
-            `)
-            .in("guid", guids)
-            .limit(10000);
-
+            .select("guid,guid_responsavel,nome,responsavel,responsavel_cpf,responsavel2_cpf,cpf,cpf_aluno")
+            .in("guid", lote);
         if (error) throw error;
-        alunos = data || [];
+        alunos.push(...(data || []));
     }
 
-    return prepararIndiceConciliacao(mensalidades || [], alunos);
+    return prepararIndiceConciliacao(mensalidades, alunos);
+}
+
+function candidatosUnicos(registros, predicado) {
+    const encontrados = registros.filter(predicado);
+    return encontrados.length === 1 ? encontrados[0] : null;
 }
 
 function resolverMensalidadeNoIndice(dados, indice) {
     if (!indice?.registros?.length) return null;
     if (dados?.id_mensalidade) return dados.id_mensalidade;
 
+    const registros = indice.registros;
+    const idsTecnicos = [
+        dados?.id_inter, dados?.codigo_solicitacao, dados?.nosso_numero,
+        dados?.linha_digitavel, dados?.codigo_barras, dados?.codigo_pix
+    ].map(normalizarChaveBoleto).filter(Boolean);
+
+    // CAMADA 1 — vínculo técnico exato. É a única camada que pode ignorar
+    // CPF/competência porque o identificador do próprio título já é inequívoco.
+    for (const id of idsTecnicos) {
+        const encontrado = candidatosUnicos(registros, r => r.ids.has(id));
+        if (encontrado) return encontrado.mensalidade.id_mensalidade;
+    }
+
+    // CAMADA 2 — seuNumero não genérico. Útil para boletos manuais que usam
+    // uma identificação própria, desde que ela seja realmente única.
+    const seuNumero = normalizarChaveBoleto(dados?.seu_numero);
+    if (seuNumero && !ehSeuNumeroGenerico(dados?.seu_numero)) {
+        const encontrado = candidatosUnicos(registros, r => r.ids.has(seuNumero));
+        if (encontrado) return encontrado.mensalidade.id_mensalidade;
+    }
+
     const competencia = competenciaDoTitulo(dados);
     const cpf = normalizarCpf(dados?.cpf_responsavel);
     const nome = normalizarTextoPessoa(dados?.nome_pagador);
     const vencimento = normalizarDataConciliacao(dados?.vencimento);
     const valor = Number(dados?.valor_final ?? dados?.valor_original);
-    const identificadores = [
-        dados?.id_inter,
-        dados?.codigo_solicitacao,
-        dados?.nosso_numero,
-        dados?.linha_digitavel,
-        dados?.codigo_barras,
-        dados?.codigo_pix
-    ].map(v => String(v || "").trim()).filter(Boolean);
 
-    // 1. Identificadores técnicos são determinísticos e independem de quem gerou o boleto.
-    for (const identificador of identificadores) {
-        const encontrados = indice.registros.filter(r => r.ids.has(identificador));
-        if (encontrados.length === 1) {
-            return encontrados[0].mensalidade.id_mensalidade;
+    const ativos = registros.filter(r => !r.possuiTitulo || idsTecnicos.some(id => r.ids.has(id)));
+    const porCompetencia = competencia
+        ? ativos.filter(r => r.competencia === competencia)
+        : ativos;
+
+    // CAMADA 3 — identidade forte + competência. Se a família possui vários
+    // alunos, valor/vencimento servem apenas para desempatar; nunca escolhemos
+    // entre dois candidatos equivalentes.
+    let candidatos = porCompetencia;
+    if (cpf) candidatos = candidatos.filter(r => r.cpfs.has(cpf));
+    if (cpf && candidatos.length === 1) return candidatos[0].mensalidade.id_mensalidade;
+
+    if (cpf && candidatos.length > 1) {
+        const refinados = candidatos.filter(r =>
+            (vencimento && r.vencimento === vencimento) ||
+            (Number.isFinite(valor) && valorIgualConciliacao(valor, r.valor))
+        );
+        if (refinados.length === 1) return refinados[0].mensalidade.id_mensalidade;
+        candidatos = refinados;
+        if (candidatos.length === 1) return candidatos[0].mensalidade.id_mensalidade;
+    }
+
+    // CAMADA 4 — nome + competência + dados financeiros.
+    if (nome) {
+        let porNome = porCompetencia.filter(r => r.nomes.has(nome));
+        if (porNome.length === 1) return porNome[0].mensalidade.id_mensalidade;
+        if (porNome.length > 1) {
+            const refinados = porNome.filter(r =>
+                (vencimento && r.vencimento === vencimento) ||
+                (Number.isFinite(valor) && valorIgualConciliacao(valor, r.valor))
+            );
+            if (refinados.length === 1) return refinados[0].mensalidade.id_mensalidade;
         }
     }
 
-    // 2. seuNumero só entra se não for o padrão genérico de boletos manuais.
-    const seuNumero = String(dados?.seu_numero || "").trim();
-    if (seuNumero && !ehSeuNumeroGenerico(seuNumero)) {
-        const encontrados = indice.registros.filter(r => r.ids.has(seuNumero));
-        if (encontrados.length === 1) {
-            return encontrados[0].mensalidade.id_mensalidade;
-        }
-    }
-
-    // 3. Reconciliação por identidade + competência + dados financeiros.
-    const candidatos = indice.registros.filter(r => {
-        if (competencia && r.competencia !== competencia) return false;
-        return true;
-    });
-
-    const avaliados = candidatos.map(r => {
-        let score = 0;
-        let identidade = 0;
-
-        if (cpf && r.cpfs.has(cpf)) {
-            score += 1000;
-            identidade += 1;
-        }
-
-        if (nome && r.nomes.has(nome)) {
-            score += 500;
-            identidade += 1;
-        }
-
-        if (competencia && r.competencia === competencia) score += 250;
-        if (vencimento && r.vencimento === vencimento) score += 220;
-        if (valorIgualConciliacao(valor, r.valor)) score += 180;
-
-        return { r, score, identidade };
-    }).filter(x => x.score > 0);
-
-    if (!avaliados.length) return null;
-
-    avaliados.sort((a, b) => b.score - a.score);
-
-    const primeiro = avaliados[0];
-    const segundo = avaliados[1];
-
-    // Com identidade, exige vantagem clara quando houver mais de um candidato.
-    if (primeiro.identidade > 0) {
-        if (!segundo || primeiro.score > segundo.score) {
-            return primeiro.r.mensalidade.id_mensalidade;
-        }
-        return null;
-    }
-
-    // Sem identidade do pagador, só aceita combinação financeira totalmente única.
-    const fortes = avaliados.filter(x =>
-        (!competencia || x.r.competencia === competencia) &&
-        (!vencimento || x.r.vencimento === vencimento) &&
-        valorIgualConciliacao(valor, x.r.valor)
+    // CAMADA 5 — sem identidade: só aceitamos combinação financeira única.
+    const fortes = porCompetencia.filter(r =>
+        (!vencimento || r.vencimento === vencimento) &&
+        Number.isFinite(valor) && valorIgualConciliacao(valor, r.valor)
     );
+    if (fortes.length === 1) return fortes[0].mensalidade.id_mensalidade;
 
-    if (fortes.length === 1) {
-        return fortes[0].r.mensalidade.id_mensalidade;
+    // CAMADA 6 — competência + vencimento, somente quando houver um único
+    // candidato. Isto cobre boletos manuais com identificação inconsistente.
+    if (competencia && vencimento) {
+        const unicos = porCompetencia.filter(r => r.vencimento === vencimento);
+        if (unicos.length === 1) return unicos[0].mensalidade.id_mensalidade;
     }
 
     return null;
@@ -994,71 +935,10 @@ function resolverMensalidadeNoIndice(dados, indice) {
 
 async function localizarMensalidadePorCompetencia(dados, contexto = null) {
     if (dados?.id_mensalidade) return dados.id_mensalidade;
+    if (contexto?.indice) return resolverMensalidadeNoIndice(dados, contexto.indice);
 
-    if (contexto?.indice) {
-        const resolvido = resolverMensalidadeNoIndice(dados, contexto.indice);
-        if (resolvido) return resolvido;
-    }
-
-    // Fallback para operações fora da sincronização em lote.
-    const competencia = competenciaDoTitulo(dados);
-    if (!competencia) return null;
-
-    const cpf = normalizarCpf(dados?.cpf_responsavel);
-    const nome = normalizarTextoPessoa(dados?.nome_pagador);
-
-    let alunos = [];
-
-    if (dados?.guid_aluno) {
-        const { data, error } = await supabase
-            .from("alunos_master")
-            .select("guid,guid_responsavel,nome,responsavel,responsavel_cpf,responsavel2_cpf,cpf,cpf_aluno")
-            .eq("guid", dados.guid_aluno)
-            .limit(1);
-        if (error) throw error;
-        alunos = data || [];
-    }
-
-    if (!alunos.length && cpf) {
-        const { data, error } = await supabase
-            .from("alunos_master")
-            .select("guid,guid_responsavel,nome,responsavel,responsavel_cpf,responsavel2_cpf,cpf,cpf_aluno")
-            .or(`responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`)
-            .limit(100);
-        if (error) throw error;
-        alunos = data || [];
-    }
-
-    if (nome) {
-        const filtrados = alunos.filter(a =>
-            normalizarTextoPessoa(a.responsavel) === nome ||
-            normalizarTextoPessoa(a.nome) === nome
-        );
-        if (filtrados.length) alunos = filtrados;
-    }
-
-    const guids = [...new Set(alunos.map(a => a.guid).filter(Boolean))];
-
-    if (guids.length) {
-        const { data: mensalidades, error } = await supabase
-            .from("mensalidades")
-            .select("id_mensalidade,guid_aluno,guid_responsavel,competencia,competencia_mes,competencia_ano,valor_original,valor_final,seu_numero")
-            .in("guid_aluno", guids)
-            .eq("competencia", competencia)
-            .limit(500);
-
-        if (error) throw error;
-
-        const valor = Number(dados?.valor_final ?? dados?.valor_original);
-        const candidatas = (mensalidades || []).filter(m =>
-            !Number.isFinite(valor) ||
-            valorIgualConciliacao(valor, Number(m.valor_final ?? m.valor_original))
-        );
-
-        if (candidatas.length === 1) return candidatas[0].id_mensalidade;
-    }
-
-    return null;
+    const indice = await construirIndiceConciliacao();
+    return resolverMensalidadeNoIndice(dados, indice);
 }
 
 async function salvarTitulo(dados, contexto = null) {
@@ -1209,12 +1089,6 @@ if (!dados.id_mensalidade && !existente?.id_mensalidade) {
         tituloSalvo = data;
     }
 
-    await reconciliarTitulo(tituloSalvo);
-
-    if (tituloSalvo.id_mensalidade) {
-        await sincronizarMensalidadeComTitulo(tituloSalvo);
-    }
-
     return tituloSalvo;
 }
 
@@ -1325,20 +1199,15 @@ async function sincronizarMensalidadeComTitulo(titulo) {
 
 
 async function sincronizarBoletos() {
-
     log("Iniciando sincronização...");
 
     const { token, cobrancas } = await listarTodasCobrancasInter();
-
-    // Novo desenho: primeiro carregamos o universo de mensalidades do período
-    // e seus dados de identidade. Depois conciliamos cada boleto em memória.
-    // Isso elimina dezenas de buscas independentes e, principalmente,
-    // elimina a dependência do seuNumero para boletos manuais.
-    const indice = await construirIndiceConciliacao(cobrancas);
+    const indice = await construirIndiceConciliacao();
 
     let processados = 0;
     let vinculados = 0;
     let orfaosRecuperados = 0;
+    let detalhesConsultados = 0;
     let erros = 0;
 
     for (const item of cobrancas) {
@@ -1347,49 +1216,41 @@ async function sincronizarBoletos() {
         if (!codigo) continue;
 
         try {
-            let detalhe;
+            // Primeiro usamos a coleção do Inter. Só consultamos o detalhe
+            // quando os dados da coleção não forem suficientes para conciliar.
+            let dados = dadosTitulo(item);
+            let idMensalidade = resolverMensalidadeNoIndice(dados, indice);
 
-            try {
-                detalhe = await consultarCobranca(codigo, token);
-            } catch (erroDetalhe) {
-                console.warn(
-                    `Detalhe indisponível para ${codigo}; usando listagem do Inter.`,
-                    erroDetalhe.message
-                );
-                detalhe = item;
+            if (!idMensalidade) {
+                try {
+                    const detalhe = await consultarCobranca(codigo, token);
+                    detalhesConsultados++;
+                    const detalhados = dadosTitulo(detalhe);
+
+                    // O detalhe tem prioridade apenas para campos que vieram
+                    // preenchidos; nunca apagamos informação útil da coleção.
+                    for (const campo of Object.keys(detalhados)) {
+                        if (campo === "json_inter") continue;
+                        if (detalhados[campo] !== null && detalhados[campo] !== undefined && detalhados[campo] !== "") {
+                            dados[campo] = detalhados[campo];
+                        }
+                    }
+                    dados.json_inter = detalhados.json_inter;
+                    idMensalidade = resolverMensalidadeNoIndice(dados, indice);
+                } catch (erroDetalhe) {
+                    console.warn(`Detalhe indisponível para ${codigo}; mantendo dados da coleção.`);
+                }
             }
-
-            const dados = dadosTitulo(detalhe);
-
-            // Complementa os dados quando o detalhe e a listagem possuem estruturas diferentes.
-            if (!dados.cpf_responsavel && cobrancaLista?.pagador?.cpfCnpj) {
-                dados.cpf_responsavel = cobrancaLista.pagador.cpfCnpj;
-            }
-
-            if (!dados.nome_pagador && cobrancaLista?.pagador?.nome) {
-                dados.nome_pagador = cobrancaLista.pagador.nome;
-            }
-
-            if (!dados.seu_numero && cobrancaLista?.seuNumero) {
-                dados.seu_numero = cobrancaLista.seuNumero;
-            }
-
-            const idMensalidade = resolverMensalidadeNoIndice(dados, indice);
 
             if (idMensalidade) {
+                const registro = indice.registros.find(r => r.mensalidade.id_mensalidade === idMensalidade);
                 dados.id_mensalidade = idMensalidade;
-
-                const registro = indice.registros.find(
-                    r => r.mensalidade.id_mensalidade === idMensalidade
-                );
-
                 if (registro) {
-                    dados.guid_aluno = registro.mensalidade.guid_aluno;
-                    dados.guid_responsavel =
-                        registro.mensalidade.guid_responsavel || dados.guid_responsavel;
-                    dados.competencia = registro.mensalidade.competencia || dados.competencia;
-                    dados.competencia_mes = registro.mensalidade.competencia_mes;
-                    dados.competencia_ano = registro.mensalidade.competencia_ano;
+                    dados.guid_aluno = registro.mensalidade.guid_aluno || null;
+                    dados.guid_responsavel = registro.mensalidade.guid_responsavel || null;
+                    dados.competencia = registro.competencia || dados.competencia || null;
+                    dados.competencia_mes = registro.mensalidade.competencia_mes || null;
+                    dados.competencia_ano = registro.mensalidade.competencia_ano || null;
                 }
             }
 
@@ -1397,18 +1258,15 @@ async function sincronizarBoletos() {
             const tituloFinal = await reconciliarTitulo(titulo, { indice });
 
             processados++;
-
-            if (tituloFinal?.id_mensalidade) {
-                vinculados++;
-            }
-
+            if (tituloFinal?.id_mensalidade) vinculados++;
         } catch (erro) {
             erros++;
             console.error(`ERRO AO PROCESSAR BOLETO ${codigo}:`, erro);
         }
     }
 
-    // Segunda passada: títulos antigos que já estão no ERP, mas ainda não tinham vínculo.
+    // Segunda etapa: títulos que já chegaram ao ERP sem vínculo. O mesmo
+    // mecanismo de reconciliação é aplicado, sem depender do seuNumero.
     const { data: orfaos, error: erroOrfaos } = await supabase
         .from("financeiro_titulos")
         .select("*")
@@ -1416,7 +1274,7 @@ async function sincronizarBoletos() {
 
     if (erroOrfaos) throw erroOrfaos;
 
-    for (const titulo of orfaos || []) {
+    for (const titulo of (orfaos || [])) {
         try {
             const idMensalidade = resolverMensalidadeNoIndice(titulo, indice);
             if (!idMensalidade) continue;
@@ -1432,33 +1290,18 @@ async function sincronizarBoletos() {
                 .single();
 
             if (error) throw error;
-
             await reconciliarTitulo(atualizado, { indice });
             orfaosRecuperados++;
             vinculados++;
-
         } catch (erro) {
             erros++;
-            console.error(
-                `ERRO AO RECUPERAR TÍTULO ÓRFÃO ${titulo.id}:`,
-                erro
-            );
+            console.error(`ERRO AO RECUPERAR TÍTULO ÓRFÃO ${titulo.id}:`, erro);
         }
     }
 
-    log(
-        `Sincronização concluída. Inter: ${cobrancas.length}. ` +
-        `Processados: ${processados}. Vinculados: ${vinculados}. ` +
-        `Órfãos recuperados: ${orfaosRecuperados}. Erros: ${erros}.`
-    );
+    log(`Sincronização concluída. Inter: ${cobrancas.length}. Processados: ${processados}. Vinculados: ${vinculados}. Órfãos recuperados: ${orfaosRecuperados}. Detalhes: ${detalhesConsultados}. Erros: ${erros}.`);
 
-    return {
-        total: cobrancas.length,
-        processados,
-        vinculados,
-        orfaosRecuperados,
-        erros
-    };
+    return { total: cobrancas.length, processados, vinculados, orfaosRecuperados, detalhesConsultados, erros };
 }
 
 
