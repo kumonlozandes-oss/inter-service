@@ -552,15 +552,50 @@ function normalizarCpf(valor) {
     return String(valor || "").replace(/\D/g, "");
 }
 
+function normalizarCompetencia(valor) {
+    const s = String(valor || "").trim().replace(/\s+/g, "");
+    if (!s) return null;
+
+    const m = s.match(/^(\d{1,2})[\/.-](\d{2}|\d{4})$/);
+    if (m) {
+        const mes = Number(m[1]);
+        let ano = Number(m[2]);
+        if (mes < 1 || mes > 12) return null;
+        if (ano < 100) ano += 2000;
+        return `${String(mes).padStart(2, "0")}/${ano}`;
+    }
+
+    const nomes = {
+        JANEIRO:1, FEVEREIRO:2, MARCO:3, ABRIL:4, MAIO:5, JUNHO:6,
+        JULHO:7, AGOSTO:8, SETEMBRO:9, OUTUBRO:10, NOVEMBRO:11, DEZEMBRO:12
+    };
+    const n = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/^([A-Z]+)\/?(\d{2}|\d{4})$/i);
+    if (n && nomes[n[1].toUpperCase()]) {
+        let ano = Number(n[2]);
+        if (ano < 100) ano += 2000;
+        return `${String(nomes[n[1].toUpperCase()]).padStart(2, "0")}/${ano}`;
+    }
+
+    return null;
+}
+
+function competenciaPartes(valor) {
+    const c = normalizarCompetencia(valor);
+    if (!c) return null;
+    const [mes, ano] = c.split("/");
+    return { competencia: c, mes: Number(mes), ano: Number(ano) };
+}
+
 function competenciaDoTitulo(dados) {
-    if (dados?.competencia) return String(dados.competencia).trim();
+    const direta = normalizarCompetencia(dados?.competencia);
+    if (direta) return direta;
 
     const vencimento = dados?.vencimento || dados?.dataVencimento;
     if (!vencimento) return null;
 
     const partes = String(vencimento).split("-");
     if (partes.length >= 2) {
-        return `${partes[1]}/${partes[0].slice(-2)}`;
+        return normalizarCompetencia(`${partes[1]}/${partes[0]}`);
     }
 
     return null;
@@ -588,9 +623,9 @@ function dadosTitulo(detalhe) {
     const competencia = cobranca.competencia || null;
     const vencimento = cobranca.dataVencimento || null;
 
-    const competenciaFinal = competencia || (
+    const competenciaFinal = normalizarCompetencia(competencia) || (
         vencimento
-            ? `${vencimento.split("-")[1]}/${vencimento.split("-")[0].slice(-2)}`
+            ? normalizarCompetencia(`${vencimento.split("-")[1]}/${vencimento.split("-")[0]}`)
             : null
     );
 
@@ -722,20 +757,6 @@ async function listarTodasCobrancasInter() {
 }
 
 
-function extrairCobrancaInter(item) {
-    if (!item || typeof item !== "object") return {};
-
-    // A listagem do Banco Inter normalmente vem em { cobranca: {...} },
-    // enquanto outros retornos podem trazer a cobrança diretamente.
-    // Este helper centraliza a leitura para que a conciliação não dependa
-    // do formato específico da resposta.
-    if (item.cobranca && typeof item.cobranca === "object") {
-        return item.cobranca;
-    }
-
-    return item;
-}
-
 function normalizarDataConciliacao(valor) {
     if (!valor) return "";
     const s = String(valor).trim();
@@ -779,7 +800,7 @@ function prepararIndiceConciliacao(mensalidades, alunos) {
             mensalidade: m,
             cpfs,
             nomes,
-            competencia: String(m.competencia || "").trim(),
+            competencia: normalizarCompetencia(m.competencia) || (m.competencia_mes && m.competencia_ano ? normalizarCompetencia(`${m.competencia_mes}/${m.competencia_ano}`) : null),
             vencimento: normalizarDataConciliacao(m.vencimento),
             valor: Number(m.valor_final ?? m.valor_original ?? 0),
             ids: new Set([
@@ -806,23 +827,12 @@ async function construirIndiceConciliacao(cobrancas) {
         if (vencimento) {
             const partes = String(vencimento).split("-");
             if (partes.length >= 2) {
-                competencias.add(`${partes[1]}/${partes[0].slice(-2)}`);
+                const c = normalizarCompetencia(`${partes[1]}/${partes[0]}`);
+                if (c) competencias.add(c);
             }
         }
 
-        const seuNumero = String(c.seuNumero || "").trim();
-        const match = seuNumero.match(/^(?:[A-ZÇ]+)\s*\/?\s*(\d{2,4})$/i);
-        if (match) {
-            const mapa = {
-                JANEIRO:1, FEVEREIRO:2, MARCO:3, ABRIL:4, MAIO:5, JUNHO:6,
-                JULHO:7, AGOSTO:8, SETEMBRO:9, OUTUBRO:10, NOVEMBRO:11, DEZEMBRO:12
-            };
-            const nomeMes = normalizarTextoPessoa(seuNumero).replace(/\d/g, "").trim();
-            if (mapa[nomeMes]) {
-                const ano = match[1].length === 2 ? `20${match[1]}` : match[1];
-                competencias.add(`${String(mapa[nomeMes]).padStart(2, "0")}/${ano.slice(-2)}`);
-            }
-        }
+
     }
 
     let query = supabase
@@ -850,7 +860,16 @@ async function construirIndiceConciliacao(cobrancas) {
         .limit(10000);
 
     if (competencias.size) {
-        query = query.in("competencia", [...competencias]);
+        const pares = [...competencias].map(c => competenciaPartes(c)).filter(Boolean);
+        // Não usamos a coluna textual `competencia` como chave de busca:
+        // existem títulos com formatos 10/26 e 10/2026.
+        // mês/ano numéricos são a representação canônica.
+        if (pares.length === 1) {
+            query = query.eq("competencia_mes", pares[0].mes).eq("competencia_ano", pares[0].ano);
+        } else {
+            // O Supabase não oferece OR simples entre pares sem montar uma expressão;
+            // carregamos o universo limitado e filtramos em memória.
+        }
     }
 
     const { data: mensalidades, error: erroMensalidades } = await query;
