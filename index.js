@@ -951,13 +951,12 @@ function pontuarCandidatoConciliacao(dados, registro) {
         motivos.push('IDENTIDADE_FINANCEIRO');
     }
 
-    // Uma mensalidade que já possui outro título não deve receber um segundo
-    // boleto por aproximação. O título atual continua permitido quando o ID
-    // técnico do boleto é o mesmo.
-    const possuiOutroTitulo = registro.possuiTitulo &&
-        !idsTecnicos.some(id => registro.ids.has(id));
-
-    if (possuiOutroTitulo) score -= 7000;
+    // Uma mensalidade pode ter mais de um título no histórico (reemissão,
+    // boleto manual, troca de boleto etc.). Portanto, a existência de outro
+    // título NÃO é uma barreira de conciliação. O que precisa ser único é a
+    // identidade do boleto do Inter e, quando necessário, a combinação dos
+    // dados da mensalidade.
+    const possuiOutroTitulo = Boolean(registro.possuiTitulo);
 
     return { score, motivos, possuiOutroTitulo };
 }
@@ -966,49 +965,120 @@ function resolverMensalidadeNoIndice(dados, indice) {
     if (!indice?.registros?.length) return null;
     if (dados?.id_mensalidade) return dados.id_mensalidade;
 
+    const competencia = competenciaDoTitulo(dados);
+    const cpf = normalizarCpf(dados?.cpf_responsavel);
+    const nome = normalizarTextoPessoa(dados?.nome_pagador);
+    const vencimento = normalizarDataConciliacao(dados?.vencimento);
+    const valor = Number(dados?.valor_final ?? dados?.valor_original);
+
     const resultados = indice.registros
         .map(registro => ({
             registro,
             ...pontuarCandidatoConciliacao(dados, registro)
         }))
-        .filter(r => r.score > 0 && !r.possuiOutroTitulo)
+        .filter(r => r.score > 0)
         .sort((a, b) => b.score - a.score);
 
     if (!resultados.length) return null;
 
+    // 1) Identificador técnico realmente único.
+    const tecnicos = resultados.filter(r => r.motivos.includes('ID_TECNICO') || r.motivos.includes('SEU_NUMERO'));
+    if (tecnicos.length === 1) {
+        return tecnicos[0].registro.mensalidade.id_mensalidade;
+    }
+
+    // 2) CPF + competência. Se o CPF aponta para uma única mensalidade
+    // daquela competência, isso é suficiente mesmo que o vencimento tenha
+    // sido alterado no boleto manual.
+    if (cpf && competencia) {
+        const porCpfCompetencia = resultados.filter(r =>
+            r.registro.cpfs.has(cpf) && r.registro.competencia === competencia
+        );
+        if (porCpfCompetencia.length === 1) {
+            return porCpfCompetencia[0].registro.mensalidade.id_mensalidade;
+        }
+    }
+
+    // 3) Nome exato + competência. Útil quando o boleto manual trouxe nome,
+    // mas o CPF não veio ou veio em formato não confiável.
+    if (nome && competencia) {
+        const porNomeCompetencia = resultados.filter(r =>
+            r.registro.nomes.has(nome) && r.registro.competencia === competencia
+        );
+        if (porNomeCompetencia.length === 1) {
+            return porNomeCompetencia[0].registro.mensalidade.id_mensalidade;
+        }
+    }
+
+    // 4) CPF + nome + competência. Resolve CPF compartilhado entre irmãos,
+    // desde que o pagador também identifique o aluno/responsável corretamente.
+    if (cpf && nome && competencia) {
+        const porIdentidade = resultados.filter(r =>
+            r.registro.cpfs.has(cpf) &&
+            r.registro.nomes.has(nome) &&
+            r.registro.competencia === competencia
+        );
+        if (porIdentidade.length === 1) {
+            return porIdentidade[0].registro.mensalidade.id_mensalidade;
+        }
+    }
+
+    // 5) Identidade + financeiro. A existência de outro título na mesma
+    // mensalidade não elimina a candidata: reemissão/manual é válida.
+    const fortes = resultados.filter(r =>
+        r.registro.competencia === competencia &&
+        ((cpf && r.registro.cpfs.has(cpf)) || (nome && r.registro.nomes.has(nome))) &&
+        ((vencimento && r.registro.vencimento === vencimento) ||
+         (Number.isFinite(valor) && valorIgualConciliacao(valor, r.registro.valor)))
+    );
+    if (fortes.length === 1) {
+        return fortes[0].registro.mensalidade.id_mensalidade;
+    }
+
+    // 6) Sem identidade, usamos somente uma combinação financeira que seja
+    // única no universo de mensalidades daquela competência.
+    if (competencia) {
+        const porValor = Number.isFinite(valor)
+            ? resultados.filter(r =>
+                r.registro.competencia === competencia &&
+                valorIgualConciliacao(valor, r.registro.valor)
+            )
+            : [];
+        if (porValor.length === 1) {
+            return porValor[0].registro.mensalidade.id_mensalidade;
+        }
+
+        const porVencimento = vencimento
+            ? resultados.filter(r =>
+                r.registro.competencia === competencia &&
+                r.registro.vencimento === vencimento
+            )
+            : [];
+        if (porVencimento.length === 1) {
+            return porVencimento[0].registro.mensalidade.id_mensalidade;
+        }
+
+        const porFinanceiro = resultados.filter(r =>
+            r.registro.competencia === competencia &&
+            vencimento &&
+            Number.isFinite(valor) &&
+            r.registro.vencimento === vencimento &&
+            valorIgualConciliacao(valor, r.registro.valor)
+        );
+        if (porFinanceiro.length === 1) {
+            return porFinanceiro[0].registro.mensalidade.id_mensalidade;
+        }
+    }
+
+    // 7) Regra final: só escolhe a melhor candidata quando há uma margem
+    // clara e pelo menos dois sinais independentes. Nunca faz associação por
+    // simples proximidade.
     const melhor = resultados[0];
     const segundo = resultados[1];
     const margem = segundo ? melhor.score - segundo.score : melhor.score;
-
-    // Chaves técnicas e seuNumero único são determinísticos.
-    if (melhor.motivos.includes('ID_TECNICO') || melhor.motivos.includes('SEU_NUMERO')) {
-        if (!segundo || margem >= 1000) return melhor.registro.mensalidade.id_mensalidade;
-    }
-
-    // CPF + competência + financeiro é forte para boleto manual.
-    if (melhor.motivos.includes('CPF') &&
-        melhor.motivos.includes('COMPETENCIA') &&
-        (melhor.motivos.includes('VENCIMENTO') || melhor.motivos.includes('VALOR')) &&
-        (!segundo || margem >= 1200)) {
+    if (melhor.motivos.length >= 2 && margem >= 1800) {
         return melhor.registro.mensalidade.id_mensalidade;
     }
-
-    // Nome exato + competência + financeiro cobre pagador informado pelo nome.
-    if (melhor.motivos.includes('NOME_EXATO') &&
-        melhor.motivos.includes('COMPETENCIA') &&
-        (melhor.motivos.includes('VENCIMENTO') || melhor.motivos.includes('VALOR')) &&
-        (!segundo || margem >= 1200)) {
-        return melhor.registro.mensalidade.id_mensalidade;
-    }
-
-    // Sem CPF/nome confiável, só vinculamos quando competência + vencimento +
-    // valor apontam para UMA única mensalidade disponível.
-    const fortes = resultados.filter(r =>
-        r.motivos.includes('COMPETENCIA') &&
-        r.motivos.includes('VENCIMENTO') &&
-        r.motivos.includes('VALOR')
-    );
-    if (fortes.length === 1) return fortes[0].registro.mensalidade.id_mensalidade;
 
     return null;
 }
