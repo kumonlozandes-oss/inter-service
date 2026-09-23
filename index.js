@@ -733,10 +733,29 @@ async function listarTodasCobrancasInter() {
 }
 
 async function localizarMensalidadePorCompetencia(dados) {
+
+    // 1. O seuNumero gerado pelo ERP deriva diretamente do id_mensalidade.
+    // É o identificador mais forte para recuperar um boleto que existe no
+    // Banco Inter mas não foi salvo/vinculado corretamente no ERP.
+    if (dados?.seu_numero) {
+        try {
+            const { data, error } = await supabase.rpc(
+                "resolver_mensalidade_por_seu_numero",
+                { p_seu_numero: String(dados.seu_numero) }
+            );
+
+            if (!error && data) {
+                return data;
+            }
+        } catch (erro) {
+            console.warn("Falha ao resolver mensalidade pelo seuNumero:", erro.message);
+        }
+    }
+
     if (
-        !dados.guid_aluno ||
-        !dados.competencia_mes ||
-        !dados.competencia_ano
+        !dados?.guid_aluno ||
+        !dados?.competencia_mes ||
+        !dados?.competencia_ano
     ) {
         return null;
     }
@@ -750,8 +769,6 @@ async function localizarMensalidadePorCompetencia(dados) {
 
     if (error) throw error;
 
-    // Só vincula automaticamente quando existe UMA mensalidade
-    // inequívoca para aquele aluno e aquela competência.
     if (data?.length === 1) {
         return data[0].id_mensalidade;
     }
@@ -804,17 +821,22 @@ async function salvarTitulo(dados) {
 
         const cpf = String(dados.cpf_responsavel).replace(/\D/g, "");
 
-        const { data: aluno } = await supabase
+        const { data: alunos, error: erroAlunos } = await supabase
             .from("alunos_master")
             .select("guid,guid_responsavel")
             .or(
                 `responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`
             )
-            .maybeSingle();
+            .limit(20);
 
-        if (aluno) {
-            dados.guid_aluno = aluno.guid;
-            dados.guid_responsavel = aluno.guid_responsavel;
+        if (erroAlunos) throw erroAlunos;
+
+        // CPF compartilhado não pode ser resolvido por maybeSingle().
+        // Primeiro tentamos o seuNumero; só usamos o CPF quando houver
+        // uma correspondência inequívoca.
+        if (alunos?.length === 1) {
+            dados.guid_aluno = alunos[0].guid;
+            dados.guid_responsavel = alunos[0].guid_responsavel;
         }
     }
 
@@ -1018,249 +1040,124 @@ async function sincronizarBoletos() {
 
     log("Iniciando sincronização...");
 
-const { token, cobrancas } = await listarCobrancasInter();
+    const { token, cobrancas } = await listarCobrancasInter();
 
     let novos = 0;
     let atualizados = 0;
+    let erros = 0;
 
     for (const item of cobrancas) {
 
+        const codigo = item?.cobranca?.codigoSolicitacao;
+        if (!codigo) continue;
+
         try {
 
-            const codigo = item.cobranca.codigoSolicitacao;
+            // Se o detalhe do Inter falhar, não perdemos o boleto: a própria
+            // listagem já contém dados suficientes para criar/recuperar o título.
+            let detalhe;
 
-            const detalhe = await consultarCobranca(codigo, token);
-
-          console.log("=== RETORNO BANCO INTER ===");
-console.log({
-    codigo,
-    situacao: detalhe?.cobranca?.situacao,
-    dataSituacao: detalhe?.cobranca?.dataSituacao,
-    valorTotalRecebido: detalhe?.cobranca?.valorTotalRecebido,
-    seuNumero: detalhe?.cobranca?.seuNumero,
-    dataVencimento: detalhe?.cobranca?.dataVencimento
-});
-
-
-let dados = dadosTitulo(detalhe);
-
-if (!dados.guid_aluno && dados.cpf_responsavel) {
-
-    const cpf = String(dados.cpf_responsavel).replace(/\D/g, "");
-
-    const { data: aluno } = await supabase
-        .from("alunos_master")
-        .select("guid,guid_responsavel")
-        .or(
-            `responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`
-        )
-        .maybeSingle();
-
-    if (aluno) {
-
-        dados.guid_aluno = aluno.guid;
-        dados.guid_responsavel = aluno.guid_responsavel;
-
-        if (dados.competencia) {
-
-            const { data: mensalidade } = await supabase
-                .from("mensalidades")
-                .select("id_mensalidade")
-                .eq("guid_aluno", aluno.guid)
-                .eq("competencia", dados.competencia)
-                .maybeSingle();
-
-            if (mensalidade) {
-                dados.id_mensalidade = mensalidade.id_mensalidade;
+            try {
+                detalhe = await consultarCobranca(codigo, token);
+            } catch (erroDetalhe) {
+                console.warn(
+                    `Detalhe indisponível para ${codigo}; usando dados da listagem.`,
+                    erroDetalhe.message
+                );
+                detalhe = item;
             }
 
-        }
+            let dados = dadosTitulo(detalhe);
 
-    }
+            // Se o detalhe não trouxe pagador ou outros dados, preserva o que
+            // estiver disponível na listagem do Inter.
+            if (!dados.cpf_responsavel && item?.cobranca?.pagador?.cpfCnpj) {
+                dados.cpf_responsavel = item.cobranca.pagador.cpfCnpj;
+            }
 
-}
+            // O seuNumero é a chave de recuperação do boleto gerado pelo ERP.
+            // Resolva a mensalidade ANTES do CPF para evitar ambiguidades.
+            dados.id_mensalidade =
+                await localizarMensalidadePorCompetencia(dados);
 
-const titulo = await salvarTitulo(dados);
+            if (dados.id_mensalidade) {
+                const { data: mensalidade } = await supabase
+                    .from("mensalidades")
+                    .select("guid_aluno,guid_responsavel,competencia,competencia_mes,competencia_ano")
+                    .eq("id_mensalidade", dados.id_mensalidade)
+                    .maybeSingle();
 
-const tituloFinal = await reconciliarTitulo(titulo);
+                if (mensalidade) {
+                    dados.guid_aluno = mensalidade.guid_aluno || dados.guid_aluno;
+                    dados.guid_responsavel = mensalidade.guid_responsavel || dados.guid_responsavel;
+                    dados.competencia = mensalidade.competencia || dados.competencia;
+                    dados.competencia_mes = mensalidade.competencia_mes || dados.competencia_mes;
+                    dados.competencia_ano = mensalidade.competencia_ano || dados.competencia_ano;
+                }
+            }
 
-await sincronizarMensalidadeComTitulo(tituloFinal);
+            const titulo = await salvarTitulo(dados);
+            const tituloFinal = await reconciliarTitulo(titulo);
 
+            if (tituloFinal?.id_mensalidade) novos += titulo.id ? 0 : 1;
+            await sincronizarMensalidadeComTitulo(tituloFinal);
             atualizados++;
 
         } catch (erro) {
 
-            console.error("ERRO AO PROCESSAR:", item.cobranca.codigoSolicitacao);
-            console.error(erro);
+            erros++;
+            console.error(`ERRO AO PROCESSAR BOLETO ${codigo}:`, erro);
 
         }
-
     }
 
-    log(`Sincronização concluída. Atualizados: ${atualizados}`);
+    // Segunda passada: recupera títulos que já existem no ERP, mas ficaram
+    // órfãos sem id_mensalidade em alguma sincronização anterior.
+    try {
+        const { data: orfaos, error: erroOrfaos } = await supabase
+            .from("financeiro_titulos")
+            .select("*")
+            .is("id_mensalidade", null);
+
+        if (erroOrfaos) throw erroOrfaos;
+
+        for (const titulo of orfaos || []) {
+            try {
+                const idMensalidade = await localizarMensalidadePorCompetencia(titulo);
+                if (!idMensalidade) continue;
+
+                const { data: atualizado, error } = await supabase
+                    .from("financeiro_titulos")
+                    .update({ id_mensalidade: idMensalidade })
+                    .eq("id", titulo.id)
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                await reconciliarTitulo(atualizado);
+                await sincronizarMensalidadeComTitulo(atualizado);
+                atualizados++;
+            } catch (erroOrfao) {
+                console.error(`ERRO AO RECUPERAR TÍTULO ÓRFÃO ${titulo.id}:`, erroOrfao);
+                erros++;
+            }
+        }
+    } catch (erro) {
+        console.error("ERRO NA RECUPERAÇÃO DE TÍTULOS ÓRFÃOS:", erro);
+        erros++;
+    }
+
+    log(`Sincronização concluída. Encontrados: ${cobrancas.length}. Processados: ${atualizados}. Erros: ${erros}.`);
 
     return {
         total: cobrancas.length,
         novos,
-        atualizados
+        atualizados,
+        erros
     };
-
 }
 
-
-function competenciaAtual() {
-
-    const hoje = new Date();
-
-    return {
-
-        competencia:
-            `${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`,
-
-        mes: hoje.getMonth() + 1,
-
-        ano: hoje.getFullYear()
-
-    };
-
-}
-
-
-async function vincularTitulosPorCpf() {
-
-    log("Vinculando títulos por CPF...");
-    log("Buscando títulos...");
-
-    const { data: alunos, error: erroAlunos } = await supabase
-    .from("alunos_master")
-    .select(`
-        guid,
-        guid_responsavel,
-        cpf,
-        responsavel_cpf,
-        responsavel2_cpf,
-        cpf_aluno
-    `);
-
-if (erroAlunos) throw erroAlunos;
-
-    const { data: titulos, error } = await supabase
-        .from("financeiro_titulos")
-        .select(`
-    id,
-    cpf_responsavel,
-    seu_numero,
-    competencia
-`)
-        .is("guid_aluno", null)
-        .not("cpf_responsavel", "is", null);
-
-    if (error) throw error;
-
-    log(`Títulos encontrados: ${titulos?.length || 0}`);
-
-    let vinculados = 0;
-
-    log("Iniciando processamento...");
-
-    for (const titulo of titulos) {
-        log(`CPF: ${titulo.cpf_responsavel}`);
-
-        const cpf = String(titulo.cpf_responsavel).replace(/\D/g, "");
-
-
-let aluno = null;
-
-for (const item of (alunos || [])) {
-
-    const cpfs = [
-
-    item.cpf,
-    item.cpf_aluno,
-    item.responsavel_cpf,
-    item.responsavel2_cpf
-
-].map(c => String(c || "").replace(/\D/g, ""));
-
-if (cpfs.some(c => c === cpf)) {
-
-    aluno = item;
-    break;
-
-}
-
-}
-
-        if (!aluno) {
-
-    const { error: erroAlerta } = await supabase
-    .from("financeiro_titulos")
-    .update({
-        alerta_vinculo: true,
-        motivo_alerta: "Não foi possível localizar o aluno automaticamente."
-    })
-    .eq("id", titulo.id);
-
-if (erroAlerta) throw erroAlerta;
-
-continue;
-
-}
-
-        const { error: erroUpdate } = await supabase
-            .from("financeiro_titulos")
-
-            .update({
-
-    guid_aluno: aluno.guid,
-    guid_responsavel: aluno.guid_responsavel,
-
-    alerta_vinculo: false,
-    motivo_alerta: null
-
-})
-            .eq("id", titulo.id);
-
-        if (erroUpdate)
-            throw erroUpdate;
-
-        vinculados++;
-
-    }
-
-    log(`Títulos vinculados: ${vinculados}`);
-
-    return vinculados;
-
-}
-
-// ======================================================
-// SINCRONIZAÇÃO AUTOMÁTICA
-// ======================================================
-
-async function sincronizacaoAutomatica() {
-
-    log("=======================================");
-    log("Sincronização iniciada");
-
-    try {
-
-        const resumo = await sincronizarBoletos();
-
-        log(`Total: ${resumo.total}`);
-        log(`Novos: ${resumo.novos}`);
-        log(`Atualizados: ${resumo.atualizados}`);
-
-    } catch (erro) {
-
-        console.error("[AUTO]", erro);
-
-    }
-
-    log("Sincronização finalizada");
-    log("=======================================");
-
-}
 
 // ======================================================
 // EXECUÇÃO AUTOMÁTICA
