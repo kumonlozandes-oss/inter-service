@@ -777,124 +777,118 @@ async function listarTodasCobrancasInter() {
 
 }
 
+function competenciaPorSeuNumero(valor) {
+    const texto = String(valor || '').trim().toUpperCase();
+    const meses = {
+        JANEIRO: '01', FEVEREIRO: '02', MARCO: '03', MARÇO: '03', ABRIL: '04',
+        MAIO: '05', JUNHO: '06', JULHO: '07', AGOSTO: '08', SETEMBRO: '09',
+        OUTUBRO: '10', NOVEMBRO: '11', DEZEMBRO: '12'
+    };
+    const m = texto.match(/^([A-ZÇ]+)[\\/.-]?(\\d{2,4})$/);
+    if (!m || !meses[m[1]]) return null;
+    const ano = m[2].length === 2 ? `20${m[2]}` : m[2];
+    return `${meses[m[1]]}/${ano}`;
+}
+
+function normalizarNome(valor) {
+    return String(valor || '')
+        .normalize('NFD')
+        .replace(/[\\u0300-\\u036f]/g, '')
+        .replace(/[^A-Z0-9]/gi, '')
+        .toUpperCase();
+}
+
 async function localizarMensalidadePorCompetencia(dados) {
 
-    const seuNumero = normalizarChaveBoleto(
-        dados?.seu_numero ?? dados?.seuNumero
-    );
+    // O seuNumero usado neste ERP pode ser a competência (ex.: OUTUBRO/26),
+    // portanto ele não é necessariamente único por aluno.
+    const seuNumeroOriginal = String(
+        dados?.seu_numero ?? dados?.seuNumero ?? ''
+    ).trim();
+    const seuNumero = normalizarChaveBoleto(seuNumeroOriginal);
+    const competenciaSeuNumero = competenciaPorSeuNumero(seuNumeroOriginal);
+    const competencia = dados?.competencia || competenciaSeuNumero || null;
 
-    // 1) Chave principal: o seuNumero usado na emissão do boleto.
-    // O ERP gera esse valor a partir dos primeiros 15 caracteres do UUID
-    // da mensalidade. Não depende de competência ou vencimento.
-    if (seuNumero) {
+    // 1) Se já temos o id, ele é definitivo.
+    if (dados?.id_mensalidade) return dados.id_mensalidade;
 
-        const valorOriginalSeuNumero = String(
-            dados?.seu_numero ?? dados?.seuNumero ?? ""
-        ).trim();
+    // 2) Identidade do pagador: CPF primeiro.
+    const cpf = String(dados?.cpf_responsavel || '').replace(/\\D/g, '');
+    let guids = [];
+    let alunos = [];
 
-        const { data: porSeuNumero, error: erroDireto } = await supabase
-            .from("mensalidades")
-            .select("id_mensalidade,seu_numero")
-            .eq("seu_numero", valorOriginalSeuNumero)
-            .limit(2);
-
-        if (erroDireto) throw erroDireto;
-
-        if (porSeuNumero?.length === 1) {
-            return porSeuNumero[0].id_mensalidade;
-        }
-
-        // Busca pelo prefixo do UUID sem depender de competência.
-        const { data: todasMensalidades, error: erroBusca } = await supabase
-            .from("mensalidades")
-            .select("id_mensalidade,seu_numero,guid_aluno,competencia,competencia_mes,competencia_ano")
-            .limit(10000);
-
-        if (erroBusca) throw erroBusca;
-
-        const candidatas = (todasMensalidades || []).filter(m => {
-            const id = normalizarChaveBoleto(m.id_mensalidade);
-            const gravado = normalizarChaveBoleto(m.seu_numero);
-            return gravado === seuNumero || id.startsWith(seuNumero);
-        });
-
-        if (candidatas.length === 1) {
-            return candidatas[0].id_mensalidade;
-        }
-
-        if (candidatas.length > 1) {
-            console.warn(
-                "SeuNumero corresponde a mais de uma mensalidade:",
-                seuNumero
-            );
-            return null;
-        }
-    }
-
-    // 2) Fallback global por CPF do pagador + competência.
-    // Isso recupera boletos mesmo quando o Inter não devolver seuNumero.
-    const cpf = String(dados?.cpf_responsavel || "").replace(/\D/g, "");
     if (cpf) {
-
-        const { data: alunos, error: erroAlunos } = await supabase
-            .from("alunos_master")
-            .select("guid,guid_responsavel,nome,responsavel,responsavel_cpf,responsavel2_cpf,cpf,cpf_aluno")
-            .or(
-                `responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`
-            )
+        const { data, error } = await supabase
+            .from('alunos_master')
+            .select('guid,guid_responsavel,nome,responsavel,responsavel_cpf,responsavel2_cpf,cpf,cpf_aluno')
+            .or(`responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`)
             .limit(50);
-
-        if (erroAlunos) throw erroAlunos;
-
-        const guids = [...new Set(
-            (alunos || []).map(a => a.guid).filter(Boolean)
-        )];
-
-        if (guids.length) {
-
-            let query = supabase
-                .from("mensalidades")
-                .select("id_mensalidade,guid_aluno,competencia,competencia_mes,competencia_ano,valor_original,valor_final")
-                .in("guid_aluno", guids)
-                .limit(1000);
-
-            if (dados?.competencia) {
-                query = query.eq("competencia", dados.competencia);
-            } else if (dados?.competencia_mes && dados?.competencia_ano) {
-                query = query
-                    .eq("competencia_mes", dados.competencia_mes)
-                    .eq("competencia_ano", dados.competencia_ano);
-            }
-
-            const { data: mensalidades, error: erroMensalidades } = await query;
-            if (erroMensalidades) throw erroMensalidades;
-
-            let candidatas = mensalidades || [];
-
-            // Se houver mais de uma, usa valor como segundo critério.
-            const valor = Number(dados?.valor_final ?? dados?.valor_original);
-            if (Number.isFinite(valor) && candidatas.length > 1) {
-                const porValor = candidatas.filter(m =>
-                    Math.abs(Number(m.valor_final ?? m.valor_original ?? 0) - valor) < 0.01
-                );
-                if (porValor.length) candidatas = porValor;
-            }
-
-            if (candidatas.length === 1) {
-                return candidatas[0].id_mensalidade;
-            }
-        }
+        if (error) throw error;
+        alunos = data || [];
+        guids = [...new Set(alunos.map(a => a.guid).filter(Boolean))];
     }
 
-    // 3) Fallback final: aluno + competência, quando já resolvido.
-    if (dados?.guid_aluno && dados?.competencia) {
+    // 3) Se o CPF não veio do Inter, usa o nome do pagador como segundo identificador.
+    const nomePagador = normalizarNome(dados?.nome_pagador);
+    if (!guids.length && nomePagador) {
         const { data, error } = await supabase
-            .from("mensalidades")
-            .select("id_mensalidade")
-            .eq("guid_aluno", dados.guid_aluno)
-            .eq("competencia", dados.competencia)
-            .limit(2);
+            .from('alunos_master')
+            .select('guid,guid_responsavel,nome,responsavel,responsavel_cpf,responsavel2_cpf,cpf,cpf_aluno')
+            .limit(10000);
+        if (error) throw error;
+        alunos = data || [];
+        const encontrados = alunos.filter(a =>
+            normalizarNome(a.nome) === nomePagador ||
+            normalizarNome(a.responsavel) === nomePagador
+        );
+        guids = [...new Set(encontrados.map(a => a.guid).filter(Boolean))];
+    }
 
+    // 4) Com identidade + competência, o vínculo é determinístico.
+    if (guids.length && competencia) {
+        let query = supabase
+            .from('mensalidades')
+            .select('id_mensalidade,guid_aluno,competencia,competencia_mes,competencia_ano,valor_original,valor_final,seu_numero')
+            .in('guid_aluno', guids)
+            .limit(1000);
+
+        query = query.eq('competencia', competencia);
+
+        const { data: mensalidades, error } = await query;
+        if (error) throw error;
+
+        let candidatas = mensalidades || [];
+
+        const valor = Number(dados?.valor_final ?? dados?.valor_original);
+        if (Number.isFinite(valor) && candidatas.length > 1) {
+            const porValor = candidatas.filter(m =>
+                Math.abs(Number(m.valor_final ?? m.valor_original ?? 0) - valor) < 0.01
+            );
+            if (porValor.length) candidatas = porValor;
+        }
+
+        if (candidatas.length === 1) return candidatas[0].id_mensalidade;
+    }
+
+    // 5) Último fallback: seuNumero pode ser um identificador único gravado na mensalidade.
+    if (seuNumero) {
+        const { data, error } = await supabase
+            .from('mensalidades')
+            .select('id_mensalidade,seu_numero')
+            .eq('seu_numero', seuNumeroOriginal)
+            .limit(2);
+        if (error) throw error;
+        if (data?.length === 1) return data[0].id_mensalidade;
+    }
+
+    // 6) Se já temos aluno + competência, tenta diretamente.
+    if (dados?.guid_aluno && competencia) {
+        const { data, error } = await supabase
+            .from('mensalidades')
+            .select('id_mensalidade')
+            .eq('guid_aluno', dados.guid_aluno)
+            .eq('competencia', competencia)
+            .limit(2);
         if (error) throw error;
         if (data?.length === 1) return data[0].id_mensalidade;
     }
@@ -979,9 +973,11 @@ if (!dados.id_mensalidade && !existente?.id_mensalidade) {
         await localizarMensalidadePorCompetencia(dados);
 }
 
+    const { nome_pagador, ...dadosFinanceiro } = dados;
+
     const registro = {
         ...(existente || {}),
-        ...dados,
+        ...dadosFinanceiro,
 
         codigo_solicitacao:
             dados.codigo_solicitacao ??
