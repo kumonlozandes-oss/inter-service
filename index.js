@@ -807,7 +807,13 @@ function prepararIndiceConciliacao(mensalidades, alunos) {
         ].map(normalizarChaveBoleto).filter(Boolean));
 
         return {
-            mensalidade: m,
+            mensalidade: {
+                ...m,
+                // A mensalidade é a fonte canônica do vínculo. Se a própria
+                // linha estiver sem guid_responsavel, recuperamos o valor do
+                // cadastro do aluno carregado no mesmo índice.
+                guid_responsavel: m.guid_responsavel || aluno.guid_responsavel || null
+            },
             cpfs,
             nomes,
             competencia,
@@ -970,6 +976,21 @@ function resolverMensalidadeNoIndice(dados, indice) {
     const nome = normalizarTextoPessoa(dados?.nome_pagador);
     const vencimento = normalizarDataConciliacao(dados?.vencimento);
     const valor = Number(dados?.valor_final ?? dados?.valor_original);
+    const seuNumero = normalizarChaveBoleto(dados?.seu_numero);
+
+    // CAMINHO 1 — chave nativa do ERP.
+    // O ERP envia ao Inter os 15 primeiros caracteres do UUID da mensalidade.
+    // O código anterior só comparava igualdade com o UUID completo e, por isso,
+    // perdia justamente os boletos legítimos gerados pelo próprio ERP.
+    if (seuNumero && !ehSeuNumeroGenerico(dados?.seu_numero) && /^[A-F0-9]{15}$/.test(seuNumero)) {
+        const porPrefixo = indice.registros.filter(r => {
+            const id = normalizarChaveBoleto(r.mensalidade.id_mensalidade);
+            return id && id.startsWith(seuNumero);
+        });
+        if (porPrefixo.length === 1) {
+            return porPrefixo[0].mensalidade.id_mensalidade;
+        }
+    }
 
     const resultados = indice.registros
         .map(registro => ({
@@ -981,15 +1002,13 @@ function resolverMensalidadeNoIndice(dados, indice) {
 
     if (!resultados.length) return null;
 
-    // 1) Identificador técnico realmente único.
+    // 2) Identificador técnico realmente único.
     const tecnicos = resultados.filter(r => r.motivos.includes('ID_TECNICO') || r.motivos.includes('SEU_NUMERO'));
     if (tecnicos.length === 1) {
         return tecnicos[0].registro.mensalidade.id_mensalidade;
     }
 
-    // 2) CPF + competência. Se o CPF aponta para uma única mensalidade
-    // daquela competência, isso é suficiente mesmo que o vencimento tenha
-    // sido alterado no boleto manual.
+    // 3) CPF + competência.
     if (cpf && competencia) {
         const porCpfCompetencia = resultados.filter(r =>
             r.registro.cpfs.has(cpf) && r.registro.competencia === competencia
@@ -999,8 +1018,7 @@ function resolverMensalidadeNoIndice(dados, indice) {
         }
     }
 
-    // 3) Nome exato + competência. Útil quando o boleto manual trouxe nome,
-    // mas o CPF não veio ou veio em formato não confiável.
+    // 4) Nome exato + competência.
     if (nome && competencia) {
         const porNomeCompetencia = resultados.filter(r =>
             r.registro.nomes.has(nome) && r.registro.competencia === competencia
@@ -1010,8 +1028,7 @@ function resolverMensalidadeNoIndice(dados, indice) {
         }
     }
 
-    // 4) CPF + nome + competência. Resolve CPF compartilhado entre irmãos,
-    // desde que o pagador também identifique o aluno/responsável corretamente.
+    // 5) CPF + nome + competência.
     if (cpf && nome && competencia) {
         const porIdentidade = resultados.filter(r =>
             r.registro.cpfs.has(cpf) &&
@@ -1023,8 +1040,7 @@ function resolverMensalidadeNoIndice(dados, indice) {
         }
     }
 
-    // 5) Identidade + financeiro. A existência de outro título na mesma
-    // mensalidade não elimina a candidata: reemissão/manual é válida.
+    // 6) Identidade + dado financeiro.
     const fortes = resultados.filter(r =>
         r.registro.competencia === competencia &&
         ((cpf && r.registro.cpfs.has(cpf)) || (nome && r.registro.nomes.has(nome))) &&
@@ -1035,29 +1051,10 @@ function resolverMensalidadeNoIndice(dados, indice) {
         return fortes[0].registro.mensalidade.id_mensalidade;
     }
 
-    // 6) Sem identidade, usamos somente uma combinação financeira que seja
-    // única no universo de mensalidades daquela competência.
+    // 7) Sem identidade, só usamos uma combinação financeira quando ela é
+    // inequivocamente única dentro da competência. Nunca escolhemos por
+    // proximidade arbitrária.
     if (competencia) {
-        const porValor = Number.isFinite(valor)
-            ? resultados.filter(r =>
-                r.registro.competencia === competencia &&
-                valorIgualConciliacao(valor, r.registro.valor)
-            )
-            : [];
-        if (porValor.length === 1) {
-            return porValor[0].registro.mensalidade.id_mensalidade;
-        }
-
-        const porVencimento = vencimento
-            ? resultados.filter(r =>
-                r.registro.competencia === competencia &&
-                r.registro.vencimento === vencimento
-            )
-            : [];
-        if (porVencimento.length === 1) {
-            return porVencimento[0].registro.mensalidade.id_mensalidade;
-        }
-
         const porFinanceiro = resultados.filter(r =>
             r.registro.competencia === competencia &&
             vencimento &&
@@ -1068,11 +1065,20 @@ function resolverMensalidadeNoIndice(dados, indice) {
         if (porFinanceiro.length === 1) {
             return porFinanceiro[0].registro.mensalidade.id_mensalidade;
         }
+
+        const porValor = Number.isFinite(valor)
+            ? resultados.filter(r => r.registro.competencia === competencia && valorIgualConciliacao(valor, r.registro.valor))
+            : [];
+        if (porValor.length === 1) return porValor[0].registro.mensalidade.id_mensalidade;
+
+        const porVencimento = vencimento
+            ? resultados.filter(r => r.registro.competencia === competencia && r.registro.vencimento === vencimento)
+            : [];
+        if (porVencimento.length === 1) return porVencimento[0].registro.mensalidade.id_mensalidade;
     }
 
-    // 7) Regra final: só escolhe a melhor candidata quando há uma margem
-    // clara e pelo menos dois sinais independentes. Nunca faz associação por
-    // simples proximidade.
+    // 8) Só aceita a melhor candidata se houver dois sinais independentes e
+    // margem clara. Isso evita vincular um boleto manual ao aluno errado.
     const melhor = resultados[0];
     const segundo = resultados[1];
     const margem = segundo ? melhor.score - segundo.score : melhor.score;
