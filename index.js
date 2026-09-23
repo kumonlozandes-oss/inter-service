@@ -1210,8 +1210,12 @@ async function sincronizarBoletos() {
 
             // O seuNumero é a chave de recuperação do boleto gerado pelo ERP.
             // Resolva a mensalidade ANTES do CPF para evitar ambiguidades.
-            dados.id_mensalidade =
-                await localizarMensalidadePorCompetencia(dados);
+            const idMensalidadeResolvido =
+    await localizarMensalidadePorCompetencia(dados);
+
+if (idMensalidadeResolvido) {
+    dados.id_mensalidade = idMensalidadeResolvido;
+}
 
             if (dados.id_mensalidade) {
                 const { data: mensalidade } = await supabase
