@@ -651,7 +651,7 @@ if (!competencia && cobranca.dataVencimento) {
 
         codigo_solicitacao: cobranca.codigoSolicitacao || cobranca.id,
 
-        seu_numero: cobranca.seuNumero,
+        seu_numero: seuNumero,
         nosso_numero: boleto.nossoNumero,
 
         status_inter: cobranca.situacao,
