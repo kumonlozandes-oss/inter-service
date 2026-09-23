@@ -721,21 +721,261 @@ async function listarTodasCobrancasInter() {
 
 }
 
-async function localizarMensalidadePorCompetencia(dados) {
 
-    // O vínculo agora é resolvido por identidade + competência.
-    // seuNumero é apenas um fallback, pois boletos manuais podem usar outro padrão.
+function normalizarDataConciliacao(valor) {
+    if (!valor) return "";
+    const s = String(valor).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const m = s.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    return s;
+}
+
+function ehSeuNumeroGenerico(soNumero) {
+    const s = normalizarTextoPessoa(soNumero).replace(/\s+/g, "");
+    return /^(JANEIRO|FEVEREIRO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)\/?\d{2,4}$/.test(s);
+}
+
+function valorIgualConciliacao(a, b) {
+    const na = Number(a);
+    const nb = Number(b);
+    return Number.isFinite(na) && Number.isFinite(nb) && Math.abs(na - nb) < 0.01;
+}
+
+function prepararIndiceConciliacao(mensalidades, alunos) {
+    const alunoPorGuid = new Map((alunos || []).map(a => [String(a.guid), a]));
+
+    const registros = (mensalidades || []).map(m => {
+        const aluno = alunoPorGuid.get(String(m.guid_aluno)) || {};
+        const cpfs = new Set([
+            aluno.responsavel_cpf,
+            aluno.responsavel2_cpf,
+            aluno.cpf,
+            aluno.cpf_aluno
+        ].map(normalizarCpf).filter(Boolean));
+
+        const nomes = new Set([
+            aluno.responsavel,
+            aluno.nome,
+            m.responsavel,
+            m.aluno
+        ].map(normalizarTextoPessoa).filter(Boolean));
+
+        return {
+            mensalidade: m,
+            cpfs,
+            nomes,
+            competencia: String(m.competencia || "").trim(),
+            vencimento: normalizarDataConciliacao(m.vencimento),
+            valor: Number(m.valor_final ?? m.valor_original ?? 0),
+            ids: new Set([
+                m.id_inter,
+                m.id_titulo,
+                m.nosso_numero,
+                m.linha_digitavel,
+                m.codigo_barras,
+                m.codigo_pix,
+                m.seu_numero
+            ].map(v => String(v || "").trim()).filter(Boolean))
+        };
+    });
+
+    return { registros };
+}
+
+async function construirIndiceConciliacao(cobrancas) {
+    const competencias = new Set();
+
+    for (const item of cobrancas || []) {
+        const c = extrairCobrancaInter(item) || {};
+        const vencimento = c.dataVencimento;
+        if (vencimento) {
+            const partes = String(vencimento).split("-");
+            if (partes.length >= 2) {
+                competencias.add(`${partes[1]}/${partes[0].slice(-2)}`);
+            }
+        }
+
+        const seuNumero = String(c.seuNumero || "").trim();
+        const match = seuNumero.match(/^(?:[A-ZÇ]+)\s*\/?\s*(\d{2,4})$/i);
+        if (match) {
+            const mapa = {
+                JANEIRO:1, FEVEREIRO:2, MARCO:3, ABRIL:4, MAIO:5, JUNHO:6,
+                JULHO:7, AGOSTO:8, SETEMBRO:9, OUTUBRO:10, NOVEMBRO:11, DEZEMBRO:12
+            };
+            const nomeMes = normalizarTextoPessoa(seuNumero).replace(/\d/g, "").trim();
+            if (mapa[nomeMes]) {
+                const ano = match[1].length === 2 ? `20${match[1]}` : match[1];
+                competencias.add(`${String(mapa[nomeMes]).padStart(2, "0")}/${ano.slice(-2)}`);
+            }
+        }
+    }
+
+    let query = supabase
+        .from("mensalidades")
+        .select(`
+            id_mensalidade,
+            guid_aluno,
+            guid_responsavel,
+            id_titulo,
+            id_inter,
+            aluno,
+            responsavel,
+            competencia,
+            competencia_mes,
+            competencia_ano,
+            vencimento,
+            valor_original,
+            valor_final,
+            nosso_numero,
+            seu_numero,
+            linha_digitavel,
+            codigo_barras,
+            codigo_pix
+        `)
+        .limit(10000);
+
+    if (competencias.size) {
+        query = query.in("competencia", [...competencias]);
+    }
+
+    const { data: mensalidades, error: erroMensalidades } = await query;
+    if (erroMensalidades) throw erroMensalidades;
+
+    const guids = [...new Set((mensalidades || []).map(m => m.guid_aluno).filter(Boolean))];
+
+    let alunos = [];
+    if (guids.length) {
+        const { data, error } = await supabase
+            .from("alunos_master")
+            .select(`
+                guid,
+                guid_responsavel,
+                nome,
+                responsavel,
+                responsavel_cpf,
+                responsavel2_cpf,
+                cpf,
+                cpf_aluno
+            `)
+            .in("guid", guids)
+            .limit(10000);
+
+        if (error) throw error;
+        alunos = data || [];
+    }
+
+    return prepararIndiceConciliacao(mensalidades || [], alunos);
+}
+
+function resolverMensalidadeNoIndice(dados, indice) {
+    if (!indice?.registros?.length) return null;
     if (dados?.id_mensalidade) return dados.id_mensalidade;
 
+    const competencia = competenciaDoTitulo(dados);
+    const cpf = normalizarCpf(dados?.cpf_responsavel);
+    const nome = normalizarTextoPessoa(dados?.nome_pagador);
+    const vencimento = normalizarDataConciliacao(dados?.vencimento);
+    const valor = Number(dados?.valor_final ?? dados?.valor_original);
+    const identificadores = [
+        dados?.id_inter,
+        dados?.codigo_solicitacao,
+        dados?.nosso_numero,
+        dados?.linha_digitavel,
+        dados?.codigo_barras,
+        dados?.codigo_pix
+    ].map(v => String(v || "").trim()).filter(Boolean);
+
+    // 1. Identificadores técnicos são determinísticos e independem de quem gerou o boleto.
+    for (const identificador of identificadores) {
+        const encontrados = indice.registros.filter(r => r.ids.has(identificador));
+        if (encontrados.length === 1) {
+            return encontrados[0].mensalidade.id_mensalidade;
+        }
+    }
+
+    // 2. seuNumero só entra se não for o padrão genérico de boletos manuais.
+    const seuNumero = String(dados?.seu_numero || "").trim();
+    if (seuNumero && !ehSeuNumeroGenerico(seuNumero)) {
+        const encontrados = indice.registros.filter(r => r.ids.has(seuNumero));
+        if (encontrados.length === 1) {
+            return encontrados[0].mensalidade.id_mensalidade;
+        }
+    }
+
+    // 3. Reconciliação por identidade + competência + dados financeiros.
+    const candidatos = indice.registros.filter(r => {
+        if (competencia && r.competencia !== competencia) return false;
+        return true;
+    });
+
+    const avaliados = candidatos.map(r => {
+        let score = 0;
+        let identidade = 0;
+
+        if (cpf && r.cpfs.has(cpf)) {
+            score += 1000;
+            identidade += 1;
+        }
+
+        if (nome && r.nomes.has(nome)) {
+            score += 500;
+            identidade += 1;
+        }
+
+        if (competencia && r.competencia === competencia) score += 250;
+        if (vencimento && r.vencimento === vencimento) score += 220;
+        if (valorIgualConciliacao(valor, r.valor)) score += 180;
+
+        return { r, score, identidade };
+    }).filter(x => x.score > 0);
+
+    if (!avaliados.length) return null;
+
+    avaliados.sort((a, b) => b.score - a.score);
+
+    const primeiro = avaliados[0];
+    const segundo = avaliados[1];
+
+    // Com identidade, exige vantagem clara quando houver mais de um candidato.
+    if (primeiro.identidade > 0) {
+        if (!segundo || primeiro.score > segundo.score) {
+            return primeiro.r.mensalidade.id_mensalidade;
+        }
+        return null;
+    }
+
+    // Sem identidade do pagador, só aceita combinação financeira totalmente única.
+    const fortes = avaliados.filter(x =>
+        (!competencia || x.r.competencia === competencia) &&
+        (!vencimento || x.r.vencimento === vencimento) &&
+        valorIgualConciliacao(valor, x.r.valor)
+    );
+
+    if (fortes.length === 1) {
+        return fortes[0].r.mensalidade.id_mensalidade;
+    }
+
+    return null;
+}
+
+async function localizarMensalidadePorCompetencia(dados, contexto = null) {
+    if (dados?.id_mensalidade) return dados.id_mensalidade;
+
+    if (contexto?.indice) {
+        const resolvido = resolverMensalidadeNoIndice(dados, contexto.indice);
+        if (resolvido) return resolvido;
+    }
+
+    // Fallback para operações fora da sincronização em lote.
     const competencia = competenciaDoTitulo(dados);
     if (!competencia) return null;
 
     const cpf = normalizarCpf(dados?.cpf_responsavel);
-    const nomePagador = normalizarTextoPessoa(dados?.nome_pagador);
+    const nome = normalizarTextoPessoa(dados?.nome_pagador);
 
     let alunos = [];
 
-    // 1) Se já temos o guid do aluno, ele é a identidade mais forte.
     if (dados?.guid_aluno) {
         const { data, error } = await supabase
             .from("alunos_master")
@@ -746,7 +986,6 @@ async function localizarMensalidadePorCompetencia(dados) {
         alunos = data || [];
     }
 
-    // 2) CPF/CNPJ do pagador: pode apontar para vários alunos da mesma família.
     if (!alunos.length && cpf) {
         const { data, error } = await supabase
             .from("alunos_master")
@@ -757,27 +996,12 @@ async function localizarMensalidadePorCompetencia(dados) {
         alunos = data || [];
     }
 
-    // 3) Nome do pagador é o segundo identificador para boletos manuais.
-    if (nomePagador) {
+    if (nome) {
         const filtrados = alunos.filter(a =>
-            normalizarTextoPessoa(a.responsavel) === nomePagador ||
-            normalizarTextoPessoa(a.nome) === nomePagador
+            normalizarTextoPessoa(a.responsavel) === nome ||
+            normalizarTextoPessoa(a.nome) === nome
         );
-
-        if (filtrados.length) {
-            alunos = filtrados;
-        } else if (!alunos.length) {
-            const { data, error } = await supabase
-                .from("alunos_master")
-                .select("guid,guid_responsavel,nome,responsavel,responsavel_cpf,responsavel2_cpf,cpf,cpf_aluno")
-                .limit(5000);
-            if (error) throw error;
-
-            alunos = (data || []).filter(a =>
-                normalizarTextoPessoa(a.responsavel) === nomePagador ||
-                normalizarTextoPessoa(a.nome) === nomePagador
-            );
-        }
+        if (filtrados.length) alunos = filtrados;
     }
 
     const guids = [...new Set(alunos.map(a => a.guid).filter(Boolean))];
@@ -792,46 +1016,19 @@ async function localizarMensalidadePorCompetencia(dados) {
 
         if (error) throw error;
 
-        let candidatas = mensalidades || [];
+        const valor = Number(dados?.valor_final ?? dados?.valor_original);
+        const candidatas = (mensalidades || []).filter(m =>
+            !Number.isFinite(valor) ||
+            valorIgualConciliacao(valor, Number(m.valor_final ?? m.valor_original))
+        );
 
-        // Valor é um segundo sinal útil quando o mesmo responsável possui vários alunos.
-        const valorTitulo = Number(dados?.valor_final ?? dados?.valor_original);
-        if (Number.isFinite(valorTitulo) && candidatas.length > 1) {
-            const porValor = candidatas.filter(m =>
-                Math.abs(Number(m.valor_final ?? m.valor_original ?? 0) - valorTitulo) < 0.01
-            );
-            if (porValor.length === 1) candidatas = porValor;
-            else if (porValor.length > 0) candidatas = porValor;
-        }
-
-        if (candidatas.length === 1) {
-            dados.guid_aluno = candidatas[0].guid_aluno;
-            dados.guid_responsavel = candidatas[0].guid_responsavel || dados.guid_responsavel || null;
-            dados.competencia = candidatas[0].competencia || competencia;
-            dados.competencia_mes = candidatas[0].competencia_mes;
-            dados.competencia_ano = candidatas[0].competencia_ano;
-            return candidatas[0].id_mensalidade;
-        }
-    }
-
-    // 4) Só usa seuNumero quando ele realmente identifica uma mensalidade.
-    const seuNumero = String(dados?.seu_numero || "").trim();
-    if (seuNumero && !/^(JANEIRO|FEVEREIRO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)\/?\d{2,4}$/i.test(seuNumero)) {
-        try {
-            const { data, error } = await supabase.rpc(
-                "resolver_mensalidade_por_seu_numero",
-                { p_seu_numero: seuNumero }
-            );
-            if (!error && data) return data;
-        } catch (erro) {
-            console.warn("Falha no fallback por seuNumero:", erro.message);
-        }
+        if (candidatas.length === 1) return candidatas[0].id_mensalidade;
     }
 
     return null;
 }
 
-async function salvarTitulo(dados) {
+async function salvarTitulo(dados, contexto = null) {
 
     console.log("SALVAR TITULO RECEBEU:", {
         id_mensalidade: dados.id_mensalidade,
@@ -904,7 +1101,7 @@ async function salvarTitulo(dados) {
 
 if (!dados.id_mensalidade && !existente?.id_mensalidade) {
     dados.id_mensalidade =
-        await localizarMensalidadePorCompetencia(dados);
+        await localizarMensalidadePorCompetencia(dados, contexto);
 }
 
     const { nome_pagador, ...dadosPersistiveis } = dados;
@@ -988,7 +1185,7 @@ if (!dados.id_mensalidade && !existente?.id_mensalidade) {
     return tituloSalvo;
 }
 
-async function reconciliarTitulo(titulo) {
+async function reconciliarTitulo(titulo, contexto = null) {
 
     if (!titulo) {
         return titulo;
@@ -1016,7 +1213,7 @@ async function reconciliarTitulo(titulo) {
     // Se não possui mensalidade, procura SOMENTE
     // pela combinação aluno + competência.
     const idMensalidade =
-        await localizarMensalidadePorCompetencia(titulo);
+        await localizarMensalidadePorCompetencia(titulo, contexto);
 
     if (!idMensalidade) {
         console.warn(
@@ -1093,11 +1290,18 @@ async function sincronizarMensalidadeComTitulo(titulo) {
 
 }
 
+
 async function sincronizarBoletos() {
 
     log("Iniciando sincronização...");
 
     const { token, cobrancas } = await listarTodasCobrancasInter();
+
+    // Novo desenho: primeiro carregamos o universo de mensalidades do período
+    // e seus dados de identidade. Depois conciliamos cada boleto em memória.
+    // Isso elimina dezenas de buscas independentes e, principalmente,
+    // elimina a dependência do seuNumero para boletos manuais.
+    const indice = await construirIndiceConciliacao(cobrancas);
 
     let processados = 0;
     let vinculados = 0;
@@ -1105,41 +1309,65 @@ async function sincronizarBoletos() {
     let erros = 0;
 
     for (const item of cobrancas) {
-        const codigo = item?.cobranca?.codigoSolicitacao;
+        const cobrancaLista = extrairCobrancaInter(item);
+        const codigo = cobrancaLista?.codigoSolicitacao || cobrancaLista?.id;
         if (!codigo) continue;
 
         try {
             let detalhe;
+
             try {
                 detalhe = await consultarCobranca(codigo, token);
             } catch (erroDetalhe) {
-                console.warn(`Detalhe indisponível para ${codigo}; usando listagem do Inter.`, erroDetalhe.message);
+                console.warn(
+                    `Detalhe indisponível para ${codigo}; usando listagem do Inter.`,
+                    erroDetalhe.message
+                );
                 detalhe = item;
             }
 
             const dados = dadosTitulo(detalhe);
 
-            // Complementa a identidade com os dados que vieram na listagem.
-            if (!dados.cpf_responsavel && item?.cobranca?.pagador?.cpfCnpj) {
-                dados.cpf_responsavel = item.cobranca.pagador.cpfCnpj;
-            }
-            if (!dados.nome_pagador && item?.cobranca?.pagador?.nome) {
-                dados.nome_pagador = item.cobranca.pagador.nome;
-            }
-            if (!dados.seu_numero && item?.cobranca?.seuNumero) {
-                dados.seu_numero = item.cobranca.seuNumero;
+            // Complementa os dados quando o detalhe e a listagem possuem estruturas diferentes.
+            if (!dados.cpf_responsavel && cobrancaLista?.pagador?.cpfCnpj) {
+                dados.cpf_responsavel = cobrancaLista.pagador.cpfCnpj;
             }
 
-            const idMensalidade = await localizarMensalidadePorCompetencia(dados);
+            if (!dados.nome_pagador && cobrancaLista?.pagador?.nome) {
+                dados.nome_pagador = cobrancaLista.pagador.nome;
+            }
+
+            if (!dados.seu_numero && cobrancaLista?.seuNumero) {
+                dados.seu_numero = cobrancaLista.seuNumero;
+            }
+
+            const idMensalidade = resolverMensalidadeNoIndice(dados, indice);
+
             if (idMensalidade) {
                 dados.id_mensalidade = idMensalidade;
+
+                const registro = indice.registros.find(
+                    r => r.mensalidade.id_mensalidade === idMensalidade
+                );
+
+                if (registro) {
+                    dados.guid_aluno = registro.mensalidade.guid_aluno;
+                    dados.guid_responsavel =
+                        registro.mensalidade.guid_responsavel || dados.guid_responsavel;
+                    dados.competencia = registro.mensalidade.competencia || dados.competencia;
+                    dados.competencia_mes = registro.mensalidade.competencia_mes;
+                    dados.competencia_ano = registro.mensalidade.competencia_ano;
+                }
             }
 
-            const titulo = await salvarTitulo(dados);
-            const tituloFinal = await reconciliarTitulo(titulo);
+            const titulo = await salvarTitulo(dados, { indice });
+            const tituloFinal = await reconciliarTitulo(titulo, { indice });
 
             processados++;
-            if (tituloFinal?.id_mensalidade) vinculados++;
+
+            if (tituloFinal?.id_mensalidade) {
+                vinculados++;
+            }
 
         } catch (erro) {
             erros++;
@@ -1147,7 +1375,7 @@ async function sincronizarBoletos() {
         }
     }
 
-    // Recupera títulos já existentes no ERP que ficaram órfãos.
+    // Segunda passada: títulos antigos que já estão no ERP, mas ainda não tinham vínculo.
     const { data: orfaos, error: erroOrfaos } = await supabase
         .from("financeiro_titulos")
         .select("*")
@@ -1157,28 +1385,39 @@ async function sincronizarBoletos() {
 
     for (const titulo of orfaos || []) {
         try {
-            const idMensalidade = await localizarMensalidadePorCompetencia(titulo);
+            const idMensalidade = resolverMensalidadeNoIndice(titulo, indice);
             if (!idMensalidade) continue;
 
             const { data: atualizado, error } = await supabase
                 .from("financeiro_titulos")
-                .update({ id_mensalidade: idMensalidade })
+                .update({
+                    id_mensalidade: idMensalidade,
+                    competencia: titulo.competencia || competenciaDoTitulo(titulo)
+                })
                 .eq("id", titulo.id)
                 .select()
                 .single();
 
             if (error) throw error;
 
-            await reconciliarTitulo(atualizado);
+            await reconciliarTitulo(atualizado, { indice });
             orfaosRecuperados++;
             vinculados++;
+
         } catch (erro) {
             erros++;
-            console.error(`ERRO AO RECUPERAR TÍTULO ÓRFÃO ${titulo.id}:`, erro);
+            console.error(
+                `ERRO AO RECUPERAR TÍTULO ÓRFÃO ${titulo.id}:`,
+                erro
+            );
         }
     }
 
-    log(`Sincronização concluída. Inter: ${cobrancas.length}. Processados: ${processados}. Vinculados: ${vinculados}. Órfãos recuperados: ${orfaosRecuperados}. Erros: ${erros}.`);
+    log(
+        `Sincronização concluída. Inter: ${cobrancas.length}. ` +
+        `Processados: ${processados}. Vinculados: ${vinculados}. ` +
+        `Órfãos recuperados: ${orfaosRecuperados}. Erros: ${erros}.`
+    );
 
     return {
         total: cobrancas.length,
@@ -2674,13 +2913,22 @@ app.get("/mensalidades", async (req, res) => {
                     id_mensalidade,
                     id_inter,
                     nosso_numero,
+                    seu_numero,
                     linha_digitavel,
                     codigo_barras,
                     codigo_pix,
                     pix_copia_cola,
                     status,
                     status_inter,
-                    ativo
+                    ativo,
+                    competencia,
+                    competencia_mes,
+                    competencia_ano,
+                    vencimento,
+                    valor_original,
+                    valor_final,
+                    cpf_responsavel,
+                    codigo_solicitacao
                 `);
 
         if (erroTitulos) {
@@ -2772,6 +3020,35 @@ for (const mensalidade of (mensalidades || [])) {
         });
     }
 }
+      // Boletos ainda não conciliados também ficam visíveis no Financeiro.
+        // O sistema não inventa um vínculo quando os dados são insuficientes;
+        // mantém o boleto acessível para reconciliação posterior.
+        for (const titulo of (titulos || [])) {
+            if (titulo.id_mensalidade) continue;
+
+            resultado.push({
+                id_mensalidade: null,
+                id_titulo: titulo.id,
+                id_inter: titulo.id_inter ?? null,
+                codigo_solicitacao: titulo.codigo_solicitacao ?? null,
+                seu_numero: titulo.seu_numero ?? null,
+                competencia: titulo.competencia ?? null,
+                competencia_mes: titulo.competencia_mes ?? null,
+                competencia_ano: titulo.competencia_ano ?? null,
+                vencimento: titulo.vencimento ?? null,
+                valor_original: titulo.valor_original ?? null,
+                valor_final: titulo.valor_final ?? null,
+                status: titulo.status ?? "ABERTO",
+                status_inter: titulo.status_inter ?? null,
+                status_vinculo: "NAO_VINCULADO",
+                nosso_numero: titulo.nosso_numero ?? null,
+                linha_digitavel: titulo.linha_digitavel ?? null,
+                codigo_barras: titulo.codigo_barras ?? null,
+                codigo_pix: titulo.codigo_pix ?? null,
+                pix_copia_cola: titulo.pix_copia_cola ?? null
+            });
+        }
+
       console.log(
     "Mensalidades carregadas:",
     resultado.length
