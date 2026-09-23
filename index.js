@@ -722,6 +722,20 @@ async function listarTodasCobrancasInter() {
 }
 
 
+function extrairCobrancaInter(item) {
+    if (!item || typeof item !== "object") return {};
+
+    // A listagem do Banco Inter normalmente vem em { cobranca: {...} },
+    // enquanto outros retornos podem trazer a cobrança diretamente.
+    // Este helper centraliza a leitura para que a conciliação não dependa
+    // do formato específico da resposta.
+    if (item.cobranca && typeof item.cobranca === "object") {
+        return item.cobranca;
+    }
+
+    return item;
+}
+
 function normalizarDataConciliacao(valor) {
     if (!valor) return "";
     const s = String(valor).trim();
