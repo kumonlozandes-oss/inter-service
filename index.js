@@ -540,9 +540,13 @@ function numero(valor) {
 
 function dadosTitulo(detalhe) {
 
-    const cobranca = detalhe.cobranca || {};
-    const boleto = detalhe.boleto || {};
-    const pix = detalhe.pix || {};
+    // O Banco Inter pode retornar a cobrança diretamente ou dentro de
+    // { cobranca: ... }, dependendo do endpoint/retorno utilizado.
+    const raiz = detalhe || {};
+    const cobranca = raiz.cobranca || raiz || {};
+    const boleto = raiz.boleto || cobranca.boleto || {};
+    const pix = raiz.pix || cobranca.pix || {};
+    const pagador = cobranca.pagador || raiz.pagador || {};
 
     const descontos = Array.isArray(cobranca.descontos)
         ? cobranca.descontos
@@ -563,7 +567,7 @@ function dadosTitulo(detalhe) {
     let guid_responsavel = null;
     let id_mensalidade = null;
 
-const seuNumero = String(cobranca.seuNumero || "")
+const seuNumero = String(cobranca.seuNumero || raiz.seuNumero || "")
     .trim()
     .toUpperCase();
 
@@ -597,7 +601,7 @@ if (!competencia && cobranca.dataVencimento) {
         guid_responsavel,
 
         cpf_responsavel:
-            cobranca.pagador?.cpfCnpj || null,
+            pagador?.cpfCnpj || null,
 
         competencia,
         competencia_mes,
@@ -1097,8 +1101,12 @@ async function sincronizarBoletos() {
 
             let dados = dadosTitulo(detalhe);
 
-            // Se o detalhe não trouxe pagador ou outros dados, preserva o que
-            // estiver disponível na listagem do Inter.
+            // A listagem do Inter é a fonte de recuperação quando o detalhe
+            // vier sem alguns campos. Preservamos seuNumero e CPF daqui.
+            if (!dados.seu_numero && item?.cobranca?.seuNumero) {
+                dados.seu_numero = String(item.cobranca.seuNumero).trim();
+            }
+
             if (!dados.cpf_responsavel && item?.cobranca?.pagador?.cpfCnpj) {
                 dados.cpf_responsavel = item.cobranca.pagador.cpfCnpj;
             }
@@ -1663,29 +1671,15 @@ let idMensalidadeResolvido = id_mensalidade;
 let competenciaResolvida = competencia;
 
 if (!idMensalidadeResolvido && seuNumeroInter) {
-    try {
-        const { data: mensalidadeResolvida, error: erroResolucao } =
-            await supabase.rpc(
-                "resolver_mensalidade_por_seu_numero",
-                {
-                    p_seu_numero: String(seuNumeroInter)
-                }
-            );
-
-        if (erroResolucao) {
-            throw erroResolucao;
-        }
-
-        if (mensalidadeResolvida) {
-            idMensalidadeResolvido = mensalidadeResolvida;
-        }
-    } catch (erro) {
-        console.error(
-            "Erro ao resolver mensalidade pelo seuNumero:",
-            erro
-        );
-    }
+    idMensalidadeResolvido =
+        await localizarMensalidadePorCompetencia({
+            seu_numero: String(seuNumeroInter),
+            competencia: competenciaResolvida,
+            competencia_mes: competenciaResolvida ? Number(String(competenciaResolvida).split("/")[0]) : null,
+            competencia_ano: competenciaResolvida ? Number(String(competenciaResolvida).split("/")[1]) : null
+        });
 }
+
 
 if (idMensalidadeResolvido) {
     const { data: mensalidadeVinculada, error: erroMensalidade } =
