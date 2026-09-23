@@ -784,7 +784,7 @@ function competenciaPorSeuNumero(valor) {
         MAIO: '05', JUNHO: '06', JULHO: '07', AGOSTO: '08', SETEMBRO: '09',
         OUTUBRO: '10', NOVEMBRO: '11', DEZEMBRO: '12'
     };
-    const m = texto.match(/^([A-ZÇ]+)[\\/.-]?(\\d{2,4})$/);
+    const m = texto.match(/^([A-ZÇ]+)[\/.-]?(\d{2,4})$/);
     if (!m || !meses[m[1]]) return null;
     const ano = m[2].length === 2 ? `20${m[2]}` : m[2];
     return `${meses[m[1]]}/${ano}`;
@@ -793,7 +793,7 @@ function competenciaPorSeuNumero(valor) {
 function normalizarNome(valor) {
     return String(valor || '')
         .normalize('NFD')
-        .replace(/[\\u0300-\\u036f]/g, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^A-Z0-9]/gi, '')
         .toUpperCase();
 }
@@ -813,7 +813,7 @@ async function localizarMensalidadePorCompetencia(dados) {
     if (dados?.id_mensalidade) return dados.id_mensalidade;
 
     // 2) Identidade do pagador: CPF primeiro.
-    const cpf = String(dados?.cpf_responsavel || '').replace(/\\D/g, '');
+    const cpf = String(dados?.cpf_responsavel || '').replace(/\D/g, '');
     let guids = [];
     let alunos = [];
 
