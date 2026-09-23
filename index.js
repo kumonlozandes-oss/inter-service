@@ -567,13 +567,7 @@ function dadosTitulo(detalhe) {
     let guid_responsavel = null;
     let id_mensalidade = null;
 
-const seuNumero = String(
-    cobranca.seuNumero ||
-    raiz.seuNumero ||
-    cobranca.seu_numero ||
-    raiz.seu_numero ||
-    ""
-)
+const seuNumero = String(cobranca.seuNumero || raiz.seuNumero || "")
     .trim()
     .toUpperCase();
 
@@ -617,7 +611,7 @@ if (!competencia && cobranca.dataVencimento) {
 
         codigo_solicitacao: cobranca.codigoSolicitacao || cobranca.id,
 
-        seu_numero: seuNumero || null,
+        seu_numero: cobranca.seuNumero,
         nosso_numero: boleto.nossoNumero,
 
         status_inter: cobranca.situacao,
@@ -744,71 +738,74 @@ async function listarTodasCobrancasInter() {
 
 async function localizarMensalidadePorCompetencia(dados) {
 
-    const seuNumero = String(dados?.seu_numero || "").trim();
+    // O Banco Inter recebe, na geração do boleto, os 15 primeiros
+    // caracteres do UUID de id_mensalidade como seuNumero.
+    // Portanto, esta rotina deve funcionar independentemente da competência
+    // ou do status da mensalidade. Ela é a chave GLOBAL de recuperação.
+    const normalizar = valor => String(valor ?? "")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .trim()
+        .toUpperCase();
 
-    // 1. Primeiro tenta o seu_numero já gravado na mensalidade.
-    // Não depende de RPC criada manualmente no Supabase.
+    const seuNumero = normalizar(dados?.seu_numero ?? dados?.seuNumero);
+
     if (seuNumero) {
-        const { data: porSeuNumero, error: erroSeuNumero } = await supabase
+
+        // 1. Caso a mensalidade já tenha seu_numero gravado, busca direta.
+        const { data: porSeuNumero, error: erroDireto } = await supabase
             .from("mensalidades")
-            .select("id_mensalidade,guid_aluno,guid_responsavel,competencia,competencia_mes,competencia_ano")
-            .eq("seu_numero", seuNumero)
+            .select("id_mensalidade,seu_numero")
+            .eq("seu_numero", String(dados?.seu_numero ?? dados?.seuNumero).trim())
             .limit(2);
 
-        if (erroSeuNumero) throw erroSeuNumero;
+        if (erroDireto) throw erroDireto;
 
         if (porSeuNumero?.length === 1) {
             return porSeuNumero[0].id_mensalidade;
         }
-    }
 
-    // 2. No fluxo original do ERP, o seu_numero é formado pelos primeiros
-    // 15 caracteres do UUID da mensalidade, sem os hífens. Quando a
-    // mensalidade ainda não recebeu o seu_numero, recuperamos pelo próprio
-    // id, restringindo pela competência para evitar vínculo indevido.
-    if (seuNumero && dados?.competencia) {
-        const { data: candidatas, error: erroCandidatas } = await supabase
+        // 2. Recuperação GLOBAL pelo próprio UUID da mensalidade.
+        // Não restringir pela competência: o vencimento pode ter sido
+        // deslocado para o mês seguinte e isso não muda o seuNumero.
+        const { data: mensalidades, error: erroBusca } = await supabase
             .from("mensalidades")
-            .select("id_mensalidade")
-            .eq("competencia", dados.competencia)
-            .limit(500);
+            .select("id_mensalidade,seu_numero")
+            .limit(5000);
 
-        if (erroCandidatas) throw erroCandidatas;
+        if (erroBusca) throw erroBusca;
 
-        const alvo = seuNumero.toUpperCase();
-        const encontradas = (candidatas || []).filter(row =>
-            String(row.id_mensalidade || "")
-                .replace(/-/g, "")
-                .toUpperCase()
-                .startsWith(alvo)
-        );
+        const candidatas = (mensalidades || []).filter(m => {
+            const id = normalizar(m.id_mensalidade);
+            const numeroGravado = normalizar(m.seu_numero);
+            return numeroGravado === seuNumero || id.startsWith(seuNumero);
+        });
 
-        if (encontradas.length === 1) {
-            return encontradas[0].id_mensalidade;
+        if (candidatas.length === 1) {
+            return candidatas[0].id_mensalidade;
+        }
+
+        if (candidatas.length > 1) {
+            console.warn("SeuNumero corresponde a mais de uma mensalidade:", seuNumero);
+            return null;
         }
     }
 
-    // 3. Fallback por aluno + competência.
-    if (
-        !dados?.guid_aluno ||
-        !dados?.competencia_mes ||
-        !dados?.competencia_ano
-    ) {
-        return null;
-    }
+    // 3. Fallback: aluno + competência, quando essas informações realmente
+    // estiverem disponíveis.
+    if (dados?.guid_aluno && dados?.competencia_mes && dados?.competencia_ano) {
+        const { data, error } = await supabase
+            .from("mensalidades")
+            .select("id_mensalidade")
+            .eq("guid_aluno", dados.guid_aluno)
+            .eq("competencia_mes", dados.competencia_mes)
+            .eq("competencia_ano", dados.competencia_ano)
+            .limit(2);
 
-    const { data, error } = await supabase
-        .from("mensalidades")
-        .select("id_mensalidade")
-        .eq("guid_aluno", dados.guid_aluno)
-        .eq("competencia_mes", dados.competencia_mes)
-        .eq("competencia_ano", dados.competencia_ano)
-        .limit(2);
+        if (error) throw error;
 
-    if (error) throw error;
-
-    if (data?.length === 1) {
-        return data[0].id_mensalidade;
+        if (data?.length === 1) {
+            return data[0].id_mensalidade;
+        }
     }
 
     return null;
@@ -1109,14 +1106,8 @@ async function sincronizarBoletos() {
 
             // A listagem do Inter é a fonte de recuperação quando o detalhe
             // vier sem alguns campos. Preservamos seuNumero e CPF daqui.
-            if (!dados.seu_numero) {
-                dados.seu_numero = String(
-                    item?.cobranca?.seuNumero ||
-                    item?.seuNumero ||
-                    item?.cobranca?.seu_numero ||
-                    item?.seu_numero ||
-                    ""
-                ).trim().toUpperCase() || null;
+            if (!dados.seu_numero && item?.cobranca?.seuNumero) {
+                dados.seu_numero = String(item.cobranca.seuNumero).trim();
             }
 
             if (!dados.cpf_responsavel && item?.cobranca?.pagador?.cpfCnpj) {
