@@ -538,12 +538,51 @@ function numero(valor) {
 
 }
 
+
+function normalizarChaveBoleto(valor) {
+    return String(valor ?? "")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .trim()
+        .toUpperCase();
+}
+
+function extrairCobrancaInter(item) {
+    if (!item || typeof item !== "object") return {};
+    return item.cobranca && typeof item.cobranca === "object"
+        ? item.cobranca
+        : item;
+}
+
+function extrairSeuNumeroInter(...fontes) {
+    const chaves = new Set(["seuNumero", "seu_numero"]);
+    const visitar = (valor, profundidade = 0) => {
+        if (!valor || profundidade > 4) return null;
+        if (Array.isArray(valor)) {
+            for (const item of valor) {
+                const achado = visitar(item, profundidade + 1);
+                if (achado) return achado;
+            }
+            return null;
+        }
+        if (typeof valor !== "object") return null;
+        for (const [chave, conteudo] of Object.entries(valor)) {
+            if (chaves.has(chave) && conteudo != null && String(conteudo).trim()) {
+                return String(conteudo).trim();
+            }
+            const achado = visitar(conteudo, profundidade + 1);
+            if (achado) return achado;
+        }
+        return null;
+    };
+    return visitar(fontes);
+}
+
 function dadosTitulo(detalhe) {
 
     // O Banco Inter pode retornar a cobrança diretamente ou dentro de
     // { cobranca: ... }, dependendo do endpoint/retorno utilizado.
     const raiz = detalhe || {};
-    const cobranca = raiz.cobranca || raiz || {};
+    const cobranca = extrairCobrancaInter(raiz);
     const boleto = raiz.boleto || cobranca.boleto || {};
     const pix = raiz.pix || cobranca.pix || {};
     const pagador = cobranca.pagador || raiz.pagador || {};
@@ -567,9 +606,7 @@ function dadosTitulo(detalhe) {
     let guid_responsavel = null;
     let id_mensalidade = null;
 
-const seuNumero = String(cobranca.seuNumero || raiz.seuNumero || "")
-    .trim()
-    .toUpperCase();
+const seuNumero = normalizarChaveBoleto(extrairSeuNumeroInter(detalhe));
 
 // O seuNumero é armazenado como identificador do boleto.
 // Ele NÃO define sozinho a competência quando ainda
@@ -602,6 +639,9 @@ if (!competencia && cobranca.dataVencimento) {
 
         cpf_responsavel:
             pagador?.cpfCnpj || null,
+
+        nome_pagador:
+            pagador?.nome || pagador?.razaoSocial || null,
 
         competencia,
         competencia_mes,
@@ -709,7 +749,8 @@ async function listarTodasCobrancasInter() {
 
         for (const item of (json.cobrancas || [])) {
 
-            const codigo = item?.cobranca?.codigoSolicitacao;
+            const cobranca = extrairCobrancaInter(item);
+            const codigo = cobranca?.codigoSolicitacao;
 
             if (!codigo)
                 continue;
@@ -738,24 +779,23 @@ async function listarTodasCobrancasInter() {
 
 async function localizarMensalidadePorCompetencia(dados) {
 
-    // O Banco Inter recebe, na geração do boleto, os 15 primeiros
-    // caracteres do UUID de id_mensalidade como seuNumero.
-    // Portanto, esta rotina deve funcionar independentemente da competência
-    // ou do status da mensalidade. Ela é a chave GLOBAL de recuperação.
-    const normalizar = valor => String(valor ?? "")
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .trim()
-        .toUpperCase();
+    const seuNumero = normalizarChaveBoleto(
+        dados?.seu_numero ?? dados?.seuNumero
+    );
 
-    const seuNumero = normalizar(dados?.seu_numero ?? dados?.seuNumero);
-
+    // 1) Chave principal: o seuNumero usado na emissão do boleto.
+    // O ERP gera esse valor a partir dos primeiros 15 caracteres do UUID
+    // da mensalidade. Não depende de competência ou vencimento.
     if (seuNumero) {
 
-        // 1. Caso a mensalidade já tenha seu_numero gravado, busca direta.
+        const valorOriginalSeuNumero = String(
+            dados?.seu_numero ?? dados?.seuNumero ?? ""
+        ).trim();
+
         const { data: porSeuNumero, error: erroDireto } = await supabase
             .from("mensalidades")
             .select("id_mensalidade,seu_numero")
-            .eq("seu_numero", String(dados?.seu_numero ?? dados?.seuNumero).trim())
+            .eq("seu_numero", valorOriginalSeuNumero)
             .limit(2);
 
         if (erroDireto) throw erroDireto;
@@ -764,20 +804,18 @@ async function localizarMensalidadePorCompetencia(dados) {
             return porSeuNumero[0].id_mensalidade;
         }
 
-        // 2. Recuperação GLOBAL pelo próprio UUID da mensalidade.
-        // Não restringir pela competência: o vencimento pode ter sido
-        // deslocado para o mês seguinte e isso não muda o seuNumero.
-        const { data: mensalidades, error: erroBusca } = await supabase
+        // Busca pelo prefixo do UUID sem depender de competência.
+        const { data: todasMensalidades, error: erroBusca } = await supabase
             .from("mensalidades")
-            .select("id_mensalidade,seu_numero")
-            .limit(5000);
+            .select("id_mensalidade,seu_numero,guid_aluno,competencia,competencia_mes,competencia_ano")
+            .limit(10000);
 
         if (erroBusca) throw erroBusca;
 
-        const candidatas = (mensalidades || []).filter(m => {
-            const id = normalizar(m.id_mensalidade);
-            const numeroGravado = normalizar(m.seu_numero);
-            return numeroGravado === seuNumero || id.startsWith(seuNumero);
+        const candidatas = (todasMensalidades || []).filter(m => {
+            const id = normalizarChaveBoleto(m.id_mensalidade);
+            const gravado = normalizarChaveBoleto(m.seu_numero);
+            return gravado === seuNumero || id.startsWith(seuNumero);
         });
 
         if (candidatas.length === 1) {
@@ -785,27 +823,80 @@ async function localizarMensalidadePorCompetencia(dados) {
         }
 
         if (candidatas.length > 1) {
-            console.warn("SeuNumero corresponde a mais de uma mensalidade:", seuNumero);
+            console.warn(
+                "SeuNumero corresponde a mais de uma mensalidade:",
+                seuNumero
+            );
             return null;
         }
     }
 
-    // 3. Fallback: aluno + competência, quando essas informações realmente
-    // estiverem disponíveis.
-    if (dados?.guid_aluno && dados?.competencia_mes && dados?.competencia_ano) {
+    // 2) Fallback global por CPF do pagador + competência.
+    // Isso recupera boletos mesmo quando o Inter não devolver seuNumero.
+    const cpf = String(dados?.cpf_responsavel || "").replace(/\D/g, "");
+    if (cpf) {
+
+        const { data: alunos, error: erroAlunos } = await supabase
+            .from("alunos_master")
+            .select("guid,guid_responsavel,nome,responsavel,responsavel_cpf,responsavel2_cpf,cpf,cpf_aluno")
+            .or(
+                `responsavel_cpf.eq.${cpf},responsavel2_cpf.eq.${cpf},cpf.eq.${cpf},cpf_aluno.eq.${cpf}`
+            )
+            .limit(50);
+
+        if (erroAlunos) throw erroAlunos;
+
+        const guids = [...new Set(
+            (alunos || []).map(a => a.guid).filter(Boolean)
+        )];
+
+        if (guids.length) {
+
+            let query = supabase
+                .from("mensalidades")
+                .select("id_mensalidade,guid_aluno,competencia,competencia_mes,competencia_ano,valor_original,valor_final")
+                .in("guid_aluno", guids)
+                .limit(1000);
+
+            if (dados?.competencia) {
+                query = query.eq("competencia", dados.competencia);
+            } else if (dados?.competencia_mes && dados?.competencia_ano) {
+                query = query
+                    .eq("competencia_mes", dados.competencia_mes)
+                    .eq("competencia_ano", dados.competencia_ano);
+            }
+
+            const { data: mensalidades, error: erroMensalidades } = await query;
+            if (erroMensalidades) throw erroMensalidades;
+
+            let candidatas = mensalidades || [];
+
+            // Se houver mais de uma, usa valor como segundo critério.
+            const valor = Number(dados?.valor_final ?? dados?.valor_original);
+            if (Number.isFinite(valor) && candidatas.length > 1) {
+                const porValor = candidatas.filter(m =>
+                    Math.abs(Number(m.valor_final ?? m.valor_original ?? 0) - valor) < 0.01
+                );
+                if (porValor.length) candidatas = porValor;
+            }
+
+            if (candidatas.length === 1) {
+                return candidatas[0].id_mensalidade;
+            }
+        }
+    }
+
+    // 3) Fallback final: aluno + competência, quando já resolvido.
+    if (dados?.guid_aluno && dados?.competencia) {
         const { data, error } = await supabase
             .from("mensalidades")
             .select("id_mensalidade")
             .eq("guid_aluno", dados.guid_aluno)
-            .eq("competencia_mes", dados.competencia_mes)
-            .eq("competencia_ano", dados.competencia_ano)
+            .eq("competencia", dados.competencia)
             .limit(2);
 
         if (error) throw error;
-
-        if (data?.length === 1) {
-            return data[0].id_mensalidade;
-        }
+        if (data?.length === 1) return data[0].id_mensalidade;
     }
 
     return null;
@@ -818,7 +909,8 @@ async function salvarTitulo(dados) {
         guid_aluno: dados.guid_aluno,
         guid_responsavel: dados.guid_responsavel,
         id_inter: dados.id_inter,
-        codigo_solicitacao: dados.codigo_solicitacao
+        codigo_solicitacao: dados.codigo_solicitacao,
+        seu_numero: dados.seu_numero
     });
 
     let existente = null;
@@ -1083,7 +1175,8 @@ async function sincronizarBoletos() {
 
     for (const item of cobrancas) {
 
-        const codigo = item?.cobranca?.codigoSolicitacao;
+        const cobrancaLista = extrairCobrancaInter(item);
+        const codigo = cobrancaLista?.codigoSolicitacao;
         if (!codigo) continue;
 
         try {
@@ -1106,12 +1199,17 @@ async function sincronizarBoletos() {
 
             // A listagem do Inter é a fonte de recuperação quando o detalhe
             // vier sem alguns campos. Preservamos seuNumero e CPF daqui.
-            if (!dados.seu_numero && item?.cobranca?.seuNumero) {
-                dados.seu_numero = String(item.cobranca.seuNumero).trim();
+            const seuNumeroLista = extrairSeuNumeroInter(item);
+            if (!dados.seu_numero && seuNumeroLista) {
+                dados.seu_numero = normalizarChaveBoleto(seuNumeroLista);
             }
 
-            if (!dados.cpf_responsavel && item?.cobranca?.pagador?.cpfCnpj) {
-                dados.cpf_responsavel = item.cobranca.pagador.cpfCnpj;
+            if (!dados.cpf_responsavel && cobrancaLista?.pagador?.cpfCnpj) {
+                dados.cpf_responsavel = cobrancaLista.pagador.cpfCnpj;
+            }
+
+            if (!dados.nome_pagador && cobrancaLista?.pagador?.nome) {
+                dados.nome_pagador = cobrancaLista.pagador.nome;
             }
 
             // O seuNumero é a chave de recuperação do boleto gerado pelo ERP.
